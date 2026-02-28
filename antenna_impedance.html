@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HF End-Fed Antenna Impedance — Visual Tool</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1c2128;
+  --border:    #30363d;
+  --text:      #c9d1d9;
+  --muted:     #8b949e;
+  --muted2:    #484f58;
+  --green:     #32c850;
+  --blue:      #4096ff;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* ─── HEADER ──────────────────────────────────── */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+header h1 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f0f6fc;
+  white-space: nowrap;
+}
+header p {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ─── CONTROLS ────────────────────────────────── */
+#controls {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.ctrl-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ctrl-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Band toggle buttons */
+#bandBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.band-btn {
+  padding: 3px 9px;
+  border-radius: 20px;
+  border: 2px solid var(--c, #888);
+  background: transparent;
+  color: var(--c, #888);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.3;
+  transition: opacity 0.12s, background 0.12s;
+  line-height: 1.5;
+}
+.band-btn.on {
+  opacity: 1;
+  background: color-mix(in srgb, var(--c, #888) 15%, transparent);
+}
+.band-btn:hover { opacity: 0.75; }
+.band-btn.on:hover { opacity: 1; }
+
+/* Matching zone buttons */
+#zoneBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.zone-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 2px solid var(--zc, #888);
+  background: transparent;
+  color: var(--zc, #888);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.35;
+  transition: opacity 0.12s, background 0.12s;
+}
+.zone-btn.on {
+  opacity: 1;
+  background: color-mix(in srgb, var(--zc, #888) 12%, transparent);
+}
+.zone-btn:hover { opacity: 0.7; }
+.zone-btn.on:hover { opacity: 1; }
+.zone-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--zc, #888);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+/* ─── GRAPH AREA ──────────────────────────────── */
+#graphWrap {
+  flex: 1;
+  position: relative;
+  padding: 14px 14px 2px;
+  min-height: 0;
+}
+#graph {
+  display: block;
+  width: 100%;
+  cursor: crosshair;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+/* ─── LEGEND ──────────────────────────────────── */
+#legendBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  padding: 8px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text);
+}
+.leg-line {
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.leg-freq { color: var(--muted); font-size: 0.68rem; }
+
+/* ─── INFO BAR ────────────────────────────────── */
+#infoBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  padding: 7px 20px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.info-item { display: flex; align-items: center; gap: 7px; }
+.info-swatch {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.info-item strong { color: var(--text); font-weight: 600; }
+
+/* ─── TOOLTIP ─────────────────────────────────── */
+#tooltip {
+  position: fixed;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 0.75rem;
+  pointer-events: none;
+  display: none;
+  z-index: 200;
+  line-height: 1.7;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+  max-width: 280px;
+}
+.tt-title {
+  font-weight: 700;
+  color: #f0f6fc;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tt-name { font-weight: 700; min-width: 32px; }
+.tt-z { font-family: monospace; min-width: 68px; }
+.tt-frac { color: var(--muted); font-size: 0.68rem; }
+.tt-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>HF End-Fed Antenna Impedance</h1>
+  <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
+</header>
+
+<div id="controls">
+  <div class="ctrl-group">
+    <div class="ctrl-label">HF Bands (toggle)</div>
+    <div id="bandBtns"></div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Matching Zones (toggle)</div>
+    <div id="zoneBtns">
+      <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
+        <span class="zone-swatch"></span>49:1 Unun
+      </button>
+      <button class="zone-btn on" id="z1Btn" style="--zc: #4096ff">
+        <span class="zone-swatch"></span>9:1 + Tuner
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="graphWrap">
+  <canvas id="graph"></canvas>
+</div>
+
+<div id="legendBar"></div>
+
+<div id="infoBar">
+  <div class="info-item">
+    <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
+    <strong>49:1 Unun:</strong>&nbsp;2000–3500 Ω — EFHW resonant match, no tuner needed.
+  </div>
+  <div class="info-item">
+    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
+    <strong>9:1 + Tuner:</strong>&nbsp;75–1800 Ω — EFRW / off-resonance lengths with antenna tuner.
+  </div>
+  <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════════
+
+const C = 299792458; // m/s
+
+// Impedance model parameters
+const Z0     = 550;   // characteristic impedance of a typical HF wire (Ω)
+const Z_PEAK = 3500;  // realistic EFHW resonant-peak impedance (Ω)
+const Z_MIN  = 15;    // realistic anti-resonance minimum (Ω)
+const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
+const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
+
+const BANDS = [
+  { name: '160m', freq: 1.900e6,  color: '#c47a50', on: false },
+  { name:  '80m', freq: 3.650e6,  color: '#e05c5c', on: false },
+  { name:  '60m', freq: 5.3625e6, color: '#d4872b', on: false },
+  { name:  '40m', freq: 7.150e6,  color: '#4caf50', on: true  },
+  { name:  '30m', freq: 10.125e6, color: '#26c6da', on: false },
+  { name:  '20m', freq: 14.175e6, color: '#5c9af5', on: true  },
+  { name:  '17m', freq: 18.118e6, color: '#ab7ae0', on: false },
+  { name:  '15m', freq: 21.225e6, color: '#f06292', on: true  },
+  { name:  '12m', freq: 24.940e6, color: '#4dd0e1', on: false },
+  { name:  '10m', freq: 28.850e6, color: '#ff7043', on: true  },
+  { name:   '6m', freq: 51.000e6, color: '#c6f135', on: false },
+];
+
+const ZONES = [
+  {
+    id: 'z0', label: '49:1 Unun',
+    zMin: 2000, zMax: 3500,
+    fill:   'rgba(50, 200, 80, 0.13)',
+    stroke: 'rgba(50, 200, 80, 0.65)',
+    text:   '#32c850',
+    on: true,
+  },
+  {
+    id: 'z1', label: '9:1 + Tuner',
+    zMin: 75, zMax: 1800,
+    fill:   'rgba(64, 150, 255, 0.11)',
+    stroke: 'rgba(64, 150, 255, 0.60)',
+    text:   '#4096ff',
+    on: true,
+  },
+];
+
+// Canvas layout margins (px)
+const M = { top: 22, right: 115, bottom: 50, left: 68 };
+
+// Y grid tick values
+const Y_TICKS = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750,
+                 1000, 1500, 2000, 3000, 3500, 5000];
+const Y_MAJOR = new Set([10, 50, 100, 500, 1000, 2000, 5000]);
+
+// Hover state + canvas CSS dimensions
+let hoverCx = null;
+let CANVAS_W = 800; // CSS pixel width  (updated in resizeAndDraw)
+let CANVAS_H = 500; // CSS pixel height (updated in resizeAndDraw)
+
+// ════════════════════════════════════════════════
+//  PHYSICS MODEL
+//  End-fed wire: open-circuit transmission line
+//  |Z_in| = Z0 · |cot(βL)|  where β = 2π/λ
+//  Clamped to [Z_MIN, Z_PEAK] for realism.
+// ════════════════════════════════════════════════
+
+function calcZ(L, freq) {
+  if (L <= 0) return Z_PEAK;
+  const lambda = C / freq;
+  const betaL  = (2 * Math.PI * L) / lambda;  // βL
+  const sinBL  = Math.sin(betaL);
+  if (Math.abs(sinBL) < 1e-9) return Z_PEAK;  // resonance peak
+  const absCot = Math.abs(Math.cos(betaL) / sinBL);
+  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * absCot));
+}
+
+// ════════════════════════════════════════════════
+//  COORDINATE HELPERS
+// ════════════════════════════════════════════════
+
+function getActiveBands() { return BANDS.filter(b => b.on); }
+
+function getXRange() {
+  const ab = getActiveBands();
+  if (!ab.length) return { xMin: 1, xMax: 50 };
+  const lowestFreq = Math.min(...ab.map(b => b.freq));
+  return { xMin: 1, xMax: C / lowestFreq }; // 0..λ of lowest band
+}
+
+function logScale(Z) {
+  const z = Math.max(Y_AXIS_MIN, Math.min(Y_AXIS_MAX, Z));
+  return (Math.log10(z) - Math.log10(Y_AXIS_MIN)) /
+         (Math.log10(Y_AXIS_MAX) - Math.log10(Y_AXIS_MIN));
+}
+
+function yPx(Z, H) {
+  return M.top + (1 - logScale(Z)) * (H - M.top - M.bottom);
+}
+
+function xPx(L, xRange, W) {
+  return M.left + ((L - xRange.xMin) / (xRange.xMax - xRange.xMin)) *
+         (W - M.left - M.right);
+}
+
+function pxToL(cx, xRange, W) {
+  return xRange.xMin + ((cx - M.left) / (W - M.left - M.right)) *
+         (xRange.xMax - xRange.xMin);
+}
+
+function formatZ(Z) {
+  if (Z >= 1000) return (Z / 1000).toFixed(Z >= 2000 ? 1 : 2) + ' kΩ';
+  return Math.round(Z) + ' Ω';
+}
+
+function niceStep(raw) {
+  const e = Math.pow(10, Math.floor(Math.log10(raw)));
+  const m = raw / e;
+  if (m < 1.5) return e;
+  if (m < 3.5) return 2 * e;
+  if (m < 7.5) return 5 * e;
+  return 10 * e;
+}
+
+// ════════════════════════════════════════════════
+//  DRAW
+// ════════════════════════════════════════════════
+
+function draw() {
+  const canvas = document.getElementById('graph');
+  const ctx    = canvas.getContext('2d');
+  const dpr    = window.devicePixelRatio || 1;
+  const W = CANVAS_W, H = CANVAS_H;
+
+  // Reset transform then apply DPR scale so all coordinates are in CSS pixels
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const xRange = getXRange();
+  const ab = getActiveBands();
+
+  // ── Clear ── (clear in CSS pixel space; DPR transform makes it cover full physical canvas)
+  ctx.clearRect(0, 0, W, H);
+
+  // Plot area background
+  ctx.fillStyle = '#090d13';
+  ctx.fillRect(M.left, M.top, W - M.left - M.right, H - M.top - M.bottom);
+
+  const plotW = W - M.left - M.right;
+  const plotH = H - M.top - M.bottom;
+
+  // ── Matching zones ──
+  ZONES.forEach(zone => {
+    if (!zone.on) return;
+    const y1 = yPx(zone.zMax, H);
+    const y2 = yPx(zone.zMin, H);
+
+    ctx.fillStyle = zone.fill;
+    ctx.fillRect(M.left, y1, plotW, y2 - y1);
+
+    ctx.strokeStyle = zone.stroke;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([7, 5]);
+    [y1, y2].forEach(y => {
+      ctx.beginPath();
+      ctx.moveTo(M.left, y);
+      ctx.lineTo(M.left + plotW, y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Right-side labels
+    const midY = (y1 + y2) / 2;
+    ctx.fillStyle = zone.text;
+    ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(zone.label, M.left + plotW + 8, midY - 4);
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.fillStyle = zone.text + 'bb';
+    ctx.fillText(formatZ(zone.zMin) + '–' + formatZ(zone.zMax),
+                 M.left + plotW + 8, midY + 9);
+  });
+
+  // ── Y grid ──
+  Y_TICKS.forEach(val => {
+    if (val < Y_AXIS_MIN || val > Y_AXIS_MAX) return;
+    const y = yPx(val, H);
+    const major = Y_MAJOR.has(val);
+
+    ctx.strokeStyle = major ? '#1e2630' : '#141820';
+    ctx.lineWidth = major ? 1 : 0.5;
+    ctx.beginPath();
+    ctx.moveTo(M.left, y);
+    ctx.lineTo(M.left + plotW, y);
+    ctx.stroke();
+
+    ctx.fillStyle = major ? '#8b949e' : '#50585e';
+    ctx.font = major ? '11px monospace' : '9px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(formatZ(val), M.left - 5, y + 4);
+  });
+
+  // ── X grid ──
+  const xSpan = xRange.xMax - xRange.xMin;
+  const xStep = niceStep(xSpan / 7);
+  const xStart = Math.ceil(xRange.xMin / xStep) * xStep;
+
+  for (let x = xStart; x <= xRange.xMax + 0.001; x += xStep) {
+    const cx = xPx(x, xRange, W);
+    ctx.strokeStyle = '#1e2630';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, M.top);
+    ctx.lineTo(cx, M.top + plotH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    const lbl = x >= 10 ? Math.round(x) + 'm' : x.toFixed(1) + 'm';
+    ctx.fillText(lbl, cx, M.top + plotH + 17);
+  }
+
+  // ── Resonant-length markers (λ/2 multiples) ──
+  ab.forEach(band => {
+    const lambda = C / band.freq;
+    for (let n = 1; ; n++) {
+      const resL = n * lambda / 2;
+      if (resL > xRange.xMax + 0.1) break;
+      if (resL < xRange.xMin) continue;
+      const cx = xPx(resL, xRange, W);
+      ctx.strokeStyle = band.color + '40';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 7]);
+      ctx.beginPath();
+      ctx.moveTo(cx, M.top);
+      ctx.lineTo(cx, M.top + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  });
+
+  // ── Impedance curves ──
+  const STEPS = 3000;
+  ab.forEach(band => {
+    const dL = (xRange.xMax - xRange.xMin) / STEPS;
+    ctx.strokeStyle = band.color;
+    ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    let pen = false;
+    for (let i = 0; i <= STEPS; i++) {
+      const L  = xRange.xMin + i * dL;
+      const Z  = calcZ(L, band.freq);
+      const cx = xPx(L, xRange, W);
+      const cy = yPx(Z, H);
+
+      // Clip curves to plot area
+      if (cy < M.top - 2 || cy > M.top + plotH + 2) {
+        pen = false;
+        continue;
+      }
+      if (!pen) { ctx.moveTo(cx, cy); pen = true; }
+      else       { ctx.lineTo(cx, cy); }
+    }
+    ctx.stroke();
+  });
+
+  // ── Hover cursor ──
+  if (hoverCx !== null) {
+    const L = pxToL(hoverCx, xRange, W);
+    if (L >= xRange.xMin && L <= xRange.xMax) {
+      // Vertical cursor line
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hoverCx, M.top);
+      ctx.lineTo(hoverCx, M.top + plotH);
+      ctx.stroke();
+
+      // Dots on curves
+      ab.forEach(band => {
+        const Z  = calcZ(L, band.freq);
+        const cy = yPx(Z, H);
+        if (cy >= M.top && cy <= M.top + plotH) {
+          ctx.fillStyle = band.color;
+          ctx.beginPath();
+          ctx.arc(hoverCx, cy, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#0d1117';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      });
+    }
+  }
+
+  // ── Axis border ──
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(M.left, M.top, plotW, plotH);
+
+  // ── Axis titles ──
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '12px system-ui, sans-serif';
+
+  // Y title
+  ctx.save();
+  ctx.translate(14, M.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Impedance (Ω)', 0, 0);
+  ctx.restore();
+
+  // X title
+  ctx.textAlign = 'center';
+  ctx.fillText('Wire Length (metres)', M.left + plotW / 2, H - 8);
+
+  // Scale annotation (top-right corner of plot)
+  const activeLowest = ab.reduce(
+    (a, b) => (b.freq < a.freq ? b : a),
+    { freq: Infinity, name: '?' }
+  );
+  if (isFinite(activeLowest.freq)) {
+    const lam = (C / activeLowest.freq).toFixed(1);
+    const txt = `X range: 0–λ of ${activeLowest.name} (${lam} m)`;
+    document.getElementById('scaleInfo').textContent = txt;
+    ctx.fillStyle = '#3a4252';
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(txt, M.left + plotW - 4, M.top + 13);
+  }
+}
+
+// ════════════════════════════════════════════════
+//  UI BUILDING
+// ════════════════════════════════════════════════
+
+function buildBandButtons() {
+  const wrap = document.getElementById('bandBtns');
+  BANDS.forEach(band => {
+    const btn = document.createElement('button');
+    btn.className = 'band-btn' + (band.on ? ' on' : '');
+    btn.textContent = band.name;
+    btn.style.setProperty('--c', band.color);
+    btn.onclick = () => {
+      band.on = !band.on;
+      btn.classList.toggle('on', band.on);
+      updateLegend();
+      resizeAndDraw();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function buildZoneButtons() {
+  ZONES.forEach((zone, i) => {
+    const btn = document.getElementById(zone.id + 'Btn');
+    if (!btn) return;
+    btn.classList.toggle('on', zone.on);
+    btn.onclick = () => {
+      zone.on = !zone.on;
+      btn.classList.toggle('on', zone.on);
+      draw();
+    };
+  });
+}
+
+function updateLegend() {
+  const bar = document.getElementById('legendBar');
+  bar.innerHTML = '';
+  getActiveBands().forEach(band => {
+    const div = document.createElement('div');
+    div.className = 'leg-item';
+    div.innerHTML =
+      `<span class="leg-line" style="background:${band.color}"></span>` +
+      `<span>${band.name} <span class="leg-freq">${(band.freq/1e6).toFixed(3)} MHz</span></span>`;
+    bar.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════
+//  HOVER / TOOLTIP
+// ════════════════════════════════════════════════
+
+function setupHover() {
+  const canvas  = document.getElementById('graph');
+  const tooltip = document.getElementById('tooltip');
+
+  function onMove(e) {
+    const rect  = canvas.getBoundingClientRect();
+    // Use CSS pixel coordinates (not physical), matching draw() coordinate space
+    const cx    = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+    const cy    = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+    const W = CANVAS_W, H = CANVAS_H;
+    const xRange = getXRange();
+    const ab     = getActiveBands();
+
+    const inPlot =
+      cx >= M.left && cx <= W - M.right &&
+      cy >= M.top  && cy <= H - M.bottom;
+
+    if (!inPlot || !ab.length) {
+      hoverCx = null;
+      tooltip.style.display = 'none';
+      draw();
+      return;
+    }
+
+    hoverCx = cx;
+    const L = pxToL(cx, xRange, W);
+
+    let html = `<div class="tt-title">Wire length: ${L >= 10 ? L.toFixed(1) : L.toFixed(2)} m</div>`;
+
+    ab.forEach(band => {
+      const Z = calcZ(L, band.freq);
+      const lambda  = C / band.freq;
+      const halfwaves = L / (lambda / 2);
+
+      const zoneMatches = ZONES.filter(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      const zoneTags = zoneMatches
+        .map(z => `<span class="tt-tag" style="color:${z.text}">${z.label}</span>`)
+        .join(' ');
+
+      html +=
+        `<div class="tt-row">` +
+        `<span class="tt-dot" style="background:${band.color}"></span>` +
+        `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
+        `<span class="tt-z">${formatZ(Z)}</span>` +
+        `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
+        zoneTags +
+        `</div>`;
+    });
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+
+    // Position tooltip (avoid screen edges)
+    const ttW = tooltip.offsetWidth, ttH = tooltip.offsetHeight;
+    let tx = e.clientX + 16, ty = e.clientY - 12;
+    if (tx + ttW > window.innerWidth  - 8) tx = e.clientX - ttW - 16;
+    if (ty + ttH > window.innerHeight - 8) ty = e.clientY - ttH;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+
+    draw();
+  }
+
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseleave', () => {
+    hoverCx = null;
+    tooltip.style.display = 'none';
+    draw();
+  });
+}
+
+// ════════════════════════════════════════════════
+//  RESIZE + DRAW
+// ════════════════════════════════════════════════
+
+function resizeAndDraw() {
+  const canvas = document.getElementById('graph');
+  const wrap   = document.getElementById('graphWrap');
+  const dpr    = window.devicePixelRatio || 1;
+
+  CANVAS_W = wrap.clientWidth - 28;   // CSS pixel width
+  CANVAS_H = Math.max(380, Math.min(620, window.innerHeight - 210));
+
+  canvas.style.width  = CANVAS_W + 'px';
+  canvas.style.height = CANVAS_H + 'px';
+  // Physical pixels = CSS px × DPR for sharp rendering on HiDPI screens
+  canvas.width  = Math.round(CANVAS_W * dpr);
+  canvas.height = Math.round(CANVAS_H * dpr);
+
+  draw();
+}
+
+// ════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════
+
+buildBandButtons();
+buildZoneButtons();
+updateLegend();
+setupHover();
+window.addEventListener('resize', resizeAndDraw);
+resizeAndDraw();
+</script>
+</body>
+</html>
