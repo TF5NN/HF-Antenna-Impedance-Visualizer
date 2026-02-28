@@ -272,6 +272,11 @@ header p {
 #cpLengthInput:focus { outline: none; border-color: #c070ff; }
 .cp-unit { font-size: 0.73rem; color: var(--muted); }
 
+/* ─── VELOCITY FACTOR CONTROL ─────────────────── */
+#vfControl { display: flex; align-items: center; gap: 8px; }
+#vfSlider  { width: 88px; accent-color: #5c9af5; cursor: pointer; }
+#vfDisplay { font-family: monospace; font-size: 0.8rem; color: var(--text); min-width: 36px; }
+
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
   background: var(--surface2);
@@ -367,6 +372,13 @@ header p {
       </div>
     </div>
   </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Wire velocity factor</div>
+    <div id="vfControl">
+      <input type="range" id="vfSlider" min="0.90" max="1.00" step="0.005" value="0.975">
+      <span id="vfDisplay">0.975</span>
+    </div>
+  </div>
 </div>
 
 <div id="graphWrap">
@@ -378,7 +390,7 @@ header p {
 <div id="infoBar">
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
-    <strong>49:1 Unun:</strong>&nbsp;2000–3500 Ω — EFHW resonant match, no tuner needed.
+    <strong>49:1 Unun:</strong>&nbsp;1500–4500 Ω — EFHW resonant match, SWR ≤ 2:1, no tuner needed.
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
@@ -430,6 +442,18 @@ header p {
     </div>
 
     <div class="notes-block">
+      <h4>Velocity factor</h4>
+      <p>
+        Real wire is electrically shorter than its physical length — the RF wave
+        travels at <em>VF × c</em> along the conductor, so resonant peaks shift left to
+        <code>VF × λ/2</code> physical length. Typical values: bare copper ~0.98,
+        insulated antenna wire ~0.95–0.97. At VF = 0.975 the 40m EFHW resonance
+        moves from 20.97 m (free-space) to ~20.4 m — matching real-world experience.
+        The velocity factor slider applies equally to the main wire and any counterpoise.
+      </p>
+    </div>
+
+    <div class="notes-block">
       <h4>Counterpoise effect</h4>
       <p>
         A counterpoise wire connects to the "cold" terminal of the transformer, providing
@@ -457,10 +481,12 @@ header p {
         <code>450 / 6 ≈ 75 Ω</code> to <code>450 × 4 ≈ 1 800 Ω</code>.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#32c850">49:1 Unun (2 000–3 500 Ω):</strong>
+        <strong style="color:#32c850">49:1 Unun (1 500–4 500 Ω):</strong>
         A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal.
-        Allowing for a practical SWR ≤ 1.5:1 window around that target gives
-        roughly 2 000–3 500 Ω on the antenna side — no tuner needed.
+        SWR ≤ 2:1 spans <code>2 450 / 2 = 1 225 Ω</code> to <code>2 450 × 2 = 4 900 Ω</code>.
+        Real antenna peaks reach 2 000–5 000 Ω depending on height — even 4 500 Ω gives
+        only ~1.8:1 SWR, well within tolerance. The zone shown (1 500–4 500 Ω) is the
+        practical usable range.
       </p>
     </div>
 
@@ -478,7 +504,7 @@ const C = 299792458; // m/s
 
 // Impedance model parameters
 const Z0     = 550;   // characteristic impedance of a typical HF wire (Ω)
-const Z_PEAK = 3500;  // realistic EFHW resonant-peak impedance (Ω)
+const Z_PEAK = 5000;  // realistic EFHW resonant-peak impedance (Ω) — real range 2000–5000
 const Z_MIN  = 25;    // realistic anti-resonance minimum (Ω) — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
 const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
@@ -500,7 +526,7 @@ const BANDS = [
 const ZONES = [
   {
     id: 'z0', label: '49:1 Unun',
-    zMin: 2000, zMax: 3500,
+    zMin: 1500, zMax: 4500,
     fill:   'rgba(50, 200, 80, 0.13)',
     stroke: 'rgba(50, 200, 80, 0.65)',
     text:   '#32c850',
@@ -529,7 +555,7 @@ const M = { top: 22, right: 115, bottom: 50, left: 68 };
 
 // Y grid tick values
 const Y_TICKS = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750,
-                 1000, 1500, 2000, 3000, 3500, 5000];
+                 1000, 1500, 2000, 3000, 3500, 4500, 5000];
 const Y_MAJOR = new Set([10, 50, 100, 500, 1000, 2000, 5000]);
 
 // Hover state + canvas CSS dimensions
@@ -540,6 +566,9 @@ let CANVAS_H = 500; // CSS pixel height (updated in resizeAndDraw)
 // Counterpoise state
 let cpEnabled = false;
 let cpLengthM = 5.0;  // metres
+
+// Velocity factor (0.90–1.00) — shifts resonant peaks to match real wire
+let VF = 0.975;
 
 // ════════════════════════════════════════════════
 //  PHYSICS MODEL
@@ -562,21 +591,22 @@ function signedCot(betaL) {
   return Math.cos(betaL) / s;
 }
 
-// Wire-only impedance — no counterpoise
+// Wire-only impedance — no counterpoise; uses velocity-factor-adjusted wavelength
 function calcZwire(L, freq) {
   if (L <= 0) return Z_PEAK;
-  const betaL = (2 * Math.PI * L) / (C / freq);
+  const lambda_eff = (C / freq) * VF;   // electrical wavelength = physical λ × VF
+  const betaL = (2 * Math.PI * L) / lambda_eff;
   const s = Math.sin(betaL);
   if (Math.abs(s) < 1e-9) return Z_PEAK;
   return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(Math.cos(betaL) / s)));
 }
 
-// Effective impedance — adds counterpoise in series when enabled
+// Effective impedance — adds counterpoise in series when enabled; VF applies to both
 function calcZ(L, freq) {
   if (!cpEnabled || cpLengthM <= 0) return calcZwire(L, freq);
-  const lambda   = C / freq;
-  const cotTotal = signedCot(2 * Math.PI * L        / lambda)
-                 + signedCot(2 * Math.PI * cpLengthM / lambda);
+  const lambda_eff = (C / freq) * VF;
+  const cotTotal = signedCot(2 * Math.PI * L        / lambda_eff)
+                 + signedCot(2 * Math.PI * cpLengthM / lambda_eff);
   return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(cotTotal)));
 }
 
@@ -727,11 +757,11 @@ function draw() {
     ctx.fillText(lbl, cx, M.top + plotH + 17);
   }
 
-  // ── Resonant-length markers (λ/2 multiples) ──
+  // ── Resonant-length markers (VF-adjusted λ/2 multiples) ──
   ab.forEach(band => {
     const lambda = C / band.freq;
     for (let n = 1; ; n++) {
-      const resL = n * lambda / 2;
+      const resL = n * lambda * VF / 2;  // physical resonant length = VF × λ/2
       if (resL > xRange.xMax + 0.1) break;
       if (resL < xRange.xMin) continue;
       const cx = xPx(resL, xRange, W);
@@ -1010,6 +1040,20 @@ function setupHover() {
 }
 
 // ════════════════════════════════════════════════
+//  VELOCITY FACTOR CONTROL
+// ════════════════════════════════════════════════
+
+function setupVF() {
+  const slider  = document.getElementById('vfSlider');
+  const display = document.getElementById('vfDisplay');
+  slider.addEventListener('input', () => {
+    VF = parseFloat(slider.value);
+    display.textContent = VF.toFixed(3);
+    draw();
+  });
+}
+
+// ════════════════════════════════════════════════
 //  COUNTERPOISE CONTROL
 // ════════════════════════════════════════════════
 
@@ -1060,6 +1104,7 @@ buildBandButtons();
 buildZoneButtons();
 updateLegend();
 setupHover();
+setupVF();
 setupCounterpoise();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
