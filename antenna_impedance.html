@@ -244,6 +244,33 @@ header p {
   border: 1px solid currentColor;
   opacity: 0.85;
 }
+.tt-cp-note { font-size: 0.65rem; color: var(--muted); font-family: monospace; }
+
+/* ─── COUNTERPOISE CONTROL ────────────────────── */
+#cpControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cp-len-wrap {
+  display: none;
+  align-items: center;
+  gap: 5px;
+}
+.cp-len-wrap.show { display: flex; }
+#cpLengthInput {
+  width: 56px;
+  padding: 3px 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+#cpLengthInput:focus { outline: none; border-color: #c070ff; }
+.cp-unit { font-size: 0.73rem; color: var(--muted); }
 
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
@@ -327,6 +354,19 @@ header p {
       </button>
     </div>
   </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Counterpoise</div>
+    <div id="cpControl">
+      <button class="zone-btn" id="cpToggleBtn" style="--zc: #c070ff">
+        <span class="zone-swatch"></span>Show effect
+      </button>
+      <div class="cp-len-wrap" id="cpLenWrap">
+        <span class="cp-unit">Length</span>
+        <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
+        <span class="cp-unit">m</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="graphWrap">
@@ -386,6 +426,20 @@ header p {
         real wires at typical HF heights give roughly 20–60 Ω due to radiation
         resistance and conductor/ground losses. 25 Ω is a conservative educational
         floor that reflects real-world measurement data.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Counterpoise effect</h4>
+      <p>
+        A counterpoise wire connects to the "cold" terminal of the transformer, providing
+        an RF return path. In the lossless model both wires are purely reactive and add
+        <em>in series</em> at the feedpoint:
+        <code>Z_feed = −jZ₀·cot(βL_wire) + −jZ₀·cot(βL_cp)</code>.
+        The signs matter — a counterpoise at λ/4 has near-zero reactance (adds little),
+        while one near λ/2 adds very high reactance and can completely ruin the match.
+        When enabled, dashed ghost curves show the wire-alone impedance for direct
+        comparison with the solid counterpoise-adjusted curves.
       </p>
     </div>
 
@@ -483,21 +537,47 @@ let hoverCx = null;
 let CANVAS_W = 800; // CSS pixel width  (updated in resizeAndDraw)
 let CANVAS_H = 500; // CSS pixel height (updated in resizeAndDraw)
 
+// Counterpoise state
+let cpEnabled = false;
+let cpLengthM = 5.0;  // metres
+
 // ════════════════════════════════════════════════
 //  PHYSICS MODEL
 //  End-fed wire: open-circuit transmission line
 //  |Z_in| = Z0 · |cot(βL)|  where β = 2π/λ
 //  Clamped to [Z_MIN, Z_PEAK] for realism.
+//
+//  With counterpoise: both wires present purely
+//  reactive impedances in series at the feedpoint:
+//    Z_feed = −jZ₀·cot(βL_wire) − jZ₀·cot(βL_cp)
+//  so |Z_feed| = Z0 · |cot(βL_wire) + cot(βL_cp)|
+//  Signs matter — they can add OR partially cancel.
 // ════════════════════════════════════════════════
 
-function calcZ(L, freq) {
+// Signed cotangent with overflow cap (for algebraic series sum)
+function signedCot(betaL) {
+  const s = Math.sin(betaL);
+  const cap = (Z_PEAK / Z0) * 1.5;
+  if (Math.abs(s) < 1e-9) return Math.cos(betaL) >= 0 ? cap : -cap;
+  return Math.cos(betaL) / s;
+}
+
+// Wire-only impedance — no counterpoise
+function calcZwire(L, freq) {
   if (L <= 0) return Z_PEAK;
-  const lambda = C / freq;
-  const betaL  = (2 * Math.PI * L) / lambda;  // βL
-  const sinBL  = Math.sin(betaL);
-  if (Math.abs(sinBL) < 1e-9) return Z_PEAK;  // resonance peak
-  const absCot = Math.abs(Math.cos(betaL) / sinBL);
-  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * absCot));
+  const betaL = (2 * Math.PI * L) / (C / freq);
+  const s = Math.sin(betaL);
+  if (Math.abs(s) < 1e-9) return Z_PEAK;
+  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(Math.cos(betaL) / s)));
+}
+
+// Effective impedance — adds counterpoise in series when enabled
+function calcZ(L, freq) {
+  if (!cpEnabled || cpLengthM <= 0) return calcZwire(L, freq);
+  const lambda   = C / freq;
+  const cotTotal = signedCot(2 * Math.PI * L        / lambda)
+                 + signedCot(2 * Math.PI * cpLengthM / lambda);
+  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(cotTotal)));
 }
 
 // ════════════════════════════════════════════════
@@ -668,6 +748,51 @@ function draw() {
 
   // ── Impedance curves ──
   const STEPS = 3000;
+
+  // Ghost curves — wire only, drawn first when counterpoise is active
+  if (cpEnabled) {
+    ctx.save();
+    ctx.globalAlpha = 0.28;
+    ctx.setLineDash([4, 6]);
+    ab.forEach(band => {
+      const dL = (xRange.xMax - xRange.xMin) / STEPS;
+      ctx.strokeStyle = band.color;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i <= STEPS; i++) {
+        const L  = xRange.xMin + i * dL;
+        const Z  = calcZwire(L, band.freq);
+        const cx = xPx(L, xRange, W);
+        const cy = yPx(Z, H);
+        if (cy < M.top - 2 || cy > M.top + plotH + 2) { pen = false; continue; }
+        if (!pen) { ctx.moveTo(cx, cy); pen = true; }
+        else       { ctx.lineTo(cx, cy); }
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // Vertical marker at counterpoise length (if within X range)
+    if (cpLengthM >= xRange.xMin && cpLengthM <= xRange.xMax) {
+      const cpCx = xPx(cpLengthM, xRange, W);
+      ctx.strokeStyle = 'rgba(192, 112, 255, 0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cpCx, M.top);
+      ctx.lineTo(cpCx, M.top + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#c070ff';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('CP ' + cpLengthM + 'm', cpCx, M.top + 12);
+    }
+  }
+
+  // Solid curves — effective impedance (wire + counterpoise when active)
   ab.forEach(band => {
     const dL = (xRange.xMax - xRange.xMin) / STEPS;
     ctx.strokeStyle = band.color;
@@ -680,12 +805,7 @@ function draw() {
       const Z  = calcZ(L, band.freq);
       const cx = xPx(L, xRange, W);
       const cy = yPx(Z, H);
-
-      // Clip curves to plot area
-      if (cy < M.top - 2 || cy > M.top + plotH + 2) {
-        pen = false;
-        continue;
-      }
+      if (cy < M.top - 2 || cy > M.top + plotH + 2) { pen = false; continue; }
       if (!pen) { ctx.moveTo(cx, cy); pen = true; }
       else       { ctx.lineTo(cx, cy); }
     }
@@ -836,11 +956,15 @@ function setupHover() {
     hoverCx = cx;
     const L = pxToL(cx, xRange, W);
 
-    let html = `<div class="tt-title">Wire length: ${L >= 10 ? L.toFixed(1) : L.toFixed(2)} m</div>`;
+    const cpHeader = cpEnabled
+      ? ` <span style="color:#c070ff;font-size:0.68rem">+ CP ${cpLengthM}m</span>`
+      : '';
+    let html = `<div class="tt-title">Wire length: ${L >= 10 ? L.toFixed(1) : L.toFixed(2)} m${cpHeader}</div>`;
 
     ab.forEach(band => {
-      const Z = calcZ(L, band.freq);
-      const lambda  = C / band.freq;
+      const Z      = calcZ(L, band.freq);
+      const Zwire  = cpEnabled ? calcZwire(L, band.freq) : null;
+      const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
 
       const zoneMatches = ZONES.filter(z => z.on && Z >= z.zMin && Z <= z.zMax);
@@ -848,11 +972,16 @@ function setupHover() {
         .map(z => `<span class="tt-tag" style="color:${z.text}">${z.label}</span>`)
         .join(' ');
 
+      const cpNote = Zwire !== null
+        ? `<span class="tt-cp-note">wire: ${formatZ(Zwire)}</span>`
+        : '';
+
       html +=
         `<div class="tt-row">` +
         `<span class="tt-dot" style="background:${band.color}"></span>` +
         `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
         `<span class="tt-z">${formatZ(Z)}</span>` +
+        cpNote +
         `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
         zoneTags +
         `</div>`;
@@ -877,6 +1006,28 @@ function setupHover() {
     hoverCx = null;
     tooltip.style.display = 'none';
     draw();
+  });
+}
+
+// ════════════════════════════════════════════════
+//  COUNTERPOISE CONTROL
+// ════════════════════════════════════════════════
+
+function setupCounterpoise() {
+  const btn  = document.getElementById('cpToggleBtn');
+  const wrap = document.getElementById('cpLenWrap');
+  const inp  = document.getElementById('cpLengthInput');
+
+  btn.onclick = () => {
+    cpEnabled = !cpEnabled;
+    btn.classList.toggle('on', cpEnabled);
+    wrap.classList.toggle('show', cpEnabled);
+    draw();
+  };
+
+  inp.addEventListener('input', () => {
+    const v = parseFloat(inp.value);
+    if (v > 0) { cpLengthM = v; draw(); }
   });
 }
 
@@ -909,6 +1060,7 @@ buildBandButtons();
 buildZoneButtons();
 updateLegend();
 setupHover();
+setupCounterpoise();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
 </script>
