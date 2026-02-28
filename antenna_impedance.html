@@ -267,6 +267,9 @@ header p {
       <button class="zone-btn on" id="z1Btn" style="--zc: #4096ff">
         <span class="zone-swatch"></span>9:1 + Tuner
       </button>
+      <button class="zone-btn on" id="z2Btn" style="--zc: #ffa000">
+        <span class="zone-swatch"></span>Direct 50 Ω
+      </button>
     </div>
   </div>
 </div>
@@ -286,6 +289,10 @@ header p {
     <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
     <strong>9:1 + Tuner:</strong>&nbsp;75–1800 Ω — EFRW / off-resonance lengths with antenna tuner.
   </div>
+  <div class="info-item">
+    <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
+    <strong>Direct 50 Ω:</strong>&nbsp;25–100 Ω — direct connection, no transformer, SWR ≤ 2:1.
+  </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
 
@@ -301,7 +308,7 @@ const C = 299792458; // m/s
 // Impedance model parameters
 const Z0     = 550;   // characteristic impedance of a typical HF wire (Ω)
 const Z_PEAK = 3500;  // realistic EFHW resonant-peak impedance (Ω)
-const Z_MIN  = 15;    // realistic anti-resonance minimum (Ω)
+const Z_MIN  = 25;    // realistic anti-resonance minimum (Ω) — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
 const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
 
@@ -334,6 +341,14 @@ const ZONES = [
     fill:   'rgba(64, 150, 255, 0.11)',
     stroke: 'rgba(64, 150, 255, 0.60)',
     text:   '#4096ff',
+    on: true,
+  },
+  {
+    id: 'z2', label: 'Direct 50 Ω',
+    zMin: 25, zMax: 100,
+    fill:   'rgba(255, 160, 0, 0.15)',
+    stroke: 'rgba(255, 160, 0, 0.75)',
+    text:   '#ffa000',
     on: true,
   },
 ];
