@@ -244,6 +244,61 @@ header p {
   border: 1px solid currentColor;
   opacity: 0.85;
 }
+
+/* ─── NOTES PANEL ─────────────────────────────── */
+#notesPanel {
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+#notesPanel summary {
+  padding: 7px 20px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.73rem;
+  letter-spacing: 0.03em;
+  list-style: none;   /* hide default triangle in Firefox */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#notesPanel summary::-webkit-details-marker { display: none; }
+#notesPanel summary::before {
+  content: '▶';
+  font-size: 0.6rem;
+  transition: transform 0.15s;
+  color: var(--muted2);
+}
+#notesPanel[open] summary::before { transform: rotate(90deg); }
+#notesPanel summary:hover { color: var(--text); }
+
+.notes-body {
+  padding: 4px 20px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px 28px;
+  line-height: 1.55;
+}
+.notes-block h4 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  border-left: 3px solid var(--border);
+  padding-left: 7px;
+}
+.notes-block p { color: var(--muted); }
+.notes-block code {
+  font-family: monospace;
+  font-size: 0.85em;
+  color: #c9d1d9;
+  background: #0d1117;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
 </style>
 </head>
 <body>
@@ -295,6 +350,68 @@ header p {
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
+
+<details id="notesPanel">
+  <summary>Model notes &amp; derivations</summary>
+  <div class="notes-body">
+
+    <div class="notes-block">
+      <h4>Why the graph starts at λ/4 of the lowest band</h4>
+      <p>
+        A wire shorter than one quarter-wavelength (λ/4) <em>can</em> radiate, but it is
+        "electrically short": radiation resistance falls roughly as <code>(L/λ)²</code>,
+        while capacitive reactance becomes very large. The result is very low efficiency
+        and a feed impedance that is almost impossible to match without special loading coils.
+        The open-circuit transmission-line model used here also becomes inaccurate below λ/4.
+        Hiding this region keeps the graph focused on practically useful end-fed wire lengths.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Why the impedance ceiling is 3 500 Ω</h4>
+      <p>
+        The formula <code>|Z| = Z₀ · |cot(βL)|</code> gives Z → ∞ at exact half-wave
+        resonances. In practice, radiation resistance and wire/ground losses limit the
+        real peak to roughly 2 000–5 000 Ω depending on wire height and diameter.
+        3 500 Ω is a realistic mid-range ceiling for the model. Values above it are
+        clamped so the graph stays readable and physically plausible.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Why the impedance floor is 25 Ω</h4>
+      <p>
+        At anti-resonance (λ/4 wire lengths), current is maximum at the feed point,
+        giving low impedance. A theoretically lossless wire would approach 0 Ω, but
+        real wires at typical HF heights give roughly 20–60 Ω due to radiation
+        resistance and conductor/ground losses. 25 Ω is a conservative educational
+        floor that reflects real-world measurement data.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>How the matching zone ranges were derived</h4>
+      <p>
+        <strong style="color:#ffa000">Direct 50 Ω (25–100 Ω):</strong>
+        A 50 Ω transceiver typically tolerates SWR ≤ 2:1.
+        SWR 2:1 spans <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
+      </p>
+      <p style="margin-top:6px">
+        <strong style="color:#4096ff">9:1 Unun + Tuner (75–1 800 Ω):</strong>
+        A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna. A good tuner
+        extends the match by roughly ±4×, giving
+        <code>450 / 6 ≈ 75 Ω</code> to <code>450 × 4 ≈ 1 800 Ω</code>.
+      </p>
+      <p style="margin-top:6px">
+        <strong style="color:#32c850">49:1 Unun (2 000–3 500 Ω):</strong>
+        A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal.
+        Allowing for a practical SWR ≤ 1.5:1 window around that target gives
+        roughly 2 000–3 500 Ω on the antenna side — no tuner needed.
+      </p>
+    </div>
+
+  </div>
+</details>
 
 <div id="tooltip"></div>
 
@@ -393,7 +510,10 @@ function getXRange() {
   const ab = getActiveBands();
   if (!ab.length) return { xMin: 1, xMax: 50 };
   const lowestFreq = Math.min(...ab.map(b => b.freq));
-  return { xMin: 1, xMax: C / lowestFreq }; // 0..λ of lowest band
+  const lambda = C / lowestFreq;
+  // Start at λ/4 of the lowest band: below this the wire is electrically
+  // short, the TL model breaks down, and practical end-fed use is rare.
+  return { xMin: lambda / 4, xMax: lambda };
 }
 
 function logScale(Z) {
