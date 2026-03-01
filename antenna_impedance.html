@@ -272,6 +272,31 @@ header p {
 #cpLengthInput:focus { outline: none; border-color: #c070ff; }
 .cp-unit { font-size: 0.73rem; color: var(--muted); }
 
+/* ─── SWEET SPOTS CONTROL ─────────────────────── */
+#sweetSpotsControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ss-min-wrap {
+  display: none;
+  align-items: center;
+  gap: 5px;
+}
+.ss-min-wrap.show { display: flex; }
+#ssMinInput {
+  width: 40px;
+  padding: 3px 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+#ssMinInput:focus { outline: none; border-color: #ffd700; }
+
 /* ─── VELOCITY FACTOR CONTROL ─────────────────── */
 #vfControl { display: flex; align-items: center; gap: 8px; }
 #vfSlider  { width: 88px; accent-color: #5c9af5; cursor: pointer; }
@@ -357,9 +382,16 @@ header p {
       <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
         <span class="zone-swatch"></span>1:1 Unun
       </button>
+    </div>
+    <div id="sweetSpotsControl">
       <button class="zone-btn" id="sweetSpotsBtn" style="--zc: #ffd700">
         <span class="zone-swatch"></span>Sweet Spots
       </button>
+      <div class="ss-min-wrap" id="ssMinWrap">
+        <span class="cp-unit">min</span>
+        <input type="number" id="ssMinInput" value="2" min="2" max="11" step="1">
+        <span class="cp-unit">bands</span>
+      </div>
     </div>
   </div>
   <div class="ctrl-group">
@@ -638,8 +670,9 @@ const Y_TICKS = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750,
                  1000, 1500, 2000, 3000, 3500, 4500, 5000];
 const Y_MAJOR = new Set([10, 50, 100, 500, 1000, 2000, 5000]);
 
-// Sweet spot overlay (wire lengths where ≥2 active bands fall in matching zones)
-let sweetSpotsOn = false;
+// Sweet spot overlay (wire lengths where ≥N active bands fall in matching zones)
+let sweetSpotsOn  = false;
+let sweetSpotsMin = 2;
 
 // Hover state + canvas CSS dimensions
 let hoverCx = null;
@@ -801,7 +834,7 @@ function draw() {
   });
 
   // ── Sweet spot overlay (≥2 bands simultaneously in a matching zone) ──
-  if (sweetSpotsOn && ab.length >= 2) {
+  if (sweetSpotsOn && ab.length >= sweetSpotsMin) {
     const SCAN = 800;
     const dL = (xRange.xMax - xRange.xMin) / SCAN;
     const spots = [];
@@ -814,8 +847,8 @@ function draw() {
         const Z = calcZ(L, band.freq);
         return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
       }).length;
-      if (hits >= 2 && !inSpot) { spotStartCx = cx; inSpot = true; }
-      else if (hits < 2 && inSpot) { spots.push([spotStartCx, cx]); inSpot = false; }
+      if (hits >= sweetSpotsMin && !inSpot) { spotStartCx = cx; inSpot = true; }
+      else if (hits < sweetSpotsMin && inSpot) { spots.push([spotStartCx, cx]); inSpot = false; }
     }
     if (inSpot) spots.push([spotStartCx, xPx(xRange.xMax, xRange, W)]);
 
@@ -1070,13 +1103,22 @@ function buildZoneButtons() {
       draw();
     };
   });
-  const ssBtn = document.getElementById('sweetSpotsBtn');
+  const ssBtn  = document.getElementById('sweetSpotsBtn');
+  const ssWrap = document.getElementById('ssMinWrap');
+  const ssInp  = document.getElementById('ssMinInput');
   if (ssBtn) {
     ssBtn.onclick = () => {
       sweetSpotsOn = !sweetSpotsOn;
       ssBtn.classList.toggle('on', sweetSpotsOn);
+      ssWrap.classList.toggle('show', sweetSpotsOn);
       draw();
     };
+  }
+  if (ssInp) {
+    ssInp.addEventListener('input', () => {
+      const v = parseInt(ssInp.value);
+      if (v >= 2) { sweetSpotsMin = v; draw(); }
+    });
   }
 }
 
