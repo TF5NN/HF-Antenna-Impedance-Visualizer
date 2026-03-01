@@ -253,23 +253,6 @@ header p {
   gap: 8px;
   flex-wrap: wrap;
 }
-.cp-len-wrap {
-  display: none;
-  align-items: center;
-  gap: 5px;
-}
-.cp-len-wrap.show { display: flex; }
-#cpLengthInput {
-  width: 56px;
-  padding: 3px 7px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: var(--text);
-  font-size: 0.8rem;
-  font-family: monospace;
-}
-#cpLengthInput:focus { outline: none; border-color: #c070ff; }
 .cp-unit { font-size: 0.73rem; color: var(--muted); }
 
 /* ─── SWEET SPOTS CONTROL ─────────────────────── */
@@ -279,14 +262,15 @@ header p {
   gap: 8px;
   margin-top: 4px;
 }
-.ss-min-wrap {
+
+/* ─── SHARED: toggle button sub-panel ─────────── */
+.toggle-sub {
   display: none;
   align-items: center;
   gap: 5px;
 }
-.ss-min-wrap.show { display: flex; }
-#ssMinInput {
-  width: 40px;
+.toggle-sub.show { display: flex; }
+.toggle-sub input {
   padding: 3px 7px;
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -295,7 +279,11 @@ header p {
   font-size: 0.8rem;
   font-family: monospace;
 }
-#ssMinInput:focus { outline: none; border-color: #ffd700; }
+.toggle-sub input:focus { outline: none; }
+#cpLengthInput { width: 56px; }
+#cpLengthInput:focus { border-color: #c070ff; }
+#ssMinInput { width: 40px; }
+#ssMinInput:focus { border-color: #ffd700; }
 
 /* ─── VELOCITY FACTOR CONTROL ─────────────────── */
 #vfControl { display: flex; align-items: center; gap: 8px; }
@@ -387,7 +375,7 @@ header p {
       <button class="zone-btn" id="sweetSpotsBtn" style="--zc: #ffd700">
         <span class="zone-swatch"></span>Sweet Spots
       </button>
-      <div class="ss-min-wrap" id="ssMinWrap">
+      <div class="toggle-sub" id="ssMinWrap">
         <span class="cp-unit">min</span>
         <input type="number" id="ssMinInput" value="2" min="2" max="11" step="1">
         <span class="cp-unit">bands</span>
@@ -400,7 +388,7 @@ header p {
       <button class="zone-btn" id="cpToggleBtn" style="--zc: #c070ff">
         <span class="zone-swatch"></span>Show effect
       </button>
-      <div class="cp-len-wrap" id="cpLenWrap">
+      <div class="toggle-sub" id="cpLenWrap">
         <span class="cp-unit">Length</span>
         <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
         <span class="cp-unit">m</span>
@@ -702,6 +690,14 @@ function mismatchEff(Z, Zref) {
   return (4 * Z * Zref) / Math.pow(Z + Zref, 2);
 }
 
+function formatLength(L) {
+  return (L >= 10 ? L.toFixed(1) : L.toFixed(2)) + ' m';
+}
+
+function calcSWR(Z, Zref) {
+  return (Math.max(Z, Zref) / Math.min(Z, Zref)).toFixed(1);
+}
+
 // Canvas layout margins (px)
 const M = { top: 22, right: 115, bottom: 50, left: 68 };
 
@@ -709,10 +705,14 @@ const M = { top: 22, right: 115, bottom: 50, left: 68 };
 const Y_TICKS = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750,
                  1000, 1500, 2000, 3000, 3500, 4500, 5000];
 const Y_MAJOR = new Set([10, 50, 100, 500, 1000, 2000, 5000]);
+const SWEET_SPOT_SCAN_POINTS = 800; // resolution of sweet-spot X-axis sweep
 
 // Sweet spot overlay (wire lengths where ≥N active bands fall in matching zones)
-let sweetSpotsOn  = false;
-let sweetSpotsMin = 2;
+let sweetSpotsOn    = false;
+let sweetSpotsMin   = 2;
+let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
+
+function invalidateSweetSpots() { sweetSpotsCache = null; }
 
 // Hover state + canvas CSS dimensions
 let hoverCx = null;
@@ -873,34 +873,33 @@ function draw() {
                  M.left + plotW + 8, midY + 9);
   });
 
-  // ── Sweet spot overlay (≥2 bands simultaneously in a matching zone) ──
+  // ── Sweet spot overlay (≥N bands simultaneously in a matching zone) ──
   if (sweetSpotsOn && ab.length >= sweetSpotsMin) {
-    const SCAN = 800;
-    const dL = (xRange.xMax - xRange.xMin) / SCAN;
-    const spots = [];
-    let inSpot = false, spotStartCx = 0;
-
-    for (let i = 0; i <= SCAN; i++) {
-      const L  = xRange.xMin + i * dL;
-      const cx = xPx(L, xRange, W);
-      const hits = ab.filter(band => {
-        const Z = calcZ(L, band.freq);
-        return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
-      }).length;
-      if (hits >= sweetSpotsMin && !inSpot) { spotStartCx = cx; inSpot = true; }
-      else if (hits < sweetSpotsMin && inSpot) { spots.push([spotStartCx, cx]); inSpot = false; }
+    // Compute once; reuse until state changes (bands, zones, VF, counterpoise)
+    if (!sweetSpotsCache) {
+      const dL = (xRange.xMax - xRange.xMin) / SWEET_SPOT_SCAN_POINTS;
+      const segs = [];
+      let inSpot = false, spotStartL = 0;
+      for (let i = 0; i <= SWEET_SPOT_SCAN_POINTS; i++) {
+        const L = xRange.xMin + i * dL;
+        const hits = ab.filter(band => {
+          const Z = calcZ(L, band.freq);
+          return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
+        }).length;
+        if (hits >= sweetSpotsMin && !inSpot) { spotStartL = L; inSpot = true; }
+        else if (hits < sweetSpotsMin && inSpot) { segs.push([spotStartL, L]); inSpot = false; }
+      }
+      if (inSpot) segs.push([spotStartL, xRange.xMax]);
+      sweetSpotsCache = segs;
     }
-    if (inSpot) spots.push([spotStartCx, xPx(xRange.xMax, xRange, W)]);
 
-    spots.forEach(([x1, x2]) => {
+    sweetSpotsCache.forEach(([L1, L2]) => {
+      const x1 = xPx(L1, xRange, W), x2 = xPx(L2, xRange, W);
       const w = x2 - x1, mid = (x1 + x2) / 2;
-      // Subtle gold column fill
       ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
       ctx.fillRect(x1, M.top, w, plotH);
-      // Thin gold stripe at top edge
       ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
       ctx.fillRect(x1, M.top, w, 2);
-      // Star label at top
       ctx.fillStyle = '#ffd700cc';
       ctx.font = 'bold 9px system-ui, sans-serif';
       ctx.textAlign = 'center';
@@ -973,8 +972,7 @@ function draw() {
       ctx.font = 'bold 8px system-ui, sans-serif';
       ctx.textAlign = 'left';
       const nLabel = n === 1 ? 'λ/2' : `${n}×λ/2`;
-      const lenLabel = resL >= 10 ? resL.toFixed(1) : resL.toFixed(2);
-      ctx.fillText(`${band.name}  ${nLabel}  ${lenLabel} m`, 5, 0);
+      ctx.fillText(`${band.name}  ${nLabel}  ${formatLength(resL)}`, 5, 0);
       ctx.restore();
     }
   });
@@ -1125,6 +1123,7 @@ function buildBandButtons() {
     btn.onclick = () => {
       band.on = !band.on;
       btn.classList.toggle('on', band.on);
+      invalidateSweetSpots();
       updateLegend();
       resizeAndDraw();
     };
@@ -1133,33 +1132,33 @@ function buildBandButtons() {
 }
 
 function buildZoneButtons() {
-  ZONES.forEach((zone, i) => {
+  ZONES.forEach(zone => {
     const btn = document.getElementById(zone.id + 'Btn');
     if (!btn) return;
     btn.classList.toggle('on', zone.on);
     btn.onclick = () => {
       zone.on = !zone.on;
       btn.classList.toggle('on', zone.on);
+      invalidateSweetSpots();
       draw();
     };
   });
+}
+
+function setupSweetSpots() {
   const ssBtn  = document.getElementById('sweetSpotsBtn');
   const ssWrap = document.getElementById('ssMinWrap');
   const ssInp  = document.getElementById('ssMinInput');
-  if (ssBtn) {
-    ssBtn.onclick = () => {
-      sweetSpotsOn = !sweetSpotsOn;
-      ssBtn.classList.toggle('on', sweetSpotsOn);
-      ssWrap.classList.toggle('show', sweetSpotsOn);
-      draw();
-    };
-  }
-  if (ssInp) {
-    ssInp.addEventListener('input', () => {
-      const v = parseInt(ssInp.value);
-      if (v >= 2) { sweetSpotsMin = v; draw(); }
-    });
-  }
+  ssBtn.onclick = () => {
+    sweetSpotsOn = !sweetSpotsOn;
+    ssBtn.classList.toggle('on', sweetSpotsOn);
+    ssWrap.classList.toggle('show', sweetSpotsOn);
+    draw();
+  };
+  ssInp.addEventListener('input', () => {
+    const v = parseInt(ssInp.value);
+    if (v >= 2) { sweetSpotsMin = v; invalidateSweetSpots(); draw(); }
+  });
 }
 
 function updateLegend() {
@@ -1197,9 +1196,8 @@ function setupHover() {
       cy >= M.top  && cy <= H - M.bottom;
 
     if (!inPlot || !ab.length) {
-      hoverCx = null;
       tooltip.style.display = 'none';
-      draw();
+      if (hoverCx !== null) { hoverCx = null; draw(); }
       return;
     }
 
@@ -1209,8 +1207,9 @@ function setupHover() {
     const cpHeader = cpEnabled
       ? ` <span style="color:#c070ff;font-size:0.68rem">+ CP ${cpLengthM}m</span>`
       : '';
-    let html = `<div class="tt-title">Wire length: ${L >= 10 ? L.toFixed(1) : L.toFixed(2)} m${cpHeader}</div>`;
+    let html = `<div class="tt-title">Wire length: ${formatLength(L)}${cpHeader}</div>`;
 
+    let anyZoneHit = false;
     ab.forEach(band => {
       const Z      = calcZ(L, band.freq);
       const Zwire  = cpEnabled ? calcZwire(L, band.freq) : null;
@@ -1218,10 +1217,11 @@ function setupHover() {
       const halfwaves = L / (lambda / 2);
 
       const zoneMatches = ZONES.filter(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      if (zoneMatches.length > 0) anyZoneHit = true;
       const zoneTags = zoneMatches
         .map(z => {
           const eff = Math.round(mismatchEff(Z, z.zRef) * z.xfrmrEff * 100);
-          const swr = (Math.max(Z, z.zRef) / Math.min(Z, z.zRef)).toFixed(1);
+          const swr = calcSWR(Z, z.zRef);
           return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% <span style="opacity:0.75;font-weight:500">SWR ${swr}:1</span></span>`;
         })
         .join(' ');
@@ -1242,10 +1242,6 @@ function setupHover() {
     });
 
     // Footnote — only when at least one band lands in a matching zone
-    const anyZoneHit = ab.some(band => {
-      const Z = calcZ(pxToL(cx, xRange, W), band.freq);
-      return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
-    });
     if (anyZoneHit) {
       html += `<div style="font-size:0.62rem;color:#484f58;margin-top:5px;` +
               `border-top:1px solid #30363d;padding-top:3px">` +
@@ -1287,6 +1283,7 @@ function setupVF() {
   slider.addEventListener('input', () => {
     VF = parseFloat(slider.value);
     display.textContent = VF.toFixed(3);
+    invalidateSweetSpots();
     draw();
   });
 }
@@ -1304,12 +1301,13 @@ function setupCounterpoise() {
     cpEnabled = !cpEnabled;
     btn.classList.toggle('on', cpEnabled);
     wrap.classList.toggle('show', cpEnabled);
+    invalidateSweetSpots();
     draw();
   };
 
   inp.addEventListener('input', () => {
     const v = parseFloat(inp.value);
-    if (v > 0) { cpLengthM = v; draw(); }
+    if (v > 0) { cpLengthM = v; invalidateSweetSpots(); draw(); }
   });
 }
 
@@ -1344,6 +1342,7 @@ updateLegend();
 setupHover();
 setupVF();
 setupCounterpoise();
+setupSweetSpots();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
 </script>
