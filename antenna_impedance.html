@@ -377,7 +377,7 @@ header p {
       </button>
       <div class="toggle-sub" id="ssMinWrap">
         <span class="cp-unit">min</span>
-        <input type="number" id="ssMinInput" value="2" min="2" max="11" step="1">
+        <input type="number" id="ssMinInput" value="2" min="1" max="11" step="1">
         <span class="cp-unit">bands</span>
       </div>
     </div>
@@ -714,7 +714,7 @@ const SWEET_SPOT_SCAN_POINTS = 800; // resolution of sweet-spot X-axis sweep
 
 // Sweet spot overlay (wire lengths where ≥N active bands fall in matching zones)
 let sweetSpotsOn    = false;
-let sweetSpotsMin   = 2;
+let sweetSpotsMin   = 1;
 let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
 
 function invalidateSweetSpots() { sweetSpotsCache = null; }
@@ -1155,10 +1155,9 @@ function buildZoneButtons() {
 // user can still type any value into the input to override for the session.
 function syncSweetSpotsMin() {
   const n = getActiveBands().length;
-  const auto = Math.max(2, Math.ceil(n / 2));
-  sweetSpotsMin = auto;
+  sweetSpotsMin = n;
   const inp = document.getElementById('ssMinInput');
-  if (inp) inp.value = auto;
+  if (inp) inp.value = n;
 }
 
 function setupSweetSpots() {
@@ -1174,7 +1173,7 @@ function setupSweetSpots() {
   };
   ssInp.addEventListener('input', () => {
     const v = parseInt(ssInp.value);
-    if (v >= 2) { sweetSpotsMin = v; invalidateSweetSpots(); draw(); }
+    if (v >= 1) { sweetSpotsMin = v; invalidateSweetSpots(); draw(); }
   });
 }
 
