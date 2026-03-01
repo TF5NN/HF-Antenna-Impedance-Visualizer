@@ -351,11 +351,11 @@ header p {
       <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
         <span class="zone-swatch"></span>49:1 Unun
       </button>
-      <button class="zone-btn on" id="z1Btn" style="--zc: #4096ff">
+      <button class="zone-btn" id="z1Btn" style="--zc: #4096ff">
         <span class="zone-swatch"></span>9:1 + Tuner
       </button>
-      <button class="zone-btn on" id="z2Btn" style="--zc: #ffa000">
-        <span class="zone-swatch"></span>Direct 50 Ω
+      <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
+        <span class="zone-swatch"></span>1:1 Balun
       </button>
     </div>
   </div>
@@ -398,7 +398,7 @@ header p {
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
-    <strong>Direct 50 Ω:</strong>&nbsp;25–100 Ω — direct connection, no transformer, SWR ≤ 2:1.
+    <strong>1:1 Balun:</strong>&nbsp;25–100 Ω — choke/current balun, suppresses common-mode RF, SWR ≤ 2:1.
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -494,7 +494,7 @@ header p {
         within a zone wastes little power as mismatch alone; network loss often matters more.
       </p>
       <p style="margin-top:6px">
-        <strong>Network loss estimates used:</strong> Direct 50 Ω — none (Zref = 50 Ω,
+        <strong>Network loss estimates used:</strong> 1:1 Balun — none (Zref = 50 Ω,
         η_net = 100%); 9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
         49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
         losses vary with power, frequency, core material, and winding quality.
@@ -504,9 +504,10 @@ header p {
     <div class="notes-block">
       <h4>How the matching zone ranges were derived</h4>
       <p>
-        <strong style="color:#ffa000">Direct 50 Ω (25–100 Ω):</strong>
-        A 50 Ω transceiver typically tolerates SWR ≤ 2:1.
-        SWR 2:1 spans <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
+        <strong style="color:#ffa000">1:1 Balun (25–100 Ω):</strong>
+        A 1:1 current/choke balun suppresses common-mode RF without changing impedance.
+        A 50 Ω transceiver typically tolerates SWR ≤ 2:1, spanning
+        <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
       </p>
       <p style="margin-top:6px">
         <strong style="color:#4096ff">9:1 Unun + Tuner (75–1 800 Ω):</strong>
@@ -576,17 +577,17 @@ const ZONES = [
     fill:   'rgba(64, 150, 255, 0.11)',
     stroke: 'rgba(64, 150, 255, 0.60)',
     text:   '#4096ff',
-    on: true,
+    on: false,
   },
   {
-    id: 'z2', label: 'Direct 50 Ω',
+    id: 'z2', label: '1:1 Balun',
     zMin: 25, zMax: 100,
-    zRef: 50,        // direct 50 Ω — no transformer
-    xfrmrEff: 1.00,  // no transformer loss
+    zRef: 50,        // 1:1 choke balun — no impedance transformation
+    xfrmrEff: 1.00,  // negligible loss
     fill:   'rgba(255, 160, 0, 0.15)',
     stroke: 'rgba(255, 160, 0, 0.75)',
     text:   '#ffa000',
-    on: true,
+    on: false,
   },
 ];
 
