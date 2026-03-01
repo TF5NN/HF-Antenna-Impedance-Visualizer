@@ -57,13 +57,6 @@ header p {
   white-space: nowrap;
   align-self: center;
 }
-#versionLabel {
-  font-size: 0.68rem;
-  color: var(--muted2);
-  margin-left: auto;
-  white-space: nowrap;
-  align-self: center;
-}
 
 /* ─── CONTROLS ────────────────────────────────── */
 #controls {
@@ -316,6 +309,56 @@ header p {
 #vfSlider  { width: 88px; accent-color: #5c9af5; cursor: pointer; }
 #vfDisplay { font-family: monospace; font-size: 0.8rem; color: var(--text); min-width: 36px; }
 
+/* ─── PIN / INSPECT-LENGTH CONTROL ───────────── */
+#pinControl { display: flex; align-items: center; gap: 5px; }
+#pinInput {
+  width: 62px;
+  padding: 3px 7px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+#pinInput:focus { outline: none; border-color: rgba(255,255,255,0.35); }
+.pin-clear-btn {
+  background: none;
+  border: none;
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+}
+.pin-clear-btn:hover { color: var(--text); }
+
+/* ─── SWEET SPOTS RESULTS TABLE ───────────────── */
+#sweetSpotsTable {
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 20px;
+  font-size: 0.71rem;
+}
+#sweetSpotsTable.show { display: flex; }
+#sweetSpotsTable .ss-header {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+  font-weight: 700;
+  margin-bottom: 1px;
+}
+.ss-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.ss-star { color: #ffd700; font-size: 0.8rem; flex-shrink: 0; }
+.ss-range { font-family: monospace; color: var(--text); min-width: 60px; }
+.ss-range-full { color: var(--muted2); font-size: 0.65rem; }
+.ss-band { font-weight: 700; }
+.ss-zone { font-size: 0.65rem; opacity: 0.8; }
+
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
   background: var(--surface2);
@@ -377,7 +420,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.0 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.01 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -433,6 +476,14 @@ header p {
       <span id="vfDisplay">0.975</span>
     </div>
   </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Inspect length</div>
+    <div id="pinControl">
+      <input type="number" id="pinInput" min="0.1" max="999" step="0.1" placeholder="m">
+      <span class="cp-unit">m</span>
+      <button class="pin-clear-btn" id="pinClearBtn" title="Remove pin">×</button>
+    </div>
+  </div>
 </div>
 
 <div id="graphWrap">
@@ -456,6 +507,8 @@ header p {
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
+
+<div id="sweetSpotsTable"></div>
 
 <details id="notesPanel">
   <summary>Model notes &amp; derivations</summary>
@@ -600,7 +653,9 @@ header p {
         The <strong>★ Sweet Spots</strong> toggle highlights wire lengths where a
         minimum number of active bands simultaneously fall inside matching zones.
         A gold column appears wherever the condition is met; a ★ marks the centre
-        of each cluster. The <em>min bands</em> control sets the threshold (default 2).
+        of each cluster. The <em>min bands</em> control sets the threshold — it
+        auto-defaults to the number of active bands, requiring all selected bands to
+        coincide simultaneously.
       </p>
       <p style="margin-top:6px">
         This is particularly useful for identifying a single wire length that covers
@@ -751,9 +806,13 @@ let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments
 function invalidateSweetSpots() { sweetSpotsCache = null; }
 
 // Hover state + canvas CSS dimensions
-let hoverCx = null;
-let CANVAS_W = 800; // CSS pixel width  (updated in resizeAndDraw)
-let CANVAS_H = 500; // CSS pixel height (updated in resizeAndDraw)
+let hoverCx    = null;
+let CANVAS_W   = 800; // CSS pixel width  (updated in resizeAndDraw)
+let CANVAS_H   = 500; // CSS pixel height (updated in resizeAndDraw)
+
+// Pin (locked inspect line) state
+let pinL       = null;  // wire length in metres, null = no pin
+let isDragging = false;
 
 // Counterpoise state
 let cpEnabled = false;
@@ -1108,6 +1167,53 @@ function draw() {
     }
   }
 
+  // ── Pin line (persistent inspect marker) ──
+  if (pinL !== null) {
+    const pinCx = xPx(pinL, xRange, W);
+    if (pinCx >= M.left && pinCx <= M.left + plotW) {
+      // Line
+      ctx.strokeStyle = 'rgba(255,255,255,0.50)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(pinCx, M.top);
+      ctx.lineTo(pinCx, M.top + plotH);
+      ctx.stroke();
+
+      // Drag-handle tab at top
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.moveTo(pinCx - 5, M.top);
+      ctx.lineTo(pinCx + 5, M.top);
+      ctx.lineTo(pinCx + 5, M.top - 9);
+      ctx.lineTo(pinCx,     M.top - 14);
+      ctx.lineTo(pinCx - 5, M.top - 9);
+      ctx.closePath();
+      ctx.fill();
+
+      // Length label in tab
+      ctx.fillStyle = '#0d1117';
+      ctx.font = 'bold 7px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(formatLength(pinL), pinCx, M.top - 4);
+
+      // Dots on band curves
+      ab.forEach(band => {
+        const Z  = calcZ(pinL, band.freq);
+        const cy = yPx(Z, H);
+        if (cy >= M.top && cy <= M.top + plotH) {
+          ctx.fillStyle = band.color;
+          ctx.beginPath();
+          ctx.arc(pinCx, cy, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      });
+    }
+  }
+
   // ── Axis border ──
   ctx.strokeStyle = '#30363d';
   ctx.lineWidth = 1.5;
@@ -1143,6 +1249,43 @@ function draw() {
     ctx.textAlign = 'right';
     ctx.fillText(txt, M.left + plotW - 4, M.top + 13);
   }
+
+  updateSweetSpotsTable();
+}
+
+// ════════════════════════════════════════════════
+//  SWEET SPOTS RESULTS TABLE
+// ════════════════════════════════════════════════
+
+function updateSweetSpotsTable() {
+  const el = document.getElementById('sweetSpotsTable');
+  if (!el) return;
+  if (!sweetSpotsOn || !sweetSpotsCache || sweetSpotsCache.length === 0) {
+    el.classList.remove('show');
+    return;
+  }
+  const ab = getActiveBands();
+  let html = '<div class="ss-header">★ Sweet spot wire lengths</div>';
+  sweetSpotsCache.forEach(([L1, L2]) => {
+    const centre = (L1 + L2) / 2;
+    const bandTags = ab.map(band => {
+      const Z    = calcZ(centre, band.freq);
+      const zone = ZONES.find(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      if (!zone) return '';
+      const eff = Math.round(mismatchEff(Z, zone.zRef) * zone.xfrmrEff * 100);
+      return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
+             `<span class="ss-zone" style="color:${zone.text}">${zone.label}&nbsp;~${eff}%</span>`;
+    }).filter(Boolean).join(' &nbsp;');
+    html +=
+      `<div class="ss-row">` +
+      `<span class="ss-star">★</span>` +
+      `<span class="ss-range">${formatLength(centre)}` +
+      ` <span class="ss-range-full">(${formatLength(L1)}–${formatLength(L2)})</span></span>` +
+      bandTags +
+      `</div>`;
+  });
+  el.innerHTML = html;
+  el.classList.add('show');
 }
 
 // ════════════════════════════════════════════════
@@ -1236,9 +1379,29 @@ function updateLegend() {
 //  HOVER / TOOLTIP
 // ════════════════════════════════════════════════
 
+function syncPinInput(L) {
+  const inp = document.getElementById('pinInput');
+  if (inp) inp.value = L === null ? '' : formatLength(L).replace(' m', '');
+}
+
 function setupHover() {
   const canvas  = document.getElementById('graph');
   const tooltip = document.getElementById('tooltip');
+
+  canvas.addEventListener('mousedown', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cx   = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+    const cy   = (e.clientY - rect.top)  * (CANVAS_H / rect.height);
+    const inPlot = cx >= M.left && cx <= CANVAS_W - M.right &&
+                   cy >= M.top  && cy <= CANVAS_H - M.bottom;
+    if (!inPlot) return;
+    isDragging = true;
+    pinL = pxToL(cx, getXRange(), CANVAS_W);
+    syncPinInput(pinL);
+    draw();
+  });
+
+  document.addEventListener('mouseup', () => { isDragging = false; });
 
   function onMove(e) {
     const rect  = canvas.getBoundingClientRect();
@@ -1253,9 +1416,22 @@ function setupHover() {
       cx >= M.left && cx <= W - M.right &&
       cy >= M.top  && cy <= H - M.bottom;
 
+    // Update cursor: ew-resize when near pin line, crosshair otherwise
+    if (inPlot && pinL !== null && Math.abs(cx - xPx(pinL, xRange, W)) <= 6) {
+      canvas.style.cursor = 'ew-resize';
+    } else {
+      canvas.style.cursor = inPlot ? 'crosshair' : '';
+    }
+
+    // While dragging, update pin position
+    if (isDragging && inPlot) {
+      pinL = pxToL(cx, xRange, W);
+      syncPinInput(pinL);
+    }
+
     if (!inPlot || !ab.length) {
       tooltip.style.display = 'none';
-      if (hoverCx !== null) { hoverCx = null; draw(); }
+      if (hoverCx !== null || isDragging) { hoverCx = null; draw(); }
       return;
     }
 
@@ -1370,6 +1546,31 @@ function setupCounterpoise() {
 }
 
 // ════════════════════════════════════════════════
+//  PIN CONTROL
+// ════════════════════════════════════════════════
+
+function setupPinControl() {
+  const inp      = document.getElementById('pinInput');
+  const clearBtn = document.getElementById('pinClearBtn');
+
+  inp.addEventListener('input', () => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && v > 0) {
+      pinL = v;
+    } else {
+      pinL = null;
+    }
+    draw();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    pinL = null;
+    inp.value = '';
+    draw();
+  });
+}
+
+// ════════════════════════════════════════════════
 //  RESIZE + DRAW
 // ════════════════════════════════════════════════
 
@@ -1401,6 +1602,7 @@ setupHover();
 setupVF();
 setupCounterpoise();
 setupSweetSpots();
+setupPinControl();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
 </script>
