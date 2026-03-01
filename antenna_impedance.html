@@ -357,6 +357,9 @@ header p {
       <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
         <span class="zone-swatch"></span>1:1 Unun
       </button>
+      <button class="zone-btn" id="sweetSpotsBtn" style="--zc: #ffd700">
+        <span class="zone-swatch"></span>Sweet Spots
+      </button>
     </div>
   </div>
   <div class="ctrl-group">
@@ -620,6 +623,9 @@ const Y_TICKS = [10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750,
                  1000, 1500, 2000, 3000, 3500, 4500, 5000];
 const Y_MAJOR = new Set([10, 50, 100, 500, 1000, 2000, 5000]);
 
+// Sweet spot overlay (wire lengths where ≥2 active bands fall in matching zones)
+let sweetSpotsOn = false;
+
 // Hover state + canvas CSS dimensions
 let hoverCx = null;
 let CANVAS_W = 800; // CSS pixel width  (updated in resizeAndDraw)
@@ -779,6 +785,41 @@ function draw() {
                  M.left + plotW + 8, midY + 9);
   });
 
+  // ── Sweet spot overlay (≥2 bands simultaneously in a matching zone) ──
+  if (sweetSpotsOn && ab.length >= 2) {
+    const SCAN = 800;
+    const dL = (xRange.xMax - xRange.xMin) / SCAN;
+    const spots = [];
+    let inSpot = false, spotStartCx = 0;
+
+    for (let i = 0; i <= SCAN; i++) {
+      const L  = xRange.xMin + i * dL;
+      const cx = xPx(L, xRange, W);
+      const hits = ab.filter(band => {
+        const Z = calcZ(L, band.freq);
+        return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      }).length;
+      if (hits >= 2 && !inSpot) { spotStartCx = cx; inSpot = true; }
+      else if (hits < 2 && inSpot) { spots.push([spotStartCx, cx]); inSpot = false; }
+    }
+    if (inSpot) spots.push([spotStartCx, xPx(xRange.xMax, xRange, W)]);
+
+    spots.forEach(([x1, x2]) => {
+      const w = x2 - x1, mid = (x1 + x2) / 2;
+      // Subtle gold column fill
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
+      ctx.fillRect(x1, M.top, w, plotH);
+      // Thin gold stripe at top edge
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
+      ctx.fillRect(x1, M.top, w, 2);
+      // Star label at top
+      ctx.fillStyle = '#ffd700cc';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', mid, M.top + 13);
+    });
+  }
+
   // ── Y grid ──
   Y_TICKS.forEach(val => {
     if (val < Y_AXIS_MIN || val > Y_AXIS_MAX) return;
@@ -835,6 +876,18 @@ function draw() {
       ctx.lineTo(cx, M.top + plotH);
       ctx.stroke();
       ctx.setLineDash([]);
+
+      // Rotated annotation — band name + harmonic + length, reading bottom-to-top
+      ctx.save();
+      ctx.translate(cx, M.top + plotH - 6);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = band.color + 'b0';
+      ctx.font = 'bold 8px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      const nLabel = n === 1 ? 'λ/2' : `${n}×λ/2`;
+      const lenLabel = resL >= 10 ? resL.toFixed(1) : resL.toFixed(2);
+      ctx.fillText(`${band.name}  ${nLabel}  ${lenLabel} m`, 5, 0);
+      ctx.restore();
     }
   });
 
@@ -1002,6 +1055,14 @@ function buildZoneButtons() {
       draw();
     };
   });
+  const ssBtn = document.getElementById('sweetSpotsBtn');
+  if (ssBtn) {
+    ssBtn.onclick = () => {
+      sweetSpotsOn = !sweetSpotsOn;
+      ssBtn.classList.toggle('on', sweetSpotsOn);
+      draw();
+    };
+  }
 }
 
 function updateLegend() {
@@ -1063,7 +1124,8 @@ function setupHover() {
       const zoneTags = zoneMatches
         .map(z => {
           const eff = Math.round(mismatchEff(Z, z.zRef) * z.xfrmrEff * 100);
-          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}%</span>`;
+          const swr = (Math.max(Z, z.zRef) / Math.min(Z, z.zRef)).toFixed(1);
+          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% <span style="opacity:0.75;font-weight:500">SWR ${swr}:1</span></span>`;
         })
         .join(' ');
 
