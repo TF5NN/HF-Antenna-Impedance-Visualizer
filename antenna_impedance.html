@@ -502,6 +502,21 @@ header p {
         49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
         losses vary with power, frequency, core material, and winding quality.
       </p>
+      <p style="margin-top:6px">
+        <strong>Radiation efficiency is not modelled.</strong> The percentages shown
+        describe how much transmitter power reaches the antenna feedpoint — they say
+        nothing about how much of that power is actually radiated into space. Radiation
+        efficiency depends on the ratio of radiation resistance to total loss resistance
+        (conductor + ground + near-field), and varies enormously with installation.
+        Rough ballparks: at <strong>EFHW resonance</strong> (49:1 zone) a well-installed
+        wire is typically <strong>70–90 %</strong> efficient because radiation resistance
+        is high (hundreds to thousands of ohms) and dominates over losses. At
+        <strong>λ/4 anti-resonance</strong> (1:1 Unun zone, ~25–50 Ω) radiation
+        resistance is only ~10–20 Ω — comparable to wire and ground losses — giving
+        <strong>30–60 %</strong> in practice, despite the near-perfect impedance match.
+        A high matching efficiency figure at a low-impedance length should not be
+        interpreted as a high-performance antenna.
+      </p>
     </div>
 
     <div class="notes-block">
@@ -1152,7 +1167,10 @@ function setupHover() {
     if (anyZoneHit) {
       html += `<div style="font-size:0.62rem;color:#484f58;margin-top:5px;` +
               `border-top:1px solid #30363d;padding-top:3px">` +
-              `% = power to antenna (mismatch loss + transformer loss est.)</div>`;
+              `% = matching + transformer efficiency only — power <em>delivered to the feedpoint</em>, ` +
+              `not power radiated. Radiation efficiency (how much actually leaves as RF) is separate: ` +
+              `typically 70–90 % at EFHW resonance (49:1 zone), 30–60 % at λ/4 anti-resonance (1:1 zone), ` +
+              `and varies with wire height, ground quality, and nearby objects.</div>`;
     }
 
     tooltip.innerHTML = html;
