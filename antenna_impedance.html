@@ -425,7 +425,7 @@ header p {
 <div id="infoBar">
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
-    <strong>49:1 Unun:</strong>&nbsp;1500–4500 Ω — EFHW resonant match, SWR ≤ 2:1, no tuner needed.
+    <strong>49:1 Unun:</strong>&nbsp;1500–5000 Ω — EFHW resonant match, SWR ≤ 2:1, no tuner needed.
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
@@ -451,6 +451,23 @@ header p {
         and a feed impedance that is almost impossible to match without special loading coils.
         The open-circuit transmission-line model used here also becomes inaccurate below λ/4.
         Hiding this region keeps the graph focused on practically useful end-fed wire lengths.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Characteristic impedance Z₀ = 550 Ω</h4>
+      <p>
+        The transmission-line formula <code>|Z| = Z₀ · |cot(βL)|</code> requires a
+        characteristic impedance for the wire. For a single wire above ground,
+        Z₀ depends on wire diameter and height:
+        <code>Z₀ ≈ 138 · log₁₀(4h / d)</code>
+        where <em>h</em> is height above ground and <em>d</em> is wire diameter.
+        For a typical 20 AWG (~0.8 mm) wire at 6–10 m height this gives roughly
+        500–600 Ω; 550 Ω is used here as a representative mid-range value.
+        Thicker wire (e.g. 14 AWG, ~1.6 mm) lowers Z₀ by ~30–50 Ω; greater
+        height increases it by a similar amount. The model is calibrated for typical
+        portable and backyard installations — not low-height DX antennas or elevated
+        ground-plane verticals, where Z₀ may differ significantly.
       </p>
     </div>
 
@@ -529,8 +546,10 @@ header p {
         within a zone wastes little power as mismatch alone; network loss often matters more.
       </p>
       <p style="margin-top:6px">
-        <strong>Network loss estimates used:</strong> 1:1 Unun — none (Zref = 50 Ω,
-        η_net = 100%); 9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
+        <strong>Network loss estimates used:</strong> 1:1 Unun — modelled as lossless
+        (η_net = 100%) because the choke passes RF essentially unchanged; real ferrite
+        chokes have ~1–3% insertion loss, negligible for this purpose.
+        9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
         49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
         losses vary with power, frequency, core material, and winding quality.
       </p>
@@ -552,6 +571,25 @@ header p {
     </div>
 
     <div class="notes-block">
+      <h4>Sweet Spots overlay</h4>
+      <p>
+        The <strong>★ Sweet Spots</strong> toggle highlights wire lengths where a
+        minimum number of active bands simultaneously fall inside matching zones.
+        A gold column appears wherever the condition is met; a ★ marks the centre
+        of each cluster. The <em>min bands</em> control sets the threshold (default 2).
+      </p>
+      <p style="margin-top:6px">
+        This is particularly useful for identifying a single wire length that covers
+        multiple bands without retuning — the classic goal of a multi-band EFHW.
+        Note that sweet spots depend on which zones are toggled on: enabling only
+        the 49:1 Unun zone will show lengths where two or more bands are
+        simultaneously near half-wave resonance, which is a strong multi-band
+        indicator; enabling all zones will show a wider (but less selective) set of
+        lengths.
+      </p>
+    </div>
+
+    <div class="notes-block">
       <h4>How the matching zone ranges were derived</h4>
       <p>
         <strong style="color:#ffa000">1:1 Unun (25–100 Ω):</strong>
@@ -567,17 +605,19 @@ header p {
       </p>
       <p style="margin-top:6px">
         <strong style="color:#4096ff">9:1 Unun + Tuner (75–1 800 Ω):</strong>
-        A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna. A good tuner
-        extends the match by roughly ±4×, giving
-        <code>450 / 6 ≈ 75 Ω</code> to <code>450 × 4 ≈ 1 800 Ω</code>.
+        A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna. A typical L-network
+        tuner can then handle roughly 75–1 800 Ω (approximately ÷6 to ×4 of the
+        450 Ω centre). The range is asymmetric because L-network topology inherently
+        covers a wider ratio in one direction; a T-network tuner may extend further.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#32c850">49:1 Unun (1 500–4 500 Ω):</strong>
+        <strong style="color:#32c850">49:1 Unun (1 500–5 000 Ω):</strong>
         A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal.
         SWR ≤ 2:1 spans <code>2 450 / 2 = 1 225 Ω</code> to <code>2 450 × 2 = 4 900 Ω</code>.
-        Real antenna peaks reach 2 000–5 000 Ω depending on height — even 4 500 Ω gives
-        only ~1.8:1 SWR, well within tolerance. The zone shown (1 500–4 500 Ω) is the
-        practical usable range.
+        The zone shown starts at 1 500 Ω (a conservative lower bound — 1 225 Ω at SWR 2:1
+        is attainable but near the noisy anti-resonance region) and extends to 5 000 Ω,
+        matching the model's impedance ceiling. At 5 000 Ω the SWR is
+        <code>5 000 / 2 450 ≈ 2.0:1</code>, right at the tolerance boundary.
       </p>
     </div>
 
@@ -1062,7 +1102,7 @@ function draw() {
   );
   if (isFinite(activeLowest.freq)) {
     const lam = (C / activeLowest.freq).toFixed(1);
-    const txt = `X range: 0–λ of ${activeLowest.name} (${lam} m)`;
+    const txt = `x: λ/4 – λ/1.75 of ${activeLowest.name}  (λ = ${lam} m)`;
     document.getElementById('scaleInfo').textContent = txt;
     ctx.fillStyle = '#3a4252';
     ctx.font = '9px system-ui, sans-serif';
