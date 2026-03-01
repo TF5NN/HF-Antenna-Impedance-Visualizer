@@ -355,7 +355,7 @@ header p {
         <span class="zone-swatch"></span>9:1 + Tuner
       </button>
       <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
-        <span class="zone-swatch"></span>1:1 Balun
+        <span class="zone-swatch"></span>1:1 Unun
       </button>
     </div>
   </div>
@@ -398,7 +398,7 @@ header p {
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
-    <strong>1:1 Balun:</strong>&nbsp;25–100 Ω — choke/current balun, suppresses common-mode RF, SWR ≤ 2:1.
+    <strong>1:1 Unun:</strong>&nbsp;25–100 Ω — current choke, suppresses common-mode RF, SWR ≤ 2:1.
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -494,7 +494,7 @@ header p {
         within a zone wastes little power as mismatch alone; network loss often matters more.
       </p>
       <p style="margin-top:6px">
-        <strong>Network loss estimates used:</strong> 1:1 Balun — none (Zref = 50 Ω,
+        <strong>Network loss estimates used:</strong> 1:1 Unun — none (Zref = 50 Ω,
         η_net = 100%); 9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
         49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
         losses vary with power, frequency, core material, and winding quality.
@@ -504,10 +504,16 @@ header p {
     <div class="notes-block">
       <h4>How the matching zone ranges were derived</h4>
       <p>
-        <strong style="color:#ffa000">1:1 Balun (25–100 Ω):</strong>
-        A 1:1 current/choke balun suppresses common-mode RF without changing impedance.
-        A 50 Ω transceiver typically tolerates SWR ≤ 2:1, spanning
-        <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
+        <strong style="color:#ffa000">1:1 Unun (25–100 Ω):</strong>
+        A 1:1 unun (UNbalanced–UNbalanced) presents the same impedance on both ports —
+        it does not transform the ratio, only suppresses common-mode RF current flowing
+        back down the coax shield. In practice this is a <em>current choke</em>: a coil
+        of coax, or coax threaded through ferrite cores (e.g. the W2DU choke). Because
+        both the transmitter output and an end-fed wire are unbalanced, a unun is the
+        correct term. It is commonly — and incorrectly — called a "1:1 balun"; a true
+        balun (BALanced–UNbalanced) is only appropriate when one port is balanced, such
+        as the centre of a dipole. A 50 Ω transceiver typically tolerates SWR ≤ 2:1,
+        spanning <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
       </p>
       <p style="margin-top:6px">
         <strong style="color:#4096ff">9:1 Unun + Tuner (75–1 800 Ω):</strong>
@@ -580,7 +586,7 @@ const ZONES = [
     on: false,
   },
   {
-    id: 'z2', label: '1:1 Balun',
+    id: 'z2', label: '1:1 Unun',
     zMin: 25, zMax: 100,
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
