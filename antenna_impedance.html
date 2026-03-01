@@ -420,13 +420,13 @@ header p {
     </div>
 
     <div class="notes-block">
-      <h4>Why the impedance ceiling is 3 500 Ω</h4>
+      <h4>Why the impedance ceiling is 5 000 Ω</h4>
       <p>
         The formula <code>|Z| = Z₀ · |cot(βL)|</code> gives Z → ∞ at exact half-wave
         resonances. In practice, radiation resistance and wire/ground losses limit the
         real peak to roughly 2 000–5 000 Ω depending on wire height and diameter.
-        3 500 Ω is a realistic mid-range ceiling for the model. Values above it are
-        clamped so the graph stays readable and physically plausible.
+        5 000 Ω is the realistic upper bound used here. Values above it are clamped so
+        the graph stays readable and physically plausible.
       </p>
     </div>
 
@@ -464,6 +464,27 @@ header p {
         while one near λ/2 adds very high reactance and can completely ruin the match.
         When enabled, dashed ghost curves show the wire-alone impedance for direct
         comparison with the solid counterpoise-adjusted curves.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Matching efficiency — how much power reaches the antenna</h4>
+      <p>
+        Efficiency has two parts: <strong>mismatch loss</strong> (power reflected at the
+        impedance boundary) and <strong>network loss</strong> (heat in the transformer/tuner).
+        The tooltip shows the combined estimate when the antenna falls inside a zone.
+      </p>
+      <p style="margin-top:6px">
+        <strong>Mismatch loss:</strong> <code>η = 4·Z·Zref / (Z + Zref)²</code> where
+        <em>Zref</em> is the transformer's design impedance. At perfect match η = 100%.
+        At SWR 2:1 (Z = 2·Zref) η ≈ 89% — only ~11% is reflected. Even a poor match
+        within a zone wastes little power as mismatch alone; network loss often matters more.
+      </p>
+      <p style="margin-top:6px">
+        <strong>Network loss estimates used:</strong> Direct 50 Ω — none (Zref = 50 Ω,
+        η_net = 100%); 9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
+        49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
+        losses vary with power, frequency, core material, and winding quality.
       </p>
     </div>
 
@@ -527,6 +548,8 @@ const ZONES = [
   {
     id: 'z0', label: '49:1 Unun',
     zMin: 1500, zMax: 4500,
+    zRef: 2450,      // ideal input impedance: 49 × 50 Ω
+    xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
     fill:   'rgba(50, 200, 80, 0.13)',
     stroke: 'rgba(50, 200, 80, 0.65)',
     text:   '#32c850',
@@ -535,6 +558,8 @@ const ZONES = [
   {
     id: 'z1', label: '9:1 + Tuner',
     zMin: 75, zMax: 1800,
+    zRef: 450,       // ideal input impedance: 9 × 50 Ω
+    xfrmrEff: 0.87,  // 9:1 transformer (~95%) + antenna tuner (~92%) combined
     fill:   'rgba(64, 150, 255, 0.11)',
     stroke: 'rgba(64, 150, 255, 0.60)',
     text:   '#4096ff',
@@ -543,12 +568,29 @@ const ZONES = [
   {
     id: 'z2', label: 'Direct 50 Ω',
     zMin: 25, zMax: 100,
+    zRef: 50,        // direct 50 Ω — no transformer
+    xfrmrEff: 1.00,  // no transformer loss
     fill:   'rgba(255, 160, 0, 0.15)',
     stroke: 'rgba(255, 160, 0, 0.75)',
     text:   '#ffa000',
     on: true,
   },
 ];
+
+// ════════════════════════════════════════════════
+//  MATCHING EFFICIENCY
+//  Mismatch efficiency: fraction of forward power
+//  actually delivered to the load.
+//    Γ = (Z − Zref) / (Z + Zref)
+//    η_mismatch = 1 − |Γ|² = 4·Z·Zref / (Z+Zref)²
+//  Multiplied by transformer/tuner insertion
+//  efficiency to get the total estimate shown in
+//  the tooltip.
+// ════════════════════════════════════════════════
+
+function mismatchEff(Z, Zref) {
+  return (4 * Z * Zref) / Math.pow(Z + Zref, 2);
+}
 
 // Canvas layout margins (px)
 const M = { top: 22, right: 115, bottom: 50, left: 68 };
@@ -999,7 +1041,10 @@ function setupHover() {
 
       const zoneMatches = ZONES.filter(z => z.on && Z >= z.zMin && Z <= z.zMax);
       const zoneTags = zoneMatches
-        .map(z => `<span class="tt-tag" style="color:${z.text}">${z.label}</span>`)
+        .map(z => {
+          const eff = Math.round(mismatchEff(Z, z.zRef) * z.xfrmrEff * 100);
+          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}%</span>`;
+        })
         .join(' ');
 
       const cpNote = Zwire !== null
@@ -1016,6 +1061,17 @@ function setupHover() {
         zoneTags +
         `</div>`;
     });
+
+    // Footnote — only when at least one band lands in a matching zone
+    const anyZoneHit = ab.some(band => {
+      const Z = calcZ(pxToL(cx, xRange, W), band.freq);
+      return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
+    });
+    if (anyZoneHit) {
+      html += `<div style="font-size:0.62rem;color:#484f58;margin-top:5px;` +
+              `border-top:1px solid #30363d;padding-top:3px">` +
+              `% = power to antenna (mismatch loss + transformer loss est.)</div>`;
+    }
 
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
