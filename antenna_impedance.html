@@ -1336,7 +1336,7 @@ function buildZoneButtons() {
   });
 }
 
-// Auto-default: at least half the active bands (min 2). Resets on band toggle;
+// Auto-default: equals the active band count (1:1 ratio). Resets on band toggle;
 // user can still type any value into the input to override for the session.
 function syncSweetSpotsMin() {
   const n = getActiveBands().length;
