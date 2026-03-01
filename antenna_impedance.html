@@ -50,6 +50,20 @@ header p {
   color: var(--muted);
   line-height: 1.4;
 }
+#versionLabel {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: var(--muted2);
+  white-space: nowrap;
+  align-self: center;
+}
+#versionLabel {
+  font-size: 0.68rem;
+  color: var(--muted2);
+  margin-left: auto;
+  white-space: nowrap;
+  align-self: center;
+}
 
 /* ─── CONTROLS ────────────────────────────────── */
 #controls {
@@ -81,6 +95,18 @@ header p {
   flex-wrap: wrap;
   gap: 5px;
 }
+#bandSelectBtns { display: flex; gap: 8px; margin-top: 3px; }
+.band-sel-btn {
+  background: none;
+  border: none;
+  color: var(--muted2);
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.band-sel-btn:hover { color: var(--muted); }
 .band-btn {
   padding: 3px 9px;
   border-radius: 20px;
@@ -351,12 +377,17 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
+  <span id="versionLabel">v1.0 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
   <div class="ctrl-group">
     <div class="ctrl-label">HF Bands (toggle)</div>
     <div id="bandBtns"></div>
+    <div id="bandSelectBtns">
+      <button class="band-sel-btn" id="bandAllBtn">All</button>
+      <button class="band-sel-btn" id="bandNoneBtn">None</button>
+    </div>
   </div>
   <div class="ctrl-group">
     <div class="ctrl-label">Matching Zones (toggle)</div>
@@ -1118,6 +1149,15 @@ function draw() {
 //  UI BUILDING
 // ════════════════════════════════════════════════
 
+function setBandsAll(on) {
+  BANDS.forEach(b => b.on = on);
+  document.querySelectorAll('#bandBtns .band-btn').forEach(btn => btn.classList.toggle('on', on));
+  syncSweetSpotsMin();
+  invalidateSweetSpots();
+  updateLegend();
+  resizeAndDraw();
+}
+
 function buildBandButtons() {
   const wrap = document.getElementById('bandBtns');
   BANDS.forEach(band => {
@@ -1135,6 +1175,8 @@ function buildBandButtons() {
     };
     wrap.appendChild(btn);
   });
+  document.getElementById('bandAllBtn').onclick  = () => setBandsAll(true);
+  document.getElementById('bandNoneBtn').onclick = () => setBandsAll(false);
 }
 
 function buildZoneButtons() {
