@@ -678,7 +678,7 @@ function getXRange() {
   const lambda = C / lowestFreq;
   // Start at λ/4 of the lowest band: below this the wire is electrically
   // short, the TL model breaks down, and practical end-fed use is rare.
-  return { xMin: lambda / 4, xMax: lambda };
+  return { xMin: lambda / 4, xMax: lambda / 1.75 };
 }
 
 function logScale(Z) {
