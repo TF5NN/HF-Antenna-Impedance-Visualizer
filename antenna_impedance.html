@@ -516,7 +516,12 @@ header p {
         counterpoise also has radiation resistance; that extracted power does not appear as
         added reactance and the model ignores it. (4) <em>Same Z₀ for both conductors</em> —
         550 Ω is calibrated for the main wire at typical heights; the counterpoise may differ.
-        For quantitative results use a NEC2/4 simulator.
+        All four errors are largest at <strong>λ/4 lengths</strong> (the 1:1 Unun zone): at
+        that length <code>cot(βL_wire) ≈ 0</code>, so the feed impedance is entirely
+        controlled by the counterpoise term — exactly where ground-plane physics and mutual
+        coupling dominate and the series-stub approximation is furthest from reality.
+        Treat the counterpoise display as a qualitative guide at EFHW/EFRW lengths;
+        do not rely on it at λ/4. For quantitative results use a NEC2/4 simulator.
       </p>
     </div>
 
@@ -1123,6 +1128,7 @@ function buildBandButtons() {
     btn.onclick = () => {
       band.on = !band.on;
       btn.classList.toggle('on', band.on);
+      syncSweetSpotsMin();
       invalidateSweetSpots();
       updateLegend();
       resizeAndDraw();
@@ -1145,10 +1151,21 @@ function buildZoneButtons() {
   });
 }
 
+// Auto-default: at least half the active bands (min 2). Resets on band toggle;
+// user can still type any value into the input to override for the session.
+function syncSweetSpotsMin() {
+  const n = getActiveBands().length;
+  const auto = Math.max(2, Math.ceil(n / 2));
+  sweetSpotsMin = auto;
+  const inp = document.getElementById('ssMinInput');
+  if (inp) inp.value = auto;
+}
+
 function setupSweetSpots() {
   const ssBtn  = document.getElementById('sweetSpotsBtn');
   const ssWrap = document.getElementById('ssMinWrap');
   const ssInp  = document.getElementById('ssMinInput');
+  syncSweetSpotsMin(); // set initial value based on default-on bands
   ssBtn.onclick = () => {
     sweetSpotsOn = !sweetSpotsOn;
     ssBtn.classList.toggle('on', sweetSpotsOn);
