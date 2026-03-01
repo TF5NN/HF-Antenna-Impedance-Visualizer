@@ -465,6 +465,19 @@ header p {
         When enabled, dashed ghost curves show the wire-alone impedance for direct
         comparison with the solid counterpoise-adjusted curves.
       </p>
+      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+        <strong style="color:#6a7280">Model limitations:</strong>
+        This is a qualitative guide, not a precise predictor. Four significant simplifications
+        are made: (1) <em>No mutual coupling</em> — the wire and counterpoise radiate into
+        each other's near field; omitting this mutual impedance term can produce ±50% errors
+        in the combined value. (2) <em>No ground interaction</em> — a real counterpoise near
+        or on the ground has capacitive coupling to soil that shifts its resonant length and
+        lowers its effective characteristic impedance. (3) <em>Pure reactance only</em> — the
+        counterpoise also has radiation resistance; that extracted power does not appear as
+        added reactance and the model ignores it. (4) <em>Same Z₀ for both conductors</em> —
+        550 Ω is calibrated for the main wire at typical heights; the counterpoise may differ.
+        For quantitative results use a NEC2/4 simulator.
+      </p>
     </div>
 
     <div class="notes-block">
