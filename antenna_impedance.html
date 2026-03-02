@@ -2005,7 +2005,15 @@ function resizeAndDraw() {
   const dpr    = window.devicePixelRatio || 1;
 
   CANVAS_W = wrap.clientWidth - 28;   // CSS pixel width
-  CANVAS_H = Math.max(380, Math.min(620, window.innerHeight - 210));
+
+  // Measure the actual height consumed by every element that sits outside
+  // the graph wrapper so the canvas fills only what remains.
+  const chrome = ['header', 'controls', 'legendBar', 'infoBar']
+    .reduce((sum, id) => {
+      const el = document.getElementById(id);
+      return sum + (el ? el.offsetHeight : 0);
+    }, 0);
+  CANVAS_H = Math.max(300, Math.min(560, window.innerHeight - chrome - 28));
 
   canvas.style.width  = CANVAS_W + 'px';
   canvas.style.height = CANVAS_H + 'px';
