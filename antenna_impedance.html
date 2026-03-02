@@ -425,7 +425,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.02 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.03 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -508,8 +508,12 @@ header p {
     <strong>49:1 Unun:</strong>&nbsp;shaded band 1500–5000 Ω (informational); coloured strip = SWR ≤ 2:1 at radio using complex impedance.
   </div>
   <div class="info-item">
-    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
-    <strong>9:1 + Tuner:</strong>&nbsp;shaded band 75–1800 Ω (informational); strip = SWR ≤ 2:1 (tuner handles up to 10:1 into tuner).
+    <span class="info-swatch" style="background: rgba(64,150,255,0.4)"></span>
+    <strong>9:1 (no tuner):</strong>&nbsp;shaded band 200–900 Ω (informational); strip = SWR ≤ 2:1 at radio using Z<sub>ant</sub>/9.
+  </div>
+  <div class="info-item">
+    <span class="info-swatch" style="background: rgba(43,214,200,0.45)"></span>
+    <strong>9:1 + Tuner:</strong>&nbsp;shaded band 75–1800 Ω (informational); strip = SWR ≤ 2:1 after analytic L-network solver (within preset L/C limits).
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
@@ -852,18 +856,164 @@ function swr50({ R, X }) {
   return g >= 1 ? Infinity : (1 + g) / (1 - g);
 }
 
-// SWR at the radio after transformer + optional tuner
-function swrAtRadio(Zc, zone) {
-  const Za  = { R: Zc.R / zone.ratio, X: Zc.X / zone.ratio };
-  const swr = swr50(Za);
-  if (!zone.tuner) return swr;
-  // Tuner feasibility: if SWR into tuner ≤ tunerLimit treat as matched (~1.2)
-  return swr <= zone.tunerLimit ? 1.2 : swr;
+// ════════════════════════════════════════════════
+//  TUNER STATE + PRESETS
+// ════════════════════════════════════════════════
+
+// Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
+const TUNER_PRESETS = {
+  internal:  { Lmax: 4,  Cmax: 300  },   // Internal (3:1)  — small coil + cap
+  external:  { Lmax: 24, Cmax: 1200 },   // External (10:1) — bench-top unit
+  widerange: { Lmax: 60, Cmax: 3500 },   // Wide-range (20:1) — high-power ATU
+};
+
+let tunerEnabled  = false;
+let tunerPreset   = 'external';          // key into TUNER_PRESETS or 'custom'
+let tunerCustom   = { Lmax: 24, Cmax: 1200 };
+
+function getTunerParams() {
+  return tunerPreset === 'custom' ? tunerCustom
+       : (TUNER_PRESETS[tunerPreset] || TUNER_PRESETS.external);
 }
 
-// True when this zone gives SWR < 2 at the radio
-function inZone(Zc, zone) {
-  return zone.on && swrAtRadio(Zc, zone) < 2.0;
+// ════════════════════════════════════════════════
+//  L-NETWORK ANALYTIC SOLVER
+//
+//  Tries to find reactive element values that
+//  present 50 Ω to the radio.
+//
+//  Two topologies:
+//  A) Series → Shunt  (works best for R_in ≤ 50 Ω)
+//  B) Shunt  → Series (works best for R_in ≥ 50 Ω)
+//
+//  For each topology two ± sign variants exist,
+//  giving L or C for each element.  All four are
+//  attempted; the first feasible one is returned.
+//
+//  Returns: { matched, topology, seriesEl, shuntEl, swr }
+//           matched = false  →  no solution within limits
+// ════════════════════════════════════════════════
+
+function _reactFeasible(X, XLmax, XCmin) {
+  // X > 0: inductor, needs X ≤ XLmax
+  // X < 0: capacitor, needs |X| ≥ XCmin  (C = 1/(ω|X|) ≤ Cmax)
+  if (X > 1e-6)  return X <= XLmax;
+  if (X < -1e-6) return Math.abs(X) >= XCmin;
+  return true;  // ~0 → no element, always ok
+}
+
+function _susceptFeasible(B, BLmin, BCmax) {
+  // B > 0: shunt cap, needs B ≤ BCmax
+  // B < 0: shunt inductor, needs |B| ≥ BLmin
+  if (B > 1e-12)  return B <= BCmax;
+  if (B < -1e-12) return Math.abs(B) >= BLmin;
+  return true;
+}
+
+function _makeEl(X, omega) {
+  if (Math.abs(X) < 1e-6) return { type: 'none', val: 0 };
+  if (X > 0) return { type: 'L', val: +(X / omega * 1e6).toFixed(3), unit: 'µH', X };
+  return { type: 'C', val: +(1 / (omega * Math.abs(X)) * 1e12).toFixed(1), unit: 'pF', X };
+}
+
+function _makeSusEl(B, omega) {
+  if (Math.abs(B) < 1e-12) return { type: 'none', val: 0 };
+  if (B > 0) return { type: 'C', val: +(B / omega * 1e12).toFixed(1), unit: 'pF', B };
+  return { type: 'L', val: +(1 / (omega * Math.abs(B)) * 1e6).toFixed(3), unit: 'µH', B };
+}
+
+function solveL(Zin, freq, Lmax_uH, Cmax_pF) {
+  const R = Zin.R, X = Zin.X;
+  if (R <= 0 || Lmax_uH <= 0 || Cmax_pF <= 0) return { matched: false };
+
+  const omega  = 2 * Math.PI * freq;
+  const XLmax  = omega * Lmax_uH * 1e-6;
+  const XCmin  = 1 / (omega * Cmax_pF * 1e-12);   // min |X| for a cap ≤ Cmax
+  const BLmin  = 1 / (omega * Lmax_uH * 1e-6);    // min |B| for a shunt-L ≤ Lmax
+  const BCmax  = omega * Cmax_pF * 1e-12;
+
+  // ── Topology A: Series element, then Shunt element ──
+  // Works when R ≤ 50.  Required shunt Y₁ has Re = 1/50.
+  //   Xs_total² = 50·R − R²  →  Xs_total = ±√(50R − R²)
+  //   Xs_series = Xs_total − X_ant
+  //   B_shunt   = −Xs_total / (50·R)
+  if (R <= 50 + 1e-6) {
+    const disc = 50 * R - R * R;
+    if (disc >= 0) {
+      const sq = Math.sqrt(disc);
+      for (const Xs_t of [sq, -sq]) {
+        const Xs = Xs_t - X;
+        const Bp = -Xs_t / (50 * R);
+        if (_reactFeasible(Xs, XLmax, XCmin) && _susceptFeasible(Bp, BLmin, BCmax)) {
+          return {
+            matched: true, swr: 1.0,
+            topology: 'series→shunt',
+            seriesEl: _makeEl(Xs, omega),
+            shuntEl:  _makeSusEl(Bp, omega),
+          };
+        }
+      }
+    }
+  }
+
+  // ── Topology B: Shunt element, then Series element ──
+  // Works when R ≥ 50.  Condition: Gs ≤ 1/50.
+  //   (Bs + Bp)² = Gs·(1/50 − Gs)
+  //   Xs_series  = Im(Z₁) to cancel
+  const R2X2 = R * R + X * X;
+  const Gs   = R / R2X2;
+  const Bs   = -X / R2X2;
+  if (Gs <= 1 / 50 + 1e-9) {
+    const disc = Gs / 50 - Gs * Gs;
+    if (disc >= 0) {
+      const sq = Math.sqrt(Math.max(0, disc));
+      for (const BpBs of [sq, -sq]) {
+        const Bp   = BpBs - Bs;
+        const dnom = Gs * Gs + BpBs * BpBs;
+        const Xs   = dnom > 1e-30 ? BpBs / dnom : 0;   // cancel Im(Z₁)
+        if (_susceptFeasible(Bp, BLmin, BCmax) && _reactFeasible(Xs, XLmax, XCmin)) {
+          return {
+            matched: true, swr: 1.0,
+            topology: 'shunt→series',
+            shuntEl:  _makeSusEl(Bp, omega),
+            seriesEl: _makeEl(Xs, omega),
+          };
+        }
+      }
+    }
+  }
+
+  return { matched: false };
+}
+
+// ────────────────────────────────────────────────
+//  MATCHING PIPELINE  (Zant → transformer → tuner → radio)
+// ────────────────────────────────────────────────
+
+// SWR at 50 Ω for complex impedance Z = {R, X}
+function swr50({ R, X }) {
+  const nr = Math.hypot(R - 50, X);
+  const dr = Math.hypot(R + 50, X);
+  if (dr < 1e-9) return Infinity;
+  const g = nr / dr;
+  return g >= 1 ? Infinity : (1 + g) / (1 - g);
+}
+
+// SWR at the radio after transformer + optional tuner.
+// freq is needed by solveL; pass 0 to skip tuner stage.
+function swrAtRadio(Zc, zone, freq) {
+  const Za     = { R: Zc.R / zone.ratio, X: Zc.X / zone.ratio };
+  const rawSwr = swr50(Za);
+  if (!zone.tuner || !tunerEnabled) return rawSwr;
+
+  const p = getTunerParams();
+  const r = solveL(Za, freq, p.Lmax, p.Cmax);
+  return r.matched ? 1.0 : rawSwr;
+}
+
+// True when this zone gives SWR < 2 at the radio for band at freq
+function inZone(Zc, zone, freq) {
+  return zone.on && swrAtRadio(Zc, zone, freq) < 2.0;
 }
 
 // Mismatch efficiency using complex Γ: η = 1 − |Γ|²
@@ -1099,7 +1249,7 @@ function draw() {
         const segs = []; let inSeg = false, segL0 = 0;
         for (let i = 0; i <= SWEET_SPOT_SCAN_POINTS; i++) {
           const L  = xRange.xMin + i * dL;
-          const hit = ab.some(band => inZone(calcZcomplex(L, band.freq), zone));
+          const hit = ab.some(band => inZone(calcZcomplex(L, band.freq), zone, band.freq));
           if (hit && !inSeg) { segL0 = L; inSeg = true; }
           else if (!hit && inSeg) { segs.push([segL0, L]); inSeg = false; }
         }
@@ -1144,7 +1294,7 @@ function draw() {
         const L = xRange.xMin + i * dL;
         const hits = ab.filter(band => {
           const Zc = calcZcomplex(L, band.freq);
-          return ZONES.some(z => inZone(Zc, z));
+          return ZONES.some(z => inZone(Zc, z, band.freq));
         }).length;
         if (hits >= sweetSpotsMin && !inSpot) { spotStartL = L; inSpot = true; }
         else if (hits < sweetSpotsMin && inSpot) { segs.push([spotStartL, L]); inSpot = false; }
@@ -1435,7 +1585,7 @@ function updateSweetSpotsTable() {
     const centre = (L1 + L2) / 2;
     const bandTags = ab.map(band => {
       const Zc   = calcZcomplex(centre, band.freq);
-      const zone = ZONES.find(z => inZone(Zc, z));
+      const zone = ZONES.find(z => inZone(Zc, z, band.freq));
       if (!zone) return '';
       const eff = Math.round(mismatchEffComplex(Zc, zone.zRef) * zone.xfrmrEff * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
@@ -1493,12 +1643,85 @@ function buildZoneButtons() {
     if (!btn) return;
     btn.classList.toggle('on', zone.on);
     btn.onclick = () => {
-      zone.on = !zone.on;
-      btn.classList.toggle('on', zone.on);
+      const turningOn = !zone.on;
+      zone.on = turningOn;
+      btn.classList.toggle('on', turningOn);
+
+      // "9:1 + Tuner" button auto-enables tuner + picks external preset
+      if (zone.id === 'z1' && turningOn) {
+        tunerEnabled = true;
+        tunerPreset  = 'external';
+        document.getElementById('tunerToggleBtn').classList.add('on');
+        document.getElementById('tunerPresetSel').value = 'external';
+        document.getElementById('tunerCustomWrap').classList.remove('show');
+        updateTunerHint();
+      }
+
       invalidateSweetSpots();
       draw();
     };
   });
+}
+
+// ════════════════════════════════════════════════
+//  TUNER CONTROL SETUP
+// ════════════════════════════════════════════════
+
+function updateTunerHint() {
+  const el = document.getElementById('tunerHint');
+  if (!el) return;
+  if (!tunerEnabled) {
+    el.textContent = 'Tuner off — showing raw SWR after transformer';
+    return;
+  }
+  const p = getTunerParams();
+  el.textContent = `L ≤ ${p.Lmax} µH, C ≤ ${p.Cmax} pF — solver finds L-network match`;
+}
+
+function setupTuner() {
+  const toggleBtn  = document.getElementById('tunerToggleBtn');
+  const presetSel  = document.getElementById('tunerPresetSel');
+  const customWrap = document.getElementById('tunerCustomWrap');
+  const lmaxInp    = document.getElementById('tunerLmaxInput');
+  const cmaxInp    = document.getElementById('tunerCmaxInput');
+
+  toggleBtn.classList.toggle('on', tunerEnabled);
+  presetSel.value = tunerPreset;
+
+  toggleBtn.onclick = () => {
+    tunerEnabled = !tunerEnabled;
+    toggleBtn.classList.toggle('on', tunerEnabled);
+    updateTunerHint();
+    invalidateSweetSpots();
+    draw();
+  };
+
+  presetSel.addEventListener('change', () => {
+    tunerPreset = presetSel.value;
+    const isCustom = tunerPreset === 'custom';
+    customWrap.classList.toggle('show', isCustom);
+    if (!isCustom) {
+      // Mirror numeric fields so user sees current preset values
+      const p = getTunerParams();
+      lmaxInp.value = p.Lmax;
+      cmaxInp.value = p.Cmax;
+    }
+    updateTunerHint();
+    invalidateSweetSpots();
+    draw();
+  });
+
+  lmaxInp.addEventListener('input', () => {
+    const v = parseFloat(lmaxInp.value);
+    if (v > 0) { tunerCustom.Lmax = v; updateTunerHint(); invalidateSweetSpots(); draw(); }
+  });
+
+  cmaxInp.addEventListener('input', () => {
+    const v = parseFloat(cmaxInp.value);
+    if (v > 0) { tunerCustom.Cmax = v; updateTunerHint(); invalidateSweetSpots(); draw(); }
+  });
+
+  updateTunerHint();
 }
 
 // Auto-default: equals the active band count (1:1 ratio). Resets on band toggle;
@@ -1616,13 +1839,34 @@ function setupHover() {
       const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
 
-      const zoneMatches = ZONES.filter(z => inZone(Zc, z));
+      const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
       if (zoneMatches.length > 0) anyZoneHit = true;
       const zoneTags = zoneMatches
         .map(z => {
           const eff     = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * 100);
-          const swrVal  = swrAtRadio(Zc, z).toFixed(1);
-          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% <span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>`;
+          const swrVal  = swrAtRadio(Zc, z, band.freq).toFixed(1);
+
+          // For 9:1 + Tuner zone, append solved component values when tuner ON
+          let tunerNote = '';
+          if (z.tuner && tunerEnabled) {
+            const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
+            const p  = getTunerParams();
+            const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
+            if (sol.matched) {
+              const fmt = el => el.type === 'none' ? '' : `${el.val} ${el.unit} ${el.type}`;
+              const parts = [fmt(sol.seriesEl), fmt(sol.shuntEl)].filter(Boolean);
+              tunerNote = parts.length
+                ? `<span style="color:#2bd6c8;font-size:0.63rem;display:block;margin-left:14px">` +
+                  `${sol.topology}: ${parts.join(' + ')}</span>`
+                : '';
+            } else {
+              tunerNote = `<span style="color:#ff7043;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
+            }
+          }
+
+          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
+                 `<span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>` +
+                 tunerNote;
         })
         .join(' ');
 
@@ -1782,6 +2026,7 @@ updateLegend();
 setupHover();
 setupVF();
 setupCounterpoise();
+setupTuner();
 setupSweetSpots();
 setupBwMode();
 setupPinControl();
