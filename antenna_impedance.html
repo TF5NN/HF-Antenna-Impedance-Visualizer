@@ -447,7 +447,10 @@ header p {
       <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
         <span class="zone-swatch"></span>49:1 Unun
       </button>
-      <button class="zone-btn" id="z1Btn" style="--zc: #4096ff">
+      <button class="zone-btn" id="z1bBtn" style="--zc: #4096ff">
+        <span class="zone-swatch"></span>9:1 (no tuner)
+      </button>
+      <button class="zone-btn" id="z1Btn" style="--zc: #2bd6c8">
         <span class="zone-swatch"></span>9:1 + Tuner
       </button>
       <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
@@ -464,6 +467,30 @@ header p {
         <span class="cp-unit">bands</span>
       </div>
     </div>
+  </div>
+  <div class="ctrl-group" id="tunerGroup">
+    <div class="ctrl-label">Antenna Tuner</div>
+    <div id="tunerControl">
+      <button class="zone-btn" id="tunerToggleBtn" style="--zc: #2bd6c8">
+        <span class="zone-swatch"></span>Tuner ON
+      </button>
+      <select id="tunerPresetSel" class="tuner-select"
+              title="Used to decide if a match is possible and to estimate needed L/C">
+        <option value="internal">Internal (3:1)</option>
+        <option value="external" selected>External (10:1)</option>
+        <option value="widerange">Wide-range (20:1)</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </div>
+    <div class="toggle-sub" id="tunerCustomWrap">
+      <span class="cp-unit">L≤</span>
+      <input type="number" id="tunerLmaxInput" value="24" min="0.1" max="2000" step="1">
+      <span class="cp-unit">µH</span>
+      <span class="cp-unit">C≤</span>
+      <input type="number" id="tunerCmaxInput" value="1200" min="10" max="50000" step="10">
+      <span class="cp-unit">pF</span>
+    </div>
+    <div class="tuner-hint" id="tunerHint">Tuner off — showing raw SWR after transformer</div>
   </div>
   <div class="ctrl-group">
     <div class="ctrl-label">Counterpoise</div>
@@ -778,7 +805,7 @@ const BANDS = [
 const ZONES = [
   {
     id: 'z0', label: '49:1 Unun',
-    ratio: 49, tuner: false, tunerLimit: Infinity,
+    ratio: 49, tuner: false,
     zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
@@ -788,19 +815,32 @@ const ZONES = [
     on: true,
   },
   {
-    id: 'z1', label: '9:1 + Tuner',
-    ratio: 9, tuner: true, tunerLimit: 10,
-    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
-    zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
-    xfrmrEff: 0.87,  // 9:1 transformer (~95%) + antenna tuner (~92%) combined
-    fill:   'rgba(64, 150, 255, 0.11)',
-    stroke: 'rgba(64, 150, 255, 0.60)',
+    // 9:1 transformer alone — no tuner stage, raw SWR at radio
+    id: 'z1b', label: '9:1 (no tuner)',
+    ratio: 9, tuner: false,
+    zMin: 200, zMax: 900,    // informational
+    zRef: 450,
+    xfrmrEff: 0.95,          // 9:1 transformer only
+    fill:   'rgba(64, 150, 255, 0.08)',
+    stroke: 'rgba(64, 150, 255, 0.50)',
     text:   '#4096ff',
     on: false,
   },
   {
+    // 9:1 transformer + L-network tuner (analytic solver)
+    id: 'z1', label: '9:1 + Tuner',
+    ratio: 9, tuner: true,
+    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
+    zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
+    xfrmrEff: 0.87,  // 9:1 transformer (~95%) + L-network tuner (~92%) combined
+    fill:   'rgba(43, 214, 200, 0.09)',
+    stroke: 'rgba(43, 214, 200, 0.58)',
+    text:   '#2bd6c8',
+    on: false,
+  },
+  {
     id: 'z2', label: '1:1 Unun',
-    ratio: 1, tuner: false, tunerLimit: Infinity,
+    ratio: 1, tuner: false,
     zMin: 25, zMax: 100,     // informational bands on Y-axis only
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
@@ -988,15 +1028,6 @@ function solveL(Zin, freq, Lmax_uH, Cmax_pF) {
 // ────────────────────────────────────────────────
 //  MATCHING PIPELINE  (Zant → transformer → tuner → radio)
 // ────────────────────────────────────────────────
-
-// SWR at 50 Ω for complex impedance Z = {R, X}
-function swr50({ R, X }) {
-  const nr = Math.hypot(R - 50, X);
-  const dr = Math.hypot(R + 50, X);
-  if (dr < 1e-9) return Infinity;
-  const g = nr / dr;
-  return g >= 1 ? Infinity : (1 + g) / (1 - g);
-}
 
 // SWR at the radio after transformer + optional tuner.
 // freq is needed by solveL; pass 0 to skip tuner stage.
