@@ -505,15 +505,15 @@ header p {
 <div id="infoBar">
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
-    <strong>49:1 Unun:</strong>&nbsp;1500–5000 Ω — EFHW resonant match, SWR ≤ 2:1, no tuner needed.
+    <strong>49:1 Unun:</strong>&nbsp;shaded band 1500–5000 Ω (informational); coloured strip = SWR ≤ 2:1 at radio using complex impedance.
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
-    <strong>9:1 + Tuner:</strong>&nbsp;75–1800 Ω — EFRW / off-resonance lengths with antenna tuner.
+    <strong>9:1 + Tuner:</strong>&nbsp;shaded band 75–1800 Ω (informational); strip = SWR ≤ 2:1 (tuner handles up to 10:1 into tuner).
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
-    <strong>1:1 Unun:</strong>&nbsp;25–100 Ω — current choke, suppresses common-mode RF, SWR ≤ 2:1.
+    <strong>1:1 Unun:</strong>&nbsp;shaded band 25–100 Ω (informational); strip = SWR ≤ 2:1 direct to 50 Ω radio.
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -554,13 +554,31 @@ header p {
     </div>
 
     <div class="notes-block">
-      <h4>Why the impedance ceiling is 5 000 Ω</h4>
+      <h4>Physics model — lossy open-circuit transmission line</h4>
       <p>
-        The formula <code>|Z| = Z₀ · |cot(βL)|</code> gives Z → ∞ at exact half-wave
-        resonances. In practice, radiation resistance and wire/ground losses limit the
-        real peak to roughly 2 000–5 000 Ω depending on wire height and diameter.
-        5 000 Ω is the realistic upper bound used here. Values above it are clamped so
-        the graph stays readable and physically plausible.
+        The antenna wire is modelled as an open-ended lossy transmission line with
+        complex propagation constant γ = α + jβ. The feedpoint impedance is:
+      </p>
+      <p style="margin:6px 0 6px 12px">
+        <code>Z = Z₀ · coth(γL) = Z₀ · [sinh(2αL) + j·sin(2βL)] / [cosh(2αL) − cos(2βL)]</code>
+      </p>
+      <p>
+        This gives a <strong>complex result {R, X}</strong> at every wire length.
+        At λ/2 resonance both sin(2βL) and the denominator are small, so
+        R ≈ Z₀/(αL) ≈ 3 000 Ω and X ≈ 0 — the antenna is nearly purely resistive and
+        a 49:1 unun gives SWR ≈ 1.2:1.
+        At λ/4 anti-resonance sin(2βL) = 0 again, so X = 0 and R ≈ Z₀·αL ≈ 34 Ω —
+        matching directly with a 1:1 choke.
+        Between resonances the large reactive component X drives SWR well above 2:1
+        through any practical transformer, so matching zones are naturally narrow
+        (~±1.5 m around each resonance for 80m).
+      </p>
+      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+        <strong style="color:#6a7280">Parameters:</strong>
+        Z₀ = 450 Ω (characteristic impedance, typical for HF wire near ground).
+        α = 0.003 75 Np/m (attenuation constant, representing radiation + ohmic loss;
+        calibrated so the 80m EFHW peak is ≈ 3 000 Ω).
+        The 5 000 Ω ceiling (Z_PEAK) clamps the R display at the top of the Y axis.
       </p>
     </div>
 
@@ -591,31 +609,25 @@ header p {
       <h4>Counterpoise effect</h4>
       <p>
         A counterpoise wire connects to the "cold" terminal of the transformer, providing
-        an RF return path. In the lossless model both wires are purely reactive and add
-        <em>in series</em> at the feedpoint:
-        <code>Z_feed = −jZ₀·cot(βL_wire) + −jZ₀·cot(βL_cp)</code>.
-        The signs matter — a counterpoise at λ/4 has near-zero reactance (adds little),
-        while one near λ/2 adds very high reactance and can completely ruin the match.
-        When enabled, dashed ghost curves show the wire-alone impedance for direct
-        comparison with the solid counterpoise-adjusted curves.
+        an RF return path. In the model both wires are open-ended lossy TLs whose complex
+        impedances <em>add in series</em> at the feedpoint:
+        <code>Z_feed = Z_wire(L_wire) + Z_cp(L_cp)</code>.
+        A counterpoise at λ/4 contributes mainly resistive impedance (low, ~34 Ω) — little
+        effect on a 49:1 match. One near λ/2 contributes high resistive + near-zero reactive
+        impedance and raises the total feedpoint Z, which can pull it out of the matching zone.
+        When enabled, dashed ghost curves show the wire-alone impedance for comparison.
       </p>
       <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
         <strong style="color:#6a7280">Model limitations:</strong>
-        This is a qualitative guide, not a precise predictor. Four significant simplifications
-        are made: (1) <em>No mutual coupling</em> — the wire and counterpoise radiate into
-        each other's near field; omitting this mutual impedance term can produce ±50% errors
-        in the combined value. (2) <em>No ground interaction</em> — a real counterpoise near
-        or on the ground has capacitive coupling to soil that shifts its resonant length and
-        lowers its effective characteristic impedance. (3) <em>Pure reactance only</em> — the
-        counterpoise also has radiation resistance; that extracted power does not appear as
-        added reactance and the model ignores it. (4) <em>Same Z₀ for both conductors</em> —
-        550 Ω is calibrated for the main wire at typical heights; the counterpoise may differ.
-        All four errors are largest at <strong>λ/4 lengths</strong> (the 1:1 Unun zone): at
-        that length <code>cot(βL_wire) ≈ 0</code>, so the feed impedance is entirely
-        controlled by the counterpoise term — exactly where ground-plane physics and mutual
-        coupling dominate and the series-stub approximation is furthest from reality.
-        Treat the counterpoise display as a qualitative guide at EFHW/EFRW lengths;
-        do not rely on it at λ/4. For quantitative results use a NEC2/4 simulator.
+        This is a qualitative guide, not a precise predictor. Key simplifications:
+        (1) <em>No mutual coupling</em> — the wire and counterpoise radiate into each other's
+        near field; omitting this can produce ±50% errors in the combined value.
+        (2) <em>No ground interaction</em> — a real counterpoise near or on the ground has
+        capacitive coupling to soil that shifts its resonant length and lowers its effective
+        characteristic impedance. (3) <em>Same Z₀ and α for both conductors</em> — the
+        counterpoise may differ significantly if it is shorter, thicker, or near ground.
+        Treat the counterpoise display as a qualitative guide; for quantitative results
+        use a NEC2/4 simulator.
       </p>
     </div>
 
@@ -627,10 +639,11 @@ header p {
         The tooltip shows the combined estimate when the antenna falls inside a zone.
       </p>
       <p style="margin-top:6px">
-        <strong>Mismatch loss:</strong> <code>η = 4·Z·Zref / (Z + Zref)²</code> where
-        <em>Zref</em> is the transformer's design impedance. At perfect match η = 100%.
-        At SWR 2:1 (Z = 2·Zref) η ≈ 89% — only ~11% is reflected. Even a poor match
-        within a zone wastes little power as mismatch alone; network loss often matters more.
+        <strong>Mismatch loss:</strong> <code>η = 1 − |Γ|²</code> where
+        <code>Γ = (Z − Zref) / (Z + Zref)</code> uses the full complex impedance Z = R + jX.
+        At perfect match (Z = Zref, purely resistive) η = 100%.
+        At SWR 2:1 η ≈ 89% — only ~11% is reflected. Reactance increases |Γ| and worsens
+        mismatch loss even when |Z| looks reasonable, which is why zones now use complex SWR.
       </p>
       <p style="margin-top:6px">
         <strong>Network loss estimates used:</strong> 1:1 Unun — modelled as lossless
@@ -735,9 +748,11 @@ header p {
 const C = 299792458; // m/s
 
 // Impedance model parameters
-const Z0     = 550;   // characteristic impedance of a typical HF wire (Ω)
-const Z_PEAK = 5000;  // realistic EFHW resonant-peak impedance (Ω) — real range 2000–5000
-const Z_MIN  = 25;    // realistic anti-resonance minimum (Ω) — real wires ≈ 20–60 Ω at λ/4
+const Z0     = 450;   // characteristic impedance of a typical HF wire (Ω) — realistic for wire near ground
+const ALPHA  = 0.00375; // attenuation constant (Np/m) — models radiation loss + wire/ground losses
+                        // Calibrated: Z0/(ALPHA × L_half80) ≈ 450/(0.00375×40) = 3000 Ω peak for 80m EFHW
+const Z_PEAK = 5000;  // clamp on displayed/computed R — real EFHW peaks 2000–5000 Ω
+const Z_MIN  = 25;    // floor for |Z| display — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
 const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
 
@@ -759,8 +774,9 @@ const BANDS = [
 const ZONES = [
   {
     id: 'z0', label: '49:1 Unun',
-    zMin: 1500, zMax: 5000,
-    zRef: 2450,      // ideal input impedance: 49 × 50 Ω
+    ratio: 49, tuner: false, tunerLimit: Infinity,
+    zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
+    zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
     fill:   'rgba(50, 200, 80, 0.13)',
     stroke: 'rgba(50, 200, 80, 0.65)',
@@ -769,8 +785,9 @@ const ZONES = [
   },
   {
     id: 'z1', label: '9:1 + Tuner',
-    zMin: 75, zMax: 1800,
-    zRef: 450,       // ideal input impedance: 9 × 50 Ω
+    ratio: 9, tuner: true, tunerLimit: 10,
+    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
+    zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
     xfrmrEff: 0.87,  // 9:1 transformer (~95%) + antenna tuner (~92%) combined
     fill:   'rgba(64, 150, 255, 0.11)',
     stroke: 'rgba(64, 150, 255, 0.60)',
@@ -779,7 +796,8 @@ const ZONES = [
   },
   {
     id: 'z2', label: '1:1 Unun',
-    zMin: 25, zMax: 100,
+    ratio: 1, tuner: false, tunerLimit: Infinity,
+    zMin: 25, zMax: 100,     // informational bands on Y-axis only
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
     fill:   'rgba(255, 160, 0, 0.15)',
@@ -820,6 +838,48 @@ function ghostLineWidth(band) {
   return 0.7 + 2.0 * (Math.log(band.bwKhz) - _BW_LOG_LO) / (_BW_LOG_HI - _BW_LOG_LO);
 }
 
+// ────────────────────────────────────────────────
+//  COMPLEX SWR + MATCHING PIPELINE
+// ────────────────────────────────────────────────
+
+// Proper complex SWR at 50 Ω:  |Γ| = |Z−50| / |Z+50|,  SWR = (1+|Γ|)/(1−|Γ|)
+function swr50({ R, X }) {
+  const nr = Math.hypot(R - 50, X);
+  const dr = Math.hypot(R + 50, X);
+  if (dr < 1e-9) return Infinity;
+  const g = nr / dr;
+  return g >= 1 ? Infinity : (1 + g) / (1 - g);
+}
+
+// SWR at the radio after transformer + optional tuner
+function swrAtRadio(Zc, zone) {
+  const Za  = { R: Zc.R / zone.ratio, X: Zc.X / zone.ratio };
+  const swr = swr50(Za);
+  if (!zone.tuner) return swr;
+  // Tuner feasibility: if SWR into tuner ≤ tunerLimit treat as matched (~1.2)
+  return swr <= zone.tunerLimit ? 1.2 : swr;
+}
+
+// True when this zone gives SWR < 2 at the radio
+function inZone(Zc, zone) {
+  return zone.on && swrAtRadio(Zc, zone) < 2.0;
+}
+
+// Mismatch efficiency using complex Γ: η = 1 − |Γ|²
+// Scales Z to 50 Ω reference via the transformer ratio before computing Γ
+function mismatchEffComplex(Zc, zRef) {
+  // zRef is the transformer's design impedance (e.g. 2450 for 49:1, 450 for 9:1, 50 for 1:1)
+  // Scale: Z_at_radio = Zc / (zRef/50)
+  const k  = zRef / 50;
+  const Za = { R: Zc.R / k, X: Zc.X / k };
+  const nr = Math.hypot(Za.R - 50, Za.X);
+  const dr = Math.hypot(Za.R + 50, Za.X);
+  if (dr < 1e-9) return 0;
+  const g = nr / dr;
+  return 1 - g * g;
+}
+
+// Legacy scalar SWR (kept for any existing call sites outside zones)
 function calcSWR(Z, Zref) {
   return (Math.max(Z, Zref) / Math.min(Z, Zref)).toFixed(1);
 }
@@ -837,8 +897,9 @@ const SWEET_SPOT_SCAN_POINTS = 800; // resolution of sweet-spot X-axis sweep
 let sweetSpotsOn    = false;
 let sweetSpotsMin   = 1;
 let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
+let swrStripCache   = null; // null = stale; [[[L1,L2], ...], ...] per-zone SWR<2 segments
 
-function invalidateSweetSpots() { sweetSpotsCache = null; }
+function invalidateSweetSpots() { sweetSpotsCache = null; swrStripCache = null; }
 
 // Hover state + canvas CSS dimensions
 let hoverCx    = null;
@@ -858,43 +919,54 @@ let cpLengthM = 5.0;  // metres
 let VF = 0.975;
 
 // ════════════════════════════════════════════════
-//  PHYSICS MODEL
-//  End-fed wire: open-circuit transmission line
-//  |Z_in| = Z0 · |cot(βL)|  where β = 2π/λ
-//  Clamped to [Z_MIN, Z_PEAK] for realism.
+//  PHYSICS MODEL  — lossy open-circuit TL
 //
-//  With counterpoise: both wires present purely
-//  reactive impedances in series at the feedpoint:
-//    Z_feed = −jZ₀·cot(βL_wire) − jZ₀·cot(βL_cp)
-//  so |Z_feed| = Z0 · |cot(βL_wire) + cot(βL_cp)|
-//  Signs matter — they can add OR partially cancel.
+//  Z_in = Z0 · coth(γL),  γ = ALPHA + jβ,  β = 2π/λ_eff
+//
+//  Exact real/imag decomposition:
+//    R = Z0 · sinh(2αL) / D
+//    X = Z0 · sin(2βL)  / D      D = cosh(2αL) − cos(2βL)
+//
+//  This produces complex impedance {R, X} where:
+//  • At λ/2 resonance: X → 0,  R ≈ Z0/(αL) ≈ 3000 Ω (80m)
+//  • At λ/4 anti-resonance: X → 0,  R ≈ Z0·αL ≈ 34 Ω (80m)
+//  • Between resonances: large |X|, large SWR through any transformer
+//    → matching zones naturally narrow to ~±1.5 m around each resonance
+//
+//  With counterpoise: both open-ended TL impedances add in series.
 // ════════════════════════════════════════════════
 
-// Signed cotangent with overflow cap (for algebraic series sum)
-function signedCot(betaL) {
-  const s = Math.sin(betaL);
-  const cap = (Z_PEAK / Z0) * 1.5;
-  if (Math.abs(s) < 1e-9) return Math.cos(betaL) >= 0 ? cap : -cap;
-  return Math.cos(betaL) / s;
-}
-
-// Wire-only impedance — no counterpoise; uses velocity-factor-adjusted wavelength
-function calcZwire(L, freq) {
-  if (L <= 0) return Z_PEAK;
-  const lambda_eff = (C / freq) * VF;   // electrical wavelength = physical λ × VF
-  const betaL = (2 * Math.PI * L) / lambda_eff;
-  const s = Math.sin(betaL);
-  if (Math.abs(s) < 1e-9) return Z_PEAK;
-  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(Math.cos(betaL) / s)));
-}
-
-// Effective impedance — adds counterpoise in series when enabled; VF applies to both
-function calcZ(L, freq) {
-  if (!cpEnabled || cpLengthM <= 0) return calcZwire(L, freq);
+// Complex impedance of one open-ended wire (no counterpoise)
+function calcZwireComplex(L, freq) {
+  if (L <= 0) return { R: Z_PEAK, X: 0 };
   const lambda_eff = (C / freq) * VF;
-  const cotTotal = signedCot(2 * Math.PI * L        / lambda_eff)
-                 + signedCot(2 * Math.PI * cpLengthM / lambda_eff);
-  return Math.max(Z_MIN, Math.min(Z_PEAK, Z0 * Math.abs(cotTotal)));
+  const betaL = (2 * Math.PI * L) / lambda_eff;
+  const a2 = 2 * ALPHA * L;
+  const b2 = 2 * betaL;
+  const D  = Math.cosh(a2) - Math.cos(b2);
+  if (D < 1e-12) return { R: Z_PEAK, X: 0 };
+  const R = Math.min(Z_PEAK, Math.max(0, Z0 * Math.sinh(a2) / D));
+  const X = Z0 * Math.sin(b2) / D;   // signed: inductive (+) or capacitive (−)
+  return { R, X };
+}
+
+// Complex impedance at feedpoint; adds counterpoise in series when enabled
+function calcZcomplex(L, freq) {
+  const Zw = calcZwireComplex(L, freq);
+  if (!cpEnabled || cpLengthM <= 0) return Zw;
+  const Zc = calcZwireComplex(cpLengthM, freq);
+  return { R: Zw.R + Zc.R, X: Zw.X + Zc.X };
+}
+
+// |Z| magnitude — used for Y-axis position; same visual as before
+function calcZmag({ R, X }) { return Math.hypot(R, X); }
+
+// Scalar wrappers — keep curve rendering and pin dots working without changes
+function calcZwire(L, freq) {
+  return Math.min(Z_PEAK, Math.max(Z_MIN, calcZmag(calcZwireComplex(L, freq))));
+}
+function calcZ(L, freq) {
+  return Math.min(Z_PEAK, Math.max(Z_MIN, calcZmag(calcZcomplex(L, freq))));
 }
 
 // ════════════════════════════════════════════════
@@ -1004,6 +1076,56 @@ function draw() {
                  M.left + plotW + 8, midY + 9);
   });
 
+  // ── SWR-match strip: thin coloured segments where SWR < 2 at the radio ──
+  // One row per zone, stacked just below the X-axis tick labels.
+  // Uses complex impedance + transformer pipeline — much narrower than the info bands above.
+  {
+    const STRIP_H = 5;
+    const STRIP_GAP = 2;
+    // Base Y: just below the x-tick labels (labels are at plotH+17; add a few px gap)
+    const stripBaseY = M.top + plotH + 28;
+
+    if (!swrStripCache) {
+      const dL = (xRange.xMax - xRange.xMin) / SWEET_SPOT_SCAN_POINTS;
+      swrStripCache = ZONES.map(zone => {
+        if (!zone.on) return [];
+        const segs = []; let inSeg = false, segL0 = 0;
+        for (let i = 0; i <= SWEET_SPOT_SCAN_POINTS; i++) {
+          const L  = xRange.xMin + i * dL;
+          const hit = ab.some(band => inZone(calcZcomplex(L, band.freq), zone));
+          if (hit && !inSeg) { segL0 = L; inSeg = true; }
+          else if (!hit && inSeg) { segs.push([segL0, L]); inSeg = false; }
+        }
+        if (inSeg) segs.push([segL0, xRange.xMax]);
+        return segs;
+      });
+    }
+
+    // Draw strips (only active zones)
+    let row = 0;
+    ZONES.forEach((zone, zi) => {
+      if (!zone.on) return;
+      const y = stripBaseY + row * (STRIP_H + STRIP_GAP);
+      // Background track
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillRect(M.left, y, plotW, STRIP_H);
+      // Matching segments
+      ctx.fillStyle = zone.stroke.replace('0.65', '0.85').replace('0.60', '0.85')
+                                 .replace('0.75', '0.85');
+      (swrStripCache[zi] || []).forEach(([L1, L2]) => {
+        const x1 = xPx(L1, xRange, W);
+        const x2 = xPx(Math.min(L2, xRange.xMax), xRange, W);
+        ctx.fillRect(x1, y, Math.max(1, x2 - x1), STRIP_H);
+      });
+      // Zone label on right
+      ctx.fillStyle = zone.text;
+      ctx.font = '8px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('SWR<2', M.left + plotW + 8, y + STRIP_H - 1);
+      row++;
+    });
+  }
+
   // ── Sweet spot overlay (≥N bands simultaneously in a matching zone) ──
   if (sweetSpotsOn && ab.length >= sweetSpotsMin) {
     // Compute once; reuse until state changes (bands, zones, VF, counterpoise)
@@ -1014,8 +1136,8 @@ function draw() {
       for (let i = 0; i <= SWEET_SPOT_SCAN_POINTS; i++) {
         const L = xRange.xMin + i * dL;
         const hits = ab.filter(band => {
-          const Z = calcZ(L, band.freq);
-          return ZONES.some(z => z.on && Z >= z.zMin && Z <= z.zMax);
+          const Zc = calcZcomplex(L, band.freq);
+          return ZONES.some(z => inZone(Zc, z));
         }).length;
         if (hits >= sweetSpotsMin && !inSpot) { spotStartL = L; inSpot = true; }
         else if (hits < sweetSpotsMin && inSpot) { segs.push([spotStartL, L]); inSpot = false; }
@@ -1305,10 +1427,10 @@ function updateSweetSpotsTable() {
   sweetSpotsCache.forEach(([L1, L2]) => {
     const centre = (L1 + L2) / 2;
     const bandTags = ab.map(band => {
-      const Z    = calcZ(centre, band.freq);
-      const zone = ZONES.find(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      const Zc   = calcZcomplex(centre, band.freq);
+      const zone = ZONES.find(z => inZone(Zc, z));
       if (!zone) return '';
-      const eff = Math.round(mismatchEff(Z, zone.zRef) * zone.xfrmrEff * 100);
+      const eff = Math.round(mismatchEffComplex(Zc, zone.zRef) * zone.xfrmrEff * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
              `<span class="ss-zone" style="color:${zone.text}">${zone.label}&nbsp;~${eff}%</span>`;
     }).filter(Boolean).join(' &nbsp;');
@@ -1481,20 +1603,26 @@ function setupHover() {
 
     let anyZoneHit = false;
     ab.forEach(band => {
-      const Z      = calcZ(L, band.freq);
+      const Zc     = calcZcomplex(L, band.freq);
+      const Z      = calcZmag(Zc);   // |Z| for display
       const Zwire  = cpEnabled ? calcZwire(L, band.freq) : null;
       const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
 
-      const zoneMatches = ZONES.filter(z => z.on && Z >= z.zMin && Z <= z.zMax);
+      const zoneMatches = ZONES.filter(z => inZone(Zc, z));
       if (zoneMatches.length > 0) anyZoneHit = true;
       const zoneTags = zoneMatches
         .map(z => {
-          const eff = Math.round(mismatchEff(Z, z.zRef) * z.xfrmrEff * 100);
-          const swr = calcSWR(Z, z.zRef);
-          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% <span style="opacity:0.75;font-weight:500">SWR ${swr}:1</span></span>`;
+          const eff     = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * 100);
+          const swrVal  = swrAtRadio(Zc, z).toFixed(1);
+          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% <span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>`;
         })
         .join(' ');
+
+      // Show R + jX alongside |Z| so users can see the complex impedance
+      const sign   = Zc.X >= 0 ? '+' : '−';
+      const Xabs   = Math.abs(Zc.X);
+      const rxNote = `<span style="color:#484f58;font-size:0.75em">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>`;
 
       const cpNote = Zwire !== null
         ? `<span class="tt-cp-note">wire: ${formatZ(Zwire)}</span>`
@@ -1505,6 +1633,7 @@ function setupHover() {
         `<span class="tt-dot" style="background:${band.color}"></span>` +
         `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
         `<span class="tt-z">${formatZ(Z)}</span>` +
+        rxNote +
         zoneTags +
         cpNote +
         `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
