@@ -431,6 +431,11 @@ header p {
       <button class="band-sel-btn" id="bandAllBtn">All</button>
       <button class="band-sel-btn" id="bandNoneBtn">None</button>
     </div>
+    <div id="bwModeControl">
+      <button class="zone-btn" id="bwModeBtn" style="--zc: #888888">
+        <span class="zone-swatch"></span>ITU R1 alloc. width
+      </button>
+    </div>
   </div>
   <div class="ctrl-group">
     <div class="ctrl-label">Matching Zones (toggle)</div>
@@ -667,6 +672,18 @@ header p {
         lengths.
       </p>
     </div>
+    <div class="notes-section">
+      <h4>ITU Region 1 allocation width</h4>
+      <p>
+        The <strong>ITU R1 alloc. width</strong> toggle scales each band's curve
+        thickness proportionally to the ITU Region 1 amateur radio frequency
+        allocation for that band, using a logarithmic scale from 1 px (60m — 15 kHz)
+        to 4 px (6m — 2000 kHz). A wider line means more frequency room: e.g. 10m
+        (1700 kHz) is nearly as thick as 6m, while 30m (50 kHz) and 17m/12m
+        (100 kHz each) are visibly thinner. This gives a quick sense of operating
+        flexibility at any given wire length.
+      </p>
+    </div>
 
     <div class="notes-block">
       <h4>How the matching zone ranges were derived</h4>
@@ -719,18 +736,19 @@ const Z_MIN  = 25;    // realistic anti-resonance minimum (Ω) — real wires �
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
 const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
 
+// bwKhz: ITU Region 1 amateur allocation bandwidth (kHz)
 const BANDS = [
-  { name: '160m', freq: 1.900e6,  color: '#c47a50', on: false },
-  { name:  '80m', freq: 3.650e6,  color: '#e05c5c', on: false },
-  { name:  '60m', freq: 5.3625e6, color: '#d4872b', on: false },
-  { name:  '40m', freq: 7.150e6,  color: '#4caf50', on: true  },
-  { name:  '30m', freq: 10.125e6, color: '#26c6da', on: false },
-  { name:  '20m', freq: 14.175e6, color: '#5c9af5', on: true  },
-  { name:  '17m', freq: 18.118e6, color: '#ab7ae0', on: false },
-  { name:  '15m', freq: 21.225e6, color: '#f06292', on: true  },
-  { name:  '12m', freq: 24.940e6, color: '#4dd0e1', on: false },
-  { name:  '10m', freq: 28.850e6, color: '#ff7043', on: true  },
-  { name:   '6m', freq: 51.000e6, color: '#c6f135', on: false },
+  { name: '160m', freq: 1.900e6,  color: '#c47a50', on: false, bwKhz:   200 },
+  { name:  '80m', freq: 3.650e6,  color: '#e05c5c', on: false, bwKhz:   300 },
+  { name:  '60m', freq: 5.3625e6, color: '#d4872b', on: false, bwKhz:    15 },
+  { name:  '40m', freq: 7.150e6,  color: '#4caf50', on: true,  bwKhz:   200 },
+  { name:  '30m', freq: 10.125e6, color: '#26c6da', on: false, bwKhz:    50 },
+  { name:  '20m', freq: 14.175e6, color: '#5c9af5', on: true,  bwKhz:   350 },
+  { name:  '17m', freq: 18.118e6, color: '#ab7ae0', on: false, bwKhz:   100 },
+  { name:  '15m', freq: 21.225e6, color: '#f06292', on: true,  bwKhz:   450 },
+  { name:  '12m', freq: 24.940e6, color: '#4dd0e1', on: false, bwKhz:   100 },
+  { name:  '10m', freq: 28.850e6, color: '#ff7043', on: true,  bwKhz:  1700 },
+  { name:   '6m', freq: 51.000e6, color: '#c6f135', on: false, bwKhz:  2000 },
 ];
 
 const ZONES = [
@@ -785,6 +803,18 @@ function formatLength(L) {
   return (L >= 10 ? L.toFixed(1) : L.toFixed(2)) + ' m';
 }
 
+// Log-scale band line width based on ITU R1 allocation (bwKhz).
+// Range: 60m (15 kHz) → 1.0 px  …  6m (2000 kHz) → 4.0 px
+const _BW_LOG_LO = Math.log(15), _BW_LOG_HI = Math.log(2000);
+function bandLineWidth(band) {
+  if (!bwMode) return 2.2;
+  return 1.0 + 3.0 * (Math.log(band.bwKhz) - _BW_LOG_LO) / (_BW_LOG_HI - _BW_LOG_LO);
+}
+function ghostLineWidth(band) {
+  if (!bwMode) return 1.5;
+  return 0.7 + 2.0 * (Math.log(band.bwKhz) - _BW_LOG_LO) / (_BW_LOG_HI - _BW_LOG_LO);
+}
+
 function calcSWR(Z, Zref) {
   return (Math.max(Z, Zref) / Math.min(Z, Zref)).toFixed(1);
 }
@@ -811,6 +841,7 @@ let CANVAS_W   = 800; // CSS pixel width  (updated in resizeAndDraw)
 let CANVAS_H   = 500; // CSS pixel height (updated in resizeAndDraw)
 
 // Pin (locked inspect line) state
+let bwMode     = false; // line width proportional to ITU R1 band allocation
 let pinL       = null;  // wire length in metres, null = no pin
 let isDragging = false;
 
@@ -1051,7 +1082,7 @@ function draw() {
       if (resL < xRange.xMin) continue;
       const cx = xPx(resL, xRange, W);
       ctx.strokeStyle = band.color + '40';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = bwMode ? bandLineWidth(band) * 0.5 : 1;
       ctx.setLineDash([3, 7]);
       ctx.beginPath();
       ctx.moveTo(cx, M.top);
@@ -1083,7 +1114,7 @@ function draw() {
     ab.forEach(band => {
       const dL = (xRange.xMax - xRange.xMin) / STEPS;
       ctx.strokeStyle = band.color;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = ghostLineWidth(band);
       ctx.lineJoin = 'round';
       ctx.beginPath();
       let pen = false;
@@ -1122,7 +1153,7 @@ function draw() {
   ab.forEach(band => {
     const dL = (xRange.xMax - xRange.xMin) / STEPS;
     ctx.strokeStyle = band.color;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = bandLineWidth(band);
     ctx.lineJoin = 'round';
     ctx.beginPath();
     let pen = false;
@@ -1549,6 +1580,15 @@ function setupCounterpoise() {
 //  PIN CONTROL
 // ════════════════════════════════════════════════
 
+function setupBwMode() {
+  const btn = document.getElementById('bwModeBtn');
+  btn.addEventListener('click', () => {
+    bwMode = !bwMode;
+    btn.classList.toggle('on', bwMode);
+    draw();
+  });
+}
+
 function setupPinControl() {
   const inp      = document.getElementById('pinInput');
   const clearBtn = document.getElementById('pinClearBtn');
@@ -1602,6 +1642,7 @@ setupHover();
 setupVF();
 setupCounterpoise();
 setupSweetSpots();
+setupBwMode();
 setupPinControl();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
