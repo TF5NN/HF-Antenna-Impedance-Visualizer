@@ -749,8 +749,9 @@ const C = 299792458; // m/s
 
 // Impedance model parameters
 const Z0     = 450;   // characteristic impedance of a typical HF wire (Ω) — realistic for wire near ground
-const ALPHA  = 0.00375; // attenuation constant (Np/m) — models radiation loss + wire/ground losses
-                        // Calibrated: Z0/(ALPHA × L_half80) ≈ 450/(0.00375×40) = 3000 Ω peak for 80m EFHW
+const ALPHA      = 0.00375; // attenuation constant (Np/m) at reference frequency ALPHA_FREF.
+const ALPHA_FREF = 3.65e6;  // α scales linearly with freq inside calcZwireComplex so that
+                             // R_peak = Z0/(α×L_res) ≈ 3000 Ω at resonance for every band.
 const Z_PEAK = 5000;  // clamp on displayed/computed R — real EFHW peaks 2000–5000 Ω
 const Z_MIN  = 25;    // floor for |Z| display — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
@@ -941,7 +942,10 @@ function calcZwireComplex(L, freq) {
   if (L <= 0) return { R: Z_PEAK, X: 0 };
   const lambda_eff = (C / freq) * VF;
   const betaL = (2 * Math.PI * L) / lambda_eff;
-  const a2 = 2 * ALPHA * L;
+  // Scale α with frequency so R_peak = Z0/(α·L_res) ≈ 3000 Ω for every band:
+  //   α(f) = ALPHA × (f / ALPHA_FREF)  →  R_peak = Z0·ALPHA_FREF·2/(ALPHA·C·VF) = const
+  const alpha = ALPHA * (freq / ALPHA_FREF);
+  const a2 = 2 * alpha * L;
   const b2 = 2 * betaL;
   const D  = Math.cosh(a2) - Math.cos(b2);
   if (D < 1e-12) return { R: Z_PEAK, X: 0 };
