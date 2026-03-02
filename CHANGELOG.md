@@ -5,7 +5,7 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
-## [v4.02] — 2026-03-02
+## [v1.02] — 2026-03-02
 
 ### Added
 - **ITU Region 1 allocation width toggle** — "ITU R1 alloc. width" button in
