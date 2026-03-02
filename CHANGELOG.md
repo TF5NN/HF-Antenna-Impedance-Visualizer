@@ -5,6 +5,31 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v4.02] — 2026-03-02
+
+### Added
+- **ITU Region 1 allocation width toggle** — "ITU R1 alloc. width" button in
+  the HF Bands panel scales each band's impedance curve thickness
+  proportionally to its ITU Region 1 amateur allocation bandwidth (logarithmic
+  scale, 1 – 4 px). Narrow allocations (60 m = 15 kHz) draw thin lines; wide
+  allocations (6 m = 2000 kHz, 10 m = 1700 kHz) draw thick lines. Gives a
+  quick visual sense of operating flexibility at any wire length. Ghost curves
+  (counterpoise mode) and resonance tick marks scale proportionally.
+- **README.md** — project description, full feature list, usage instructions,
+  impedance model notes, and licence section with CC BY 4.0 badge.
+- **LICENSE** — Creative Commons Attribution 4.0 International. Share, adapt,
+  and build upon this work freely; credit TF5NN as the original creator.
+- **Meta and Open Graph tags** in `<head>` — `<meta name="description">`,
+  `<meta name="author">`, `og:title`, `og:description`, and `og:type` for
+  proper social sharing link previews.
+
+### Fixed
+- Corrected stale code comment in `syncSweetSpotsMin`: previously said
+  "at least half the active bands (min 2)"; now correctly states the 1:1
+  ratio behaviour implemented in v1.01.
+
+---
+
 ## [v1.01] — 2026-03-01
 
 ### Added
