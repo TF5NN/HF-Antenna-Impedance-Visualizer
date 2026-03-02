@@ -163,10 +163,9 @@ header p {
 
 /* ─── GRAPH AREA ──────────────────────────────── */
 #graphWrap {
-  flex: 1;
+  flex: 0 0 auto;   /* size to content; do not stretch to fill viewport */
   position: relative;
   padding: 14px 14px 2px;
-  min-height: 0;
 }
 #graph {
   display: block;
@@ -2006,14 +2005,9 @@ function resizeAndDraw() {
 
   CANVAS_W = wrap.clientWidth - 28;   // CSS pixel width
 
-  // Measure the actual height consumed by every element that sits outside
-  // the graph wrapper so the canvas fills only what remains.
-  const chrome = ['header', 'controls', 'legendBar', 'infoBar']
-    .reduce((sum, id) => {
-      const el = document.getElementById(id);
-      return sum + (el ? el.offsetHeight : 0);
-    }, 0);
-  CANVAS_H = Math.max(300, Math.min(560, window.innerHeight - chrome - 28));
+  // Cap at 45 % of viewport height so the graph never dominates the screen,
+  // and never smaller than 280 px on tiny windows.
+  CANVAS_H = Math.max(280, Math.floor(window.innerHeight * 0.45));
 
   canvas.style.width  = CANVAS_W + 'px';
   canvas.style.height = CANVAS_H + 'px';
