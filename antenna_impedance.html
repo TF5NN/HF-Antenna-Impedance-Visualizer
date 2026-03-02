@@ -982,11 +982,14 @@ function getActiveBands() { return BANDS.filter(b => b.on); }
 function getXRange() {
   const ab = getActiveBands();
   if (!ab.length) return { xMin: 1, xMax: 50 };
-  const lowestFreq = Math.min(...ab.map(b => b.freq));
-  const lambda = C / lowestFreq;
-  // Start at λ/4 of the lowest band: below this the wire is electrically
-  // short, the TL model breaks down, and practical end-fed use is rare.
-  return { xMin: lambda / 4, xMax: lambda / 1.75 };
+  const lowestFreq  = Math.min(...ab.map(b => b.freq));
+  const highestFreq = Math.max(...ab.map(b => b.freq));
+  const lambda_low  = C / lowestFreq;
+  const lambda_high = C / highestFreq;
+  // xMin: λ/4 of the HIGHEST active band — ensures every band's fundamental
+  //        resonance (λ/2) is visible even in a multi-band view.
+  // xMax: slightly above λ/2 of the LOWEST band (shows its resonance peak).
+  return { xMin: lambda_high / 4, xMax: lambda_low / 1.75 };
 }
 
 function logScale(Z) {
