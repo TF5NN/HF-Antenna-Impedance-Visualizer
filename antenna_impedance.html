@@ -424,7 +424,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.03 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.04 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -801,11 +801,13 @@ const BANDS = [
 
 const ZONES = [
   {
-    // swrLimit 3.0: higher-order resonances (3/2λ, 2λ …) present R ≈ 750–1 000 Ω
-    // at the 49:1 output (SWR 2.4–3.3).  Real EFHW antennas work on these harmonics
-    // in practice, so 3:1 reflects actual usability.  Tuner widens the window further.
+    // rawSwrLimit 2.0: strict threshold used when NO tuner is active (only clean λ/2
+    //   resonances with SWR ≤ 2:1 at radio are shown).
+    // swrLimit 3.0: looser threshold used WITH a tuner — higher-order resonances
+    //   (3/2λ → SWR ≈ 2.45; 2λ → SWR ≈ 3.3) are reachable when a tuner is present.
+    //   This split makes the tuner toggle visibly widen the z0 strip.
     id: 'z0', label: '49:1 Unun',
-    ratio: 49, swrLimit: 3.0,
+    ratio: 49, rawSwrLimit: 2.0, swrLimit: 3.0,
     zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
@@ -888,7 +890,7 @@ function swr50({ R, X }) {
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
-  internal:  { Lmax: 4,  Cmax: 300,  maxSWR: 3  },   // Internal (3:1)
+  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3  },   // Internal (3:1)
   external:  { Lmax: 24, Cmax: 1200, maxSWR: 10 },   // External (10:1)
   widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20 },   // Wide-range (20:1)
 };
@@ -1033,10 +1035,14 @@ function swrAtRadio(Zc, zone, freq) {
 }
 
 // True when this zone gives acceptable SWR at the radio for band at freq.
-// Each zone carries its own swrLimit; z0 (49:1) uses 3.0 to cover higher-order
-// harmonics that present lower impedance but are still usable in practice.
+// When no tuner is active, uses zone.rawSwrLimit (if set) for a stricter threshold;
+// when a tuner is active the wider zone.swrLimit applies so the tuner visibly
+// extends the matching window (most noticeable on z0: 2.0 → 3.0).
 function inZone(Zc, zone, freq) {
-  return zone.on && swrAtRadio(Zc, zone, freq) < (zone.swrLimit || 2.0);
+  if (!zone.on) return false;
+  const s     = swrAtRadio(Zc, zone, freq);
+  const limit = (!tunerEnabled && zone.rawSwrLimit) ? zone.rawSwrLimit : (zone.swrLimit || 2.0);
+  return s < limit;
 }
 
 // Mismatch efficiency using complex Γ: η = 1 − |Γ|²
@@ -1297,10 +1303,11 @@ function draw() {
         ctx.fillRect(x1, y, Math.max(1, x2 - x1), STRIP_H);
       });
       // Zone label on right
+      const dispLimit = (!tunerEnabled && zone.rawSwrLimit) ? zone.rawSwrLimit : (zone.swrLimit || 2.0);
       ctx.fillStyle = zone.text;
       ctx.font = '8px system-ui, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('SWR<2', M.left + plotW + 8, y + STRIP_H - 1);
+      ctx.fillText(`SWR<${dispLimit}`, M.left + plotW + 8, y + STRIP_H - 1);
       row++;
     });
   }
