@@ -426,7 +426,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.07 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.08 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -811,7 +811,6 @@ const ZONES = [
     //   This split makes the tuner toggle visibly widen the z0 strip.
     id: 'z0', label: '49:1 Unun',
     ratio: 49, rawSwrLimit: 2.0, swrLimit: 3.0,
-    zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
     fill:   'rgba(50, 200, 80, 0.13)',
@@ -822,7 +821,6 @@ const ZONES = [
   {
     id: 'z1', label: '9:1 Unun',
     ratio: 9, swrLimit: 2.0,
-    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
     zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
     xfrmrEff: 0.90,  // 9:1 transformer — tuner adds ~92% efficiency when active
     fill:   'rgba(64, 150, 255, 0.10)',
@@ -833,7 +831,6 @@ const ZONES = [
   {
     id: 'z2', label: '1:1 Balun',
     ratio: 1, swrLimit: 2.0,
-    zMin: 25, zMax: 100,     // informational bands on Y-axis only
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
     fill:   'rgba(255, 160, 0, 0.15)',
@@ -1243,10 +1240,18 @@ function draw() {
   const plotH = H - M.top - M.bottom;
 
   // ── Matching zones ──
+  // Band edges are computed dynamically so they grow/shrink with tuner state:
+  //   tuner OFF  → natural transformer window  (zRef ÷ rawSwrLimit … zRef × rawSwrLimit)
+  //   tuner ON   → full tuner range            (zRef ÷ maxSWR … zRef × maxSWR)
   ZONES.forEach(zone => {
     if (!zone.on) return;
-    const y1 = yPx(zone.zMax, H);
-    const y2 = yPx(zone.zMin, H);
+    const effectiveSWR = tunerEnabled
+      ? getTunerParams().maxSWR
+      : (zone.rawSwrLimit || zone.swrLimit || 2.0);
+    const dynZMin = Math.max(Y_AXIS_MIN, zone.zRef / effectiveSWR);
+    const dynZMax = Math.min(Y_AXIS_MAX, zone.zRef * effectiveSWR);
+    const y1 = yPx(dynZMax, H);
+    const y2 = yPx(dynZMin, H);
 
     ctx.fillStyle = zone.fill;
     ctx.fillRect(M.left, y1, plotW, y2 - y1);
@@ -1270,7 +1275,7 @@ function draw() {
     ctx.fillText(zone.label, M.left + plotW + 8, midY - 4);
     ctx.font = '9px system-ui, sans-serif';
     ctx.fillStyle = zone.text + 'bb';
-    ctx.fillText(formatZ(zone.zMin) + '–' + formatZ(zone.zMax),
+    ctx.fillText(formatZ(dynZMin) + '–' + formatZ(dynZMax),
                  M.left + plotW + 8, midY + 9);
   });
 
