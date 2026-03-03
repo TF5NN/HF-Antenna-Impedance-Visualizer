@@ -426,7 +426,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.05 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.06 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -1128,7 +1128,15 @@ function calcZwireComplex(L, freq) {
   // Scale α with frequency so R_peak = Z0/(α·L_res) ≈ 3000 Ω for every band:
   //   α(f) = ALPHA × (f / ALPHA_FREF)  →  R_peak = Z0·ALPHA_FREF·2/(ALPHA·C·VF) = const
   const alpha = ALPHA * (freq / ALPHA_FREF);
-  const a2 = 2 * alpha * L;
+  // Harmonic-order correction: higher-order resonances on the same physical wire
+  // radiate more efficiently than the flat-α model predicts.  Reduce α by n_eff^0.5
+  // where n_eff = number of half-wavelengths in the wire (≥1, clamped so sub-λ/2
+  // lengths are never penalised).
+  //   n_eff = 1 (λ/2 fundamental): α unchanged → cross-band λ/2 calibration preserved.
+  //   n_eff = 4 (2λ, e.g. 10m on 40m wire): α halved → R_peak ≈ doubles (~750→1500 Ω).
+  const n_eff    = Math.max(1, (2 * L) / lambda_eff);
+  const alphaEff = alpha / Math.pow(n_eff, 0.5);
+  const a2 = 2 * alphaEff * L;
   const b2 = 2 * betaL;
   const D  = Math.cosh(a2) - Math.cos(b2);
   if (D < 1e-12) return { R: Z_PEAK, X: 0 };
