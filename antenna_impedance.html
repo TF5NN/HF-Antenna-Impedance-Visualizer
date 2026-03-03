@@ -447,14 +447,11 @@ header p {
       <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
         <span class="zone-swatch"></span>49:1 Unun
       </button>
-      <button class="zone-btn" id="z1bBtn" style="--zc: #4096ff">
-        <span class="zone-swatch"></span>9:1 (no tuner)
-      </button>
-      <button class="zone-btn" id="z1Btn" style="--zc: #2bd6c8">
-        <span class="zone-swatch"></span>9:1 + Tuner
+      <button class="zone-btn" id="z1Btn" style="--zc: #4096ff">
+        <span class="zone-swatch"></span>9:1 Unun
       </button>
       <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
-        <span class="zone-swatch"></span>1:1 Unun
+        <span class="zone-swatch"></span>1:1 Balun
       </button>
     </div>
     <div id="sweetSpotsControl">
@@ -531,19 +528,19 @@ header p {
 <div id="infoBar">
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
-    <strong>49:1 Unun:</strong>&nbsp;shaded band 1500–5000 Ω (informational); coloured strip = SWR ≤ 2:1 at radio using complex impedance.
+    <strong>49:1 Unun:</strong>&nbsp;shaded band 1500–5000 Ω; strip = SWR ≤ 3:1 at radio (tuner widens window when on).
   </div>
   <div class="info-item">
-    <span class="info-swatch" style="background: rgba(64,150,255,0.4)"></span>
-    <strong>9:1 (no tuner):</strong>&nbsp;shaded band 200–900 Ω (informational); strip = SWR ≤ 2:1 at radio using Z<sub>ant</sub>/9.
-  </div>
-  <div class="info-item">
-    <span class="info-swatch" style="background: rgba(43,214,200,0.45)"></span>
-    <strong>9:1 + Tuner:</strong>&nbsp;shaded band 75–1800 Ω (informational); strip = SWR ≤ 2:1 after analytic L-network solver (within preset L/C limits).
+    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
+    <strong>9:1 Unun:</strong>&nbsp;shaded band 75–1800 Ω; strip = SWR ≤ 2:1 at radio (tuner adds L-network match when on).
   </div>
   <div class="info-item">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
-    <strong>1:1 Unun:</strong>&nbsp;shaded band 25–100 Ω (informational); strip = SWR ≤ 2:1 direct to 50 Ω radio.
+    <strong>1:1 Balun:</strong>&nbsp;shaded band 25–100 Ω; strip = SWR ≤ 2:1 direct to 50 Ω (tuner extends range when on).
+  </div>
+  <div class="info-item" style="color:var(--muted2);font-size:0.75rem">
+    Antenna Tuner toggle applies to all active zones simultaneously.
+    Preset sets the rated matching range (Internal 3:1 · External 10:1 · Wide-range 20:1).
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -804,12 +801,11 @@ const BANDS = [
 
 const ZONES = [
   {
+    // swrLimit 3.0: higher-order resonances (3/2λ, 2λ …) present R ≈ 750–1 000 Ω
+    // at the 49:1 output (SWR 2.4–3.3).  Real EFHW antennas work on these harmonics
+    // in practice, so 3:1 reflects actual usability.  Tuner widens the window further.
     id: 'z0', label: '49:1 Unun',
-    ratio: 49, tuner: false,
-    // swrLimit 3.0: higher-order resonances (3/2λ, 2λ …) present R ≈ 750–1000 Ω
-    // at the 49:1 output, giving SWR 2.4–3.3.  Real EFHW antennas work on these
-    // harmonics (15m, 10m …) in practice, so a 3:1 limit reflects actual usability.
-    swrLimit: 3.0,
+    ratio: 49, swrLimit: 3.0,
     zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
@@ -819,35 +815,19 @@ const ZONES = [
     on: true,
   },
   {
-    // 9:1 transformer alone — no tuner stage, raw SWR at radio
-    id: 'z1b', label: '9:1 (no tuner)',
-    ratio: 9, tuner: false,
-    swrLimit: 2.0,
-    zMin: 200, zMax: 900,    // informational
-    zRef: 450,
-    xfrmrEff: 0.95,          // 9:1 transformer only
-    fill:   'rgba(64, 150, 255, 0.08)',
-    stroke: 'rgba(64, 150, 255, 0.50)',
+    id: 'z1', label: '9:1 Unun',
+    ratio: 9, swrLimit: 2.0,
+    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
+    zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
+    xfrmrEff: 0.90,  // 9:1 transformer — tuner adds ~92% efficiency when active
+    fill:   'rgba(64, 150, 255, 0.10)',
+    stroke: 'rgba(64, 150, 255, 0.65)',
     text:   '#4096ff',
     on: false,
   },
   {
-    // 9:1 transformer + L-network tuner (analytic solver)
-    id: 'z1', label: '9:1 + Tuner',
-    ratio: 9, tuner: true,
-    swrLimit: 2.0,
-    zMin: 75, zMax: 1800,    // informational bands on Y-axis only
-    zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
-    xfrmrEff: 0.87,  // 9:1 transformer (~95%) + L-network tuner (~92%) combined
-    fill:   'rgba(43, 214, 200, 0.09)',
-    stroke: 'rgba(43, 214, 200, 0.58)',
-    text:   '#2bd6c8',
-    on: false,
-  },
-  {
-    id: 'z2', label: '1:1 Unun',
-    ratio: 1, tuner: false,
-    swrLimit: 2.0,
+    id: 'z2', label: '1:1 Balun',
+    ratio: 1, swrLimit: 2.0,
     zMin: 25, zMax: 100,     // informational bands on Y-axis only
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
@@ -908,14 +888,14 @@ function swr50({ R, X }) {
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
-  internal:  { Lmax: 4,  Cmax: 300  },   // Internal (3:1)  — small coil + cap
-  external:  { Lmax: 24, Cmax: 1200 },   // External (10:1) — bench-top unit
-  widerange: { Lmax: 60, Cmax: 3500 },   // Wide-range (20:1) — high-power ATU
+  internal:  { Lmax: 4,  Cmax: 300,  maxSWR: 3  },   // Internal (3:1)
+  external:  { Lmax: 24, Cmax: 1200, maxSWR: 10 },   // External (10:1)
+  widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20 },   // Wide-range (20:1)
 };
 
 let tunerEnabled  = false;
 let tunerPreset   = 'external';          // key into TUNER_PRESETS or 'custom'
-let tunerCustom   = { Lmax: 24, Cmax: 1200 };
+let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
 
 function getTunerParams() {
   return tunerPreset === 'custom' ? tunerCustom
@@ -1037,13 +1017,17 @@ function solveL(Zin, freq, Lmax_uH, Cmax_pF) {
 // ────────────────────────────────────────────────
 
 // SWR at the radio after transformer + optional tuner.
-// freq is needed by solveL; pass 0 to skip tuner stage.
+// When tunerEnabled the L-network solver is tried for every active zone.
+// The tuner only helps when rawSwr ≤ preset.maxSWR (the rated matching range);
+// beyond that it returns the raw SWR so the zone correctly shows no match.
 function swrAtRadio(Zc, zone, freq) {
   const Za     = { R: Zc.R / zone.ratio, X: Zc.X / zone.ratio };
   const rawSwr = swr50(Za);
-  if (!zone.tuner || !tunerEnabled) return rawSwr;
+  if (!tunerEnabled) return rawSwr;
 
   const p = getTunerParams();
+  if (rawSwr > p.maxSWR) return rawSwr;   // outside tuner's rated range
+
   const r = solveL(Za, freq, p.Lmax, p.Cmax);
   return r.matched ? 1.0 : rawSwr;
 }
@@ -1684,17 +1668,6 @@ function buildZoneButtons() {
       const turningOn = !zone.on;
       zone.on = turningOn;
       btn.classList.toggle('on', turningOn);
-
-      // "9:1 + Tuner" button auto-enables tuner + picks external preset
-      if (zone.id === 'z1' && turningOn) {
-        tunerEnabled = true;
-        tunerPreset  = 'external';
-        document.getElementById('tunerToggleBtn').classList.add('on');
-        document.getElementById('tunerPresetSel').value = 'external';
-        document.getElementById('tunerCustomWrap').classList.remove('show');
-        updateTunerHint();
-      }
-
       invalidateSweetSpots();
       draw();
     };
@@ -1713,7 +1686,7 @@ function updateTunerHint() {
     return;
   }
   const p = getTunerParams();
-  el.textContent = `L ≤ ${p.Lmax} µH, C ≤ ${p.Cmax} pF — solver finds L-network match`;
+  el.textContent = `L ≤ ${p.Lmax} µH, C ≤ ${p.Cmax} pF · rated up to ${p.maxSWR}:1 — solver finds L-network match`;
 }
 
 function setupTuner() {
@@ -1729,16 +1702,6 @@ function setupTuner() {
   toggleBtn.onclick = () => {
     tunerEnabled = !tunerEnabled;
     toggleBtn.classList.toggle('on', tunerEnabled);
-    // If user switched tuner ON but the 9:1+Tuner zone is inactive, enable it so
-    // the visual change (SWR strip) is immediately visible.
-    if (tunerEnabled) {
-      const z1 = ZONES.find(z => z.id === 'z1');
-      const z1btn = document.getElementById('z1Btn');
-      if (z1 && !z1.on) {
-        z1.on = true;
-        if (z1btn) z1btn.classList.add('on');
-      }
-    }
     updateTunerHint();
     invalidateSweetSpots();
     draw();
@@ -1895,9 +1858,9 @@ function setupHover() {
           const eff     = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * 100);
           const swrVal  = swrAtRadio(Zc, z, band.freq).toFixed(1);
 
-          // For 9:1 + Tuner zone, append solved component values when tuner ON
+          // When tuner is on, append solved L-network component values for any zone
           let tunerNote = '';
-          if (z.tuner && tunerEnabled) {
+          if (tunerEnabled) {
             const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
             const p  = getTunerParams();
             const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
