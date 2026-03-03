@@ -426,7 +426,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.06 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.07 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -476,7 +476,7 @@ header p {
       </button>
       <select id="tunerPresetSel" class="tuner-select"
               title="Used to decide if a match is possible and to estimate needed L/C">
-        <option value="internal">Internal (3:1)</option>
+        <option value="internal">Internal (4:1)</option>
         <option value="external" selected>External (10:1)</option>
         <option value="widerange">Wide-range (20:1)</option>
         <option value="custom">Custom…</option>
@@ -543,7 +543,7 @@ header p {
   </div>
   <div class="info-item" style="color:var(--muted2);font-size:0.75rem">
     Antenna Tuner toggle applies to all active zones simultaneously.
-    Preset sets the rated matching range (Internal 3:1 · External 10:1 · Wide-range 20:1).
+    Preset sets the rated matching range (Internal 4:1 · External 10:1 · Wide-range 20:1).
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -893,7 +893,7 @@ function swr50({ R, X }) {
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
-  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3  },   // Internal (3:1)
+  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 4  },   // Internal (4:1)
   external:  { Lmax: 24, Cmax: 1200, maxSWR: 10 },   // External (10:1)
   widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20 },   // Wide-range (20:1)
 };
