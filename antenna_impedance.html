@@ -806,6 +806,10 @@ const ZONES = [
   {
     id: 'z0', label: '49:1 Unun',
     ratio: 49, tuner: false,
+    // swrLimit 3.0: higher-order resonances (3/2λ, 2λ …) present R ≈ 750–1000 Ω
+    // at the 49:1 output, giving SWR 2.4–3.3.  Real EFHW antennas work on these
+    // harmonics (15m, 10m …) in practice, so a 3:1 limit reflects actual usability.
+    swrLimit: 3.0,
     zMin: 1500, zMax: 5000,  // informational bands on Y-axis only (not zone decision)
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
@@ -818,6 +822,7 @@ const ZONES = [
     // 9:1 transformer alone — no tuner stage, raw SWR at radio
     id: 'z1b', label: '9:1 (no tuner)',
     ratio: 9, tuner: false,
+    swrLimit: 2.0,
     zMin: 200, zMax: 900,    // informational
     zRef: 450,
     xfrmrEff: 0.95,          // 9:1 transformer only
@@ -830,6 +835,7 @@ const ZONES = [
     // 9:1 transformer + L-network tuner (analytic solver)
     id: 'z1', label: '9:1 + Tuner',
     ratio: 9, tuner: true,
+    swrLimit: 2.0,
     zMin: 75, zMax: 1800,    // informational bands on Y-axis only
     zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
     xfrmrEff: 0.87,  // 9:1 transformer (~95%) + L-network tuner (~92%) combined
@@ -841,6 +847,7 @@ const ZONES = [
   {
     id: 'z2', label: '1:1 Unun',
     ratio: 1, tuner: false,
+    swrLimit: 2.0,
     zMin: 25, zMax: 100,     // informational bands on Y-axis only
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
@@ -1041,9 +1048,11 @@ function swrAtRadio(Zc, zone, freq) {
   return r.matched ? 1.0 : rawSwr;
 }
 
-// True when this zone gives SWR < 2 at the radio for band at freq
+// True when this zone gives acceptable SWR at the radio for band at freq.
+// Each zone carries its own swrLimit; z0 (49:1) uses 3.0 to cover higher-order
+// harmonics that present lower impedance but are still usable in practice.
 function inZone(Zc, zone, freq) {
-  return zone.on && swrAtRadio(Zc, zone, freq) < 2.0;
+  return zone.on && swrAtRadio(Zc, zone, freq) < (zone.swrLimit || 2.0);
 }
 
 // Mismatch efficiency using complex Γ: η = 1 − |Γ|²
@@ -1297,8 +1306,7 @@ function draw() {
       ctx.fillStyle = 'rgba(255,255,255,0.04)';
       ctx.fillRect(M.left, y, plotW, STRIP_H);
       // Matching segments
-      ctx.fillStyle = zone.stroke.replace('0.65', '0.85').replace('0.60', '0.85')
-                                 .replace('0.75', '0.85');
+      ctx.fillStyle = zone.stroke.replace(/[\d.]+\)$/, '0.85)');
       (swrStripCache[zi] || []).forEach(([L1, L2]) => {
         const x1 = xPx(L1, xRange, W);
         const x2 = xPx(Math.min(L2, xRange.xMax), xRange, W);
@@ -1721,6 +1729,16 @@ function setupTuner() {
   toggleBtn.onclick = () => {
     tunerEnabled = !tunerEnabled;
     toggleBtn.classList.toggle('on', tunerEnabled);
+    // If user switched tuner ON but the 9:1+Tuner zone is inactive, enable it so
+    // the visual change (SWR strip) is immediately visible.
+    if (tunerEnabled) {
+      const z1 = ZONES.find(z => z.id === 'z1');
+      const z1btn = document.getElementById('z1Btn');
+      if (z1 && !z1.on) {
+        z1.on = true;
+        if (z1btn) z1btn.classList.add('on');
+      }
+    }
     updateTunerHint();
     invalidateSweetSpots();
     draw();
@@ -1754,13 +1772,14 @@ function setupTuner() {
   updateTunerHint();
 }
 
-// Auto-default: equals the active band count (1:1 ratio). Resets on band toggle;
-// user can still type any value into the input to override for the session.
+// Auto-default: ≥ half the active bands (rounded up, minimum 2).
+// This lets sweet spots appear for EFHW harmonic sets where not every band
+// resonates at the exact same length.  User can type a higher value to tighten.
 function syncSweetSpotsMin() {
   const n = getActiveBands().length;
-  sweetSpotsMin = n;
+  sweetSpotsMin = Math.max(2, Math.ceil(n / 2));
   const inp = document.getElementById('ssMinInput');
-  if (inp) inp.value = n;
+  if (inp) inp.value = sweetSpotsMin;
 }
 
 function setupSweetSpots() {
