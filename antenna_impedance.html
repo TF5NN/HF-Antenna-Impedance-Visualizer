@@ -307,6 +307,8 @@ header p {
 #cpLengthInput:focus { border-color: #c070ff; }
 #ssMinInput { width: 40px; }
 #ssMinInput:focus { border-color: #ffd700; }
+#ssSWRInput { width: 44px; }
+#ssSWRInput:focus { border-color: #ffd700; }
 
 /* ─── VELOCITY FACTOR CONTROL ─────────────────── */
 #vfControl { display: flex; align-items: center; gap: 8px; }
@@ -424,7 +426,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.04 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.05 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -461,7 +463,8 @@ header p {
       <div class="toggle-sub" id="ssMinWrap">
         <span class="cp-unit">min</span>
         <input type="number" id="ssMinInput" value="2" min="1" max="11" step="1">
-        <span class="cp-unit">bands</span>
+        <span class="cp-unit">bands &nbsp; SWR≤</span>
+        <input type="number" id="ssSWRInput" value="2.0" min="1.0" max="10.0" step="0.1">
       </div>
     </div>
   </div>
@@ -1076,6 +1079,7 @@ const SWEET_SPOT_SCAN_POINTS = 800; // resolution of sweet-spot X-axis sweep
 // Sweet spot overlay (wire lengths where ≥N active bands fall in matching zones)
 let sweetSpotsOn    = false;
 let sweetSpotsMin   = 1;
+let sweetSpotsSWR   = 2.0;  // uniform SWR threshold at radio for sweet-spot counting
 let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
 let swrStripCache   = null; // null = stale; [[[L1,L2], ...], ...] per-zone SWR<2 segments
 
@@ -1323,7 +1327,7 @@ function draw() {
         const L = xRange.xMin + i * dL;
         const hits = ab.filter(band => {
           const Zc = calcZcomplex(L, band.freq);
-          return ZONES.some(z => inZone(Zc, z, band.freq));
+          return ZONES.some(z => z.on && swrAtRadio(Zc, z, band.freq) < sweetSpotsSWR);
         }).length;
         if (hits >= sweetSpotsMin && !inSpot) { spotStartL = L; inSpot = true; }
         else if (hits < sweetSpotsMin && inSpot) { segs.push([spotStartL, L]); inSpot = false; }
@@ -1742,12 +1746,11 @@ function setupTuner() {
   updateTunerHint();
 }
 
-// Auto-default: ≥ half the active bands (rounded up, minimum 2).
-// This lets sweet spots appear for EFHW harmonic sets where not every band
-// resonates at the exact same length.  User can type a higher value to tighten.
+// Default: all active bands must simultaneously match — gives the most selective sweet spots.
+// User can lower the threshold to show partial-coverage wire lengths.
 function syncSweetSpotsMin() {
   const n = getActiveBands().length;
-  sweetSpotsMin = Math.max(2, Math.ceil(n / 2));
+  sweetSpotsMin = n;
   const inp = document.getElementById('ssMinInput');
   if (inp) inp.value = sweetSpotsMin;
 }
@@ -1766,6 +1769,12 @@ function setupSweetSpots() {
   ssInp.addEventListener('input', () => {
     const v = parseInt(ssInp.value);
     if (v >= 1) { sweetSpotsMin = v; invalidateSweetSpots(); draw(); }
+  });
+
+  const swrInp = document.getElementById('ssSWRInput');
+  swrInp.addEventListener('input', () => {
+    const v = parseFloat(swrInp.value);
+    if (v >= 1.0) { sweetSpotsSWR = v; invalidateSweetSpots(); draw(); }
   });
 }
 
