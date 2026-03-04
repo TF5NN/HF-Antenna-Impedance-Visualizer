@@ -436,7 +436,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.09 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.10 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -550,8 +550,7 @@ header p {
   </div>
   <div class="xr-side">
     <select id="xEndSel" class="tuner-select">
-      <option value="halfLow" selected>1× λ/2 lowest band</option>
-      <option value="threeQtrLow">0.75× λ/2 lowest band</option>
+      <option value="oneQtrMore" selected>1.25× λ/2 lowest band</option>
       <option value="distance">Set distance…</option>
     </select>
     <input type="number" id="xEndDistInp" value="21" min="1" max="1000" step="0.5"
@@ -938,7 +937,7 @@ let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
 
 // X-axis range state
 let xStartMode = 'highBand'; // 'highBand' | 'lowBand' | 'distance'
-let xEndMode   = 'halfLow';  // 'halfLow'  | 'threeQtrLow' | 'distance'
+let xEndMode   = 'oneQtrMore'; // 'oneQtrMore' | 'distance'
 let xStartDist = 5;           // metres, used when xStartMode === 'distance'
 let xEndDist   = 21;          // metres, used when xEndMode   === 'distance'
 
@@ -1235,9 +1234,8 @@ function getXRange() {
 
   let xMax;
   switch (xEndMode) {
-    case 'threeQtrLow': xMax = (lambda_low / 2) * 0.75; break;
-    case 'distance':    xMax = xEndDist;                 break;
-    default:            xMax = lambda_low / 2;           break; // 'halfLow'
+    case 'distance': xMax = xEndDist;                 break;
+    default:         xMax = (lambda_low / 2) * 1.25;  break; // 'oneQtrMore'
   }
 
   return { xMin: Math.max(0.5, xMin), xMax: Math.max(xMin + 1, xMax) };

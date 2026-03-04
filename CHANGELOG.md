@@ -5,6 +5,134 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v1.10] — 2026-03-04
+
+### Changed
+- **X-range end selector** — simplified to a single preset: **1.25× λ/2 of
+  lowest band** (replaces the previous 0.75× and 1× options). The default
+  right edge now shows the resonance peak plus a comfortable tail past it
+  (~26 m for a 40 m-lowest configuration). "Set distance…" option retained.
+
+### Documentation
+- **CHANGELOG.md** updated to cover all versions from v1.03 onwards.
+- **README.md** — Model Notes section replaced with a full technical writeup:
+  antenna impedance formula, SWR / reflection-coefficient math, transformer
+  efficiency decisions, ATU L-network matching and inductor-Q loss model,
+  counterpoise series-stub model, and a dedicated note explaining why the
+  9:1 Unun struggles to find matches without a counterpoise.
+
+---
+
+## [v1.09] — 2026-03-04
+
+### Changed
+- **Internal ATU preset** corrected to **3:1** (maxSWR 4 → 3); label and
+  info-bar text updated accordingly.
+
+### Added
+- **X-axis range selectors** below the graph canvas:
+  - *Start (left):* ¼ λ highest band (default) · ¼ λ lowest band · Set distance
+  - *End (right):* 1× λ/2 lowest band (default) · 0.75× λ/2 · Set distance
+  - Selecting "Set distance…" reveals a live numeric metre input.
+- **Inductor-Q ATU loss estimate** (v1 spec):
+  - Constant `TUNER_L_Q = 120` (typical small toroidal ATU coil Q).
+  - Helper `estimateTunerEff(freq, L_µH, R_load)`:
+    `Rs = 2πf·L/Q`, `η = R_load / (R_load + Rs)`, clamped to [0.30, 0.98].
+  - Tooltip topology line now appends **"tuner eff xx %"**.
+  - The `~xx%` delivered-power figure multiplies transformer efficiency by
+    tuner efficiency (tooltip display only — matching logic unchanged).
+
+---
+
+## [v1.08] — 2026-03-04
+
+### Changed
+- **Zone overlay bands are now dynamic** — they grow or shrink based on the
+  current tuner state and selected preset rather than using fixed `zMin`/`zMax`
+  values:
+  - Tuner **off**: band = `[zRef / rawSwrLimit … zRef × rawSwrLimit]`
+    (e.g. 9:1 Unun: 225 – 900 Ω, the natural transformer window).
+  - Tuner **on**: band = `[zRef / maxSWR … zRef × maxSWR]` per preset
+    (internal 3:1 → 150–1350 Ω; external 10:1 → 45–4500 Ω; wide-range
+    20:1 → ~23–5000 Ω for the 9:1 zone).
+  - Band range label to the right of the plot updates in real time.
+- Static `zMin` / `zMax` properties removed from all zone definitions
+  (values now computed on every draw).
+
+---
+
+## [v1.07] — 2026-03-03
+
+### Changed
+- **Internal ATU maxSWR gate** raised from 3 to 4, allowing the analytic
+  L-network solver to attempt a match for impedances that fall in the
+  3:1 – 4:1 SWR range at the transformer output (e.g. higher-order
+  harmonics through the 49:1 zone). *(Later revised to 3:1 in v1.09.)*
+
+---
+
+## [v1.06] — 2026-03-03
+
+### Changed
+- **Harmonic-order attenuation correction** in `calcZwireComplex`:
+  `α_eff = α / √n_eff` where `n_eff = max(1, 2L / λ_eff)`.
+  - At the fundamental λ/2 resonance (`n_eff = 1`): α unchanged — the
+    cross-band calibration (`R_peak ≈ 3 000 Ω`) is preserved.
+  - At the 2λ resonance (`n_eff = 4`, e.g. 10 m on a 40 m wire): α halved
+    → `R_peak` approximately doubles from ~750 Ω to ~1 500 Ω, matching
+    real-world EFHW behaviour more closely.
+
+---
+
+## [v1.05] — 2026-03-03
+
+### Added
+- **Uniform SWR≤ threshold input** in the Sweet Spots panel — a small
+  numeric field lets the user set the per-band SWR limit used to count zone
+  hits (default 2.0). Previously the per-zone `swrLimit` was used directly.
+
+### Changed
+- **Sweet Spots min-bands** auto-default reverted to `n` (all active bands)
+  from the earlier `ceil(n/2)` value; the input label updated to match.
+- Sweet Spots hit test now runs the full `swrAtRadio()` pipeline (transformer
+  ratio + optional ATU) so the star columns respond correctly to tuner toggle.
+
+---
+
+## [v1.04] — 2026-03-03
+
+### Added
+- **Antenna Tuner** control group with three presets:
+  - *Internal (4:1)* — Lmax 4 µH, Cmax 500 pF.
+  - *External (10:1)* — Lmax 24 µH, Cmax 1 200 pF.
+  - *Wide-range (20:1)* — Lmax 60 µH, Cmax 3 500 pF.
+  - *Custom* — user-editable Lmax, Cmax, and maxSWR fields.
+- **Analytic L-network solver** (`solveL`) — attempts series→shunt and
+  shunt→series topologies; returns exact L and C values or `matched: false`
+  when no feasible solution exists within the preset component limits.
+- **Tooltip tuner note** — when a match is found, the tooltip shows the
+  L-network topology, inductance (µH), and capacitance (pF).
+- **Per-zone SWR threshold split** — `rawSwrLimit` (no tuner) vs `swrLimit`
+  (with tuner) so that enabling the ATU visibly widens the 49:1 strip from
+  SWR < 2 to SWR < 3 at the radio.
+
+---
+
+## [v1.03] — 2026-03-02
+
+### Fixed
+- Rebuilt zone buttons HTML (`z0`, `z1`, `z2`) and the Antenna Tuner
+  control-group HTML that had failed to persist in the previous session.
+  `setupTuner()` was crashing on `null` DOM references at page load.
+
+### Changed
+- **9:1 Unun** zone split into a no-tuner-required configuration with a
+  tighter SWR limit, retaining the wider band for tuner-assisted operation.
+- Zone `ZONES` array updated: added `rawSwrLimit`, `swrLimit`, `zRef`,
+  and `xfrmrEff` fields; removed dead `tunerLimit` field.
+
+---
+
 ## [v1.02] — 2026-03-02
 
 ### Added
