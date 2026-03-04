@@ -176,6 +176,16 @@ header p {
 }
 
 /* ─── LEGEND ──────────────────────────────────── */
+#xRangeControls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  color: var(--muted2);
+  background: var(--surface);
+}
+.xr-side { display: flex; align-items: center; gap: 4px; }
 #legendBar {
   display: flex;
   flex-wrap: wrap;
@@ -426,7 +436,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.08 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.09 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -476,7 +486,7 @@ header p {
       </button>
       <select id="tunerPresetSel" class="tuner-select"
               title="Used to decide if a match is possible and to estimate needed L/C">
-        <option value="internal">Internal (4:1)</option>
+        <option value="internal">Internal (3:1)</option>
         <option value="external" selected>External (10:1)</option>
         <option value="widerange">Wide-range (20:1)</option>
         <option value="custom">Custom…</option>
@@ -526,6 +536,31 @@ header p {
   <canvas id="graph"></canvas>
 </div>
 
+<div id="xRangeControls">
+  <div class="xr-side">
+    <span class="cp-unit">Start:</span>
+    <select id="xStartSel" class="tuner-select">
+      <option value="highBand" selected>¼ λ highest band</option>
+      <option value="lowBand">¼ λ lowest band</option>
+      <option value="distance">Set distance…</option>
+    </select>
+    <input type="number" id="xStartDistInp" value="5" min="0.5" max="500" step="0.5"
+           class="cp-inp" style="display:none; width:52px">
+    <span class="cp-unit" id="xStartDistUnit" style="display:none">m</span>
+  </div>
+  <div class="xr-side">
+    <select id="xEndSel" class="tuner-select">
+      <option value="halfLow" selected>1× λ/2 lowest band</option>
+      <option value="threeQtrLow">0.75× λ/2 lowest band</option>
+      <option value="distance">Set distance…</option>
+    </select>
+    <input type="number" id="xEndDistInp" value="21" min="1" max="1000" step="0.5"
+           class="cp-inp" style="display:none; width:52px">
+    <span class="cp-unit" id="xEndDistUnit" style="display:none">m</span>
+    <span class="cp-unit">:End</span>
+  </div>
+</div>
+
 <div id="legendBar"></div>
 
 <div id="infoBar">
@@ -543,7 +578,7 @@ header p {
   </div>
   <div class="info-item" style="color:var(--muted2);font-size:0.75rem">
     Antenna Tuner toggle applies to all active zones simultaneously.
-    Preset sets the rated matching range (Internal 4:1 · External 10:1 · Wide-range 20:1).
+    Preset sets the rated matching range (Internal 3:1 · External 10:1 · Wide-range 20:1).
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -888,9 +923,11 @@ function swr50({ R, X }) {
 //  TUNER STATE + PRESETS
 // ════════════════════════════════════════════════
 
+const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical small toroid)
+
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
-  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 4  },   // Internal (4:1)
+  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3  },   // Internal (3:1)
   external:  { Lmax: 24, Cmax: 1200, maxSWR: 10 },   // External (10:1)
   widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20 },   // Wide-range (20:1)
 };
@@ -899,9 +936,23 @@ let tunerEnabled  = false;
 let tunerPreset   = 'external';          // key into TUNER_PRESETS or 'custom'
 let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
 
+// X-axis range state
+let xStartMode = 'highBand'; // 'highBand' | 'lowBand' | 'distance'
+let xEndMode   = 'halfLow';  // 'halfLow'  | 'threeQtrLow' | 'distance'
+let xStartDist = 5;           // metres, used when xStartMode === 'distance'
+let xEndDist   = 21;          // metres, used when xEndMode   === 'distance'
+
 function getTunerParams() {
   return tunerPreset === 'custom' ? tunerCustom
        : (TUNER_PRESETS[tunerPreset] || TUNER_PRESETS.external);
+}
+
+// Estimates tuner efficiency from inductor loss only (capacitor ESR ignored).
+// Rs = ωL/Q is the equivalent series resistance of the coil; η = Rload/(Rload + Rs).
+function estimateTunerEff(freq, L_uH, Rload) {
+  const Rs = 2 * Math.PI * freq * L_uH * 1e-6 / TUNER_L_Q;
+  if (Rload <= 0 || Rs <= 0) return 0.98;
+  return Math.max(0.30, Math.min(0.98, Rload / (Rload + Rs)));
 }
 
 // ════════════════════════════════════════════════
@@ -1174,10 +1225,22 @@ function getXRange() {
   const highestFreq = Math.max(...ab.map(b => b.freq));
   const lambda_low  = C / lowestFreq;
   const lambda_high = C / highestFreq;
-  // xMin: λ/4 of the HIGHEST active band — ensures every band's fundamental
-  //        resonance (λ/2) is visible even in a multi-band view.
-  // xMax: slightly above λ/2 of the LOWEST band (shows its resonance peak).
-  return { xMin: lambda_high / 4, xMax: lambda_low / 1.75 };
+
+  let xMin;
+  switch (xStartMode) {
+    case 'lowBand':  xMin = lambda_low  / 4; break;
+    case 'distance': xMin = xStartDist;      break;
+    default:         xMin = lambda_high / 4; break; // 'highBand'
+  }
+
+  let xMax;
+  switch (xEndMode) {
+    case 'threeQtrLow': xMax = (lambda_low / 2) * 0.75; break;
+    case 'distance':    xMax = xEndDist;                 break;
+    default:            xMax = lambda_low / 2;           break; // 'halfLow'
+  }
+
+  return { xMin: Math.max(0.5, xMin), xMax: Math.max(xMin + 1, xMax) };
 }
 
 function logScale(Z) {
@@ -1884,26 +1947,35 @@ function setupHover() {
       if (zoneMatches.length > 0) anyZoneHit = true;
       const zoneTags = zoneMatches
         .map(z => {
-          const eff     = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * 100);
-          const swrVal  = swrAtRadio(Zc, z, band.freq).toFixed(1);
+          const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
 
-          // When tuner is on, append solved L-network component values for any zone
+          // When tuner is on, append solved L-network topology, components, and efficiency
+          let tunerEff  = 1.0;
           let tunerNote = '';
           if (tunerEnabled) {
-            const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
-            const p  = getTunerParams();
+            const p   = getTunerParams();
             const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
             if (sol.matched) {
               const fmt = el => el.type === 'none' ? '' : `${el.val} ${el.unit} ${el.type}`;
               const parts = [fmt(sol.seriesEl), fmt(sol.shuntEl)].filter(Boolean);
+              // Inductor-Q loss: sum all inductors in the L-network
+              let L_uH = 0;
+              if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
+              if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
+              tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
               tunerNote = parts.length
                 ? `<span style="color:#2bd6c8;font-size:0.63rem;display:block;margin-left:14px">` +
-                  `${sol.topology}: ${parts.join(' + ')}</span>`
+                  `${sol.topology}: ${parts.join(' + ')}` +
+                  ` &nbsp; tuner eff ${Math.round(tunerEff * 100)} %</span>`
                 : '';
             } else {
               tunerNote = `<span style="color:#ff7043;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
             }
           }
+
+          // tunerEff folds into the delivered-power estimate (tooltip display only)
+          const eff    = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * tunerEff * 100);
+          const swrVal = swrAtRadio(Zc, z, band.freq).toFixed(1);
 
           return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
                  `<span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>` +
@@ -2003,6 +2075,47 @@ function setupCounterpoise() {
 }
 
 // ════════════════════════════════════════════════
+//  X-AXIS RANGE SELECTORS
+// ════════════════════════════════════════════════
+
+function setupXRange() {
+  const startSel  = document.getElementById('xStartSel');
+  const endSel    = document.getElementById('xEndSel');
+  const startInp  = document.getElementById('xStartDistInp');
+  const endInp    = document.getElementById('xEndDistInp');
+  const startUnit = document.getElementById('xStartDistUnit');
+  const endUnit   = document.getElementById('xEndDistUnit');
+
+  function applyStart() {
+    xStartMode = startSel.value;
+    const show = xStartMode === 'distance';
+    startInp.style.display  = show ? '' : 'none';
+    startUnit.style.display = show ? '' : 'none';
+    if (show) xStartDist = parseFloat(startInp.value) || 5;
+    invalidateCaches(); draw();
+  }
+  function applyEnd() {
+    xEndMode = endSel.value;
+    const show = xEndMode === 'distance';
+    endInp.style.display  = show ? '' : 'none';
+    endUnit.style.display = show ? '' : 'none';
+    if (show) xEndDist = parseFloat(endInp.value) || 21;
+    invalidateCaches(); draw();
+  }
+
+  startSel.addEventListener('change', applyStart);
+  endSel.addEventListener('change',   applyEnd);
+  startInp.addEventListener('input', () => {
+    xStartDist = parseFloat(startInp.value) || 5;
+    invalidateCaches(); draw();
+  });
+  endInp.addEventListener('input', () => {
+    xEndDist = parseFloat(endInp.value) || 21;
+    invalidateCaches(); draw();
+  });
+}
+
+// ════════════════════════════════════════════════
 //  PIN CONTROL
 // ════════════════════════════════════════════════
 
@@ -2071,6 +2184,7 @@ setupHover();
 setupVF();
 setupCounterpoise();
 setupTuner();
+setupXRange();
 setupSweetSpots();
 setupBwMode();
 setupPinControl();
