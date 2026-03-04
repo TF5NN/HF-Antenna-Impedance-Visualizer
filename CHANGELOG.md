@@ -5,6 +5,34 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v1.11] — 2026-03-04
+
+### Changed
+- **X-range Start (left) selector** — options changed from ¼ λ to **⅛ λ** of
+  highest / lowest active band; default remains ⅛ λ of highest band. The shorter
+  default start exposes the first matching windows on higher bands without
+  wasting canvas on near-zero-length wires.
+
+### Documentation
+- **In-tool model notes** (`<details>` panel) fully rewritten to reflect the
+  current implementation:
+  - Block 1 ("Why graph starts at…") updated to explain the configurable X-range
+    selectors and the new ⅛ λ default.
+  - Z₀ heading corrected from **550 Ω** to **450 Ω** (the actual code constant).
+  - Physics model block extended with the **harmonic-order attenuation correction**
+    (`α_eff = α / √n_eff`) paragraph.
+  - Efficiency block restructured: now documents the three-factor
+    `η_total = η_mismatch × η_transformer × η_tuner` formula; stale flat-rate
+    "~13% loss" figure for the 9:1 zone replaced with the inductor-Q model
+    description.
+  - New **ATU L-network solver** block summarising topology search, component
+    display, and all three presets with their Lmax/Cmax/maxSWR values.
+  - Zone range block updated: 9:1 Unun now described as **dynamic**
+    (225–900 Ω without tuner, expands with ATU preset); 49:1 Unun band
+    description updated to reflect dynamic maxSWR behaviour.
+
+---
+
 ## [v1.10] — 2026-03-04
 
 ### Changed

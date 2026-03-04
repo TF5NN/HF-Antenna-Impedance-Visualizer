@@ -436,7 +436,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.10 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.11 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -540,8 +540,8 @@ header p {
   <div class="xr-side">
     <span class="cp-unit">Start:</span>
     <select id="xStartSel" class="tuner-select">
-      <option value="highBand" selected>¼ λ highest band</option>
-      <option value="lowBand">¼ λ lowest band</option>
+      <option value="highBand" selected>⅛ λ highest band</option>
+      <option value="lowBand">⅛ λ lowest band</option>
       <option value="distance">Set distance…</option>
     </select>
     <input type="number" id="xStartDistInp" value="5" min="0.5" max="500" step="0.5"
@@ -589,31 +589,38 @@ header p {
   <div class="notes-body">
 
     <div class="notes-block">
-      <h4>Why the graph starts at λ/4 of the lowest band</h4>
+      <h4>Graph X-axis range</h4>
       <p>
-        A wire shorter than one quarter-wavelength (λ/4) <em>can</em> radiate, but it is
-        "electrically short": radiation resistance falls roughly as <code>(L/λ)²</code>,
-        while capacitive reactance becomes very large. The result is very low efficiency
-        and a feed impedance that is almost impossible to match without special loading coils.
-        The open-circuit transmission-line model used here also becomes inaccurate below λ/4.
-        Hiding this region keeps the graph focused on practically useful end-fed wire lengths.
+        The <strong>Start</strong> and <strong>End</strong> drop-downs below the graph
+        control the wire-length range displayed. Default start is <strong>⅛ λ of the
+        highest active band</strong> — short enough to show the first matching opportunities
+        without wasting space on electrically tiny wires. Default end is
+        <strong>1.25 × λ/2 of the lowest active band</strong>, which places the lowest-band
+        half-wave resonance peak (the main 49:1 Unun target) roughly three-quarters of the
+        way across the X axis, leaving a comfortable tail to the right.
+      </p>
+      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+        Wires shorter than ⅛ λ are not useful in practice: radiation resistance falls
+        as <code>(L/λ)²</code>, capacitive reactance becomes very large, and the
+        transmission-line model used here is least accurate in this region. Start the
+        graph at a short distance only if you are specifically studying loading-coil or
+        matching-network designs for short verticals.
       </p>
     </div>
 
     <div class="notes-block">
-      <h4>Characteristic impedance Z₀ = 550 Ω</h4>
+      <h4>Characteristic impedance Z₀ = 450 Ω</h4>
       <p>
-        The transmission-line formula <code>|Z| = Z₀ · |cot(βL)|</code> requires a
-        characteristic impedance for the wire. For a single wire above ground,
-        Z₀ depends on wire diameter and height:
+        The transmission-line model requires a characteristic impedance for the wire.
+        For a single wire above ground, Z₀ depends on wire diameter and height:
         <code>Z₀ ≈ 138 · log₁₀(4h / d)</code>
         where <em>h</em> is height above ground and <em>d</em> is wire diameter.
         For a typical 20 AWG (~0.8 mm) wire at 6–10 m height this gives roughly
-        500–600 Ω; 550 Ω is used here as a representative mid-range value.
-        Thicker wire (e.g. 14 AWG, ~1.6 mm) lowers Z₀ by ~30–50 Ω; greater
-        height increases it by a similar amount. The model is calibrated for typical
-        portable and backyard installations — not low-height DX antennas or elevated
-        ground-plane verticals, where Z₀ may differ significantly.
+        500–600 Ω; the model uses <strong>450 Ω</strong> as a conservative midpoint
+        that also accounts for the effective impedance averaging that occurs in sloped
+        or bent installations. The attenuation constant α is then calibrated so that
+        the λ/2 resonance peak is approximately 3 000 Ω — consistent with published
+        EFHW measurements.
       </p>
     </div>
 
@@ -637,12 +644,21 @@ header p {
         through any practical transformer, so matching zones are naturally narrow
         (~±1.5 m around each resonance for 80m).
       </p>
+      <p style="margin-top:6px">
+        <strong>Harmonic-order correction:</strong> a wire operating at its <em>n</em>th
+        harmonic resonance radiates more efficiently than a flat-α model predicts. The
+        effective attenuation is reduced by:
+        <code>α_eff = α / √n_eff</code> where <code>n_eff = max(1, 2L / λ_eff)</code>.
+        At the fundamental (n_eff = 1) α is unchanged.
+        At the 2λ resonance (n_eff = 4, e.g. 10 m on a 40 m wire) α is halved, roughly
+        doubling R_peak from ~750 Ω to ~1 500 Ω — consistent with real EFHW measurements
+        at higher harmonics.
+      </p>
       <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
         <strong style="color:#6a7280">Parameters:</strong>
         Z₀ = 450 Ω (characteristic impedance, typical for HF wire near ground).
-        α = 0.003 75 Np/m (attenuation constant, representing radiation + ohmic loss;
-        calibrated so the 80m EFHW peak is ≈ 3 000 Ω).
-        The 5 000 Ω ceiling (Z_PEAK) clamps the R display at the top of the Y axis.
+        α₀ = calibrated per-band so R_peak ≈ 3 000 Ω at each band's fundamental λ/2.
+        R_min clamped to 25 Ω; R_max clamped to 5 000 Ω — practical limits for real wires.
       </p>
     </div>
 
@@ -698,39 +714,57 @@ header p {
     <div class="notes-block">
       <h4>Matching efficiency — how much power reaches the antenna</h4>
       <p>
-        Efficiency has two parts: <strong>mismatch loss</strong> (power reflected at the
-        impedance boundary) and <strong>network loss</strong> (heat in the transformer/tuner).
-        The tooltip shows the combined estimate when the antenna falls inside a zone.
+        The tooltip <strong>~xx%</strong> figure is the total delivered-power efficiency:
+        <code>η_total = η_mismatch × η_transformer × η_tuner</code>
       </p>
       <p style="margin-top:6px">
-        <strong>Mismatch loss:</strong> <code>η = 1 − |Γ|²</code> where
-        <code>Γ = (Z − Zref) / (Z + Zref)</code> uses the full complex impedance Z = R + jX.
-        At perfect match (Z = Zref, purely resistive) η = 100%.
-        At SWR 2:1 η ≈ 89% — only ~11% is reflected. Reactance increases |Γ| and worsens
-        mismatch loss even when |Z| looks reasonable, which is why zones now use complex SWR.
+        <strong>Mismatch efficiency:</strong> <code>η_mismatch = 1 − |Γ|²</code> where
+        <code>Γ = (Za − 50) / (Za + 50)</code> and Za is the impedance presented to the
+        radio side of the transformer. Full complex arithmetic is used — reactance increases
+        |Γ| even when |Z| looks numerically close to the reference.
       </p>
       <p style="margin-top:6px">
-        <strong>Network loss estimates used:</strong> 1:1 Unun — modelled as lossless
-        (η_net = 100%) because the choke passes RF essentially unchanged; real ferrite
-        chokes have ~1–3% insertion loss, negligible for this purpose.
-        9:1 + Tuner — ~13% loss (transformer ~5%, tuner ~8%);
-        49:1 Unun — ~10% loss (ferrite core heating). These are broad estimates; real
-        losses vary with power, frequency, core material, and winding quality.
+        <strong>Transformer efficiency</strong> is a fixed constant per zone based on
+        measured ferrite-toroid insertion loss at HF:
+        1:1 choke — 100% (negligible loss);
+        9:1 Unun — 90%;
+        49:1 Unun — 90%.
+        Real losses vary with power level, frequency, and core material.
       </p>
       <p style="margin-top:6px">
-        <strong>Radiation efficiency is not modelled.</strong> The percentages shown
-        describe how much transmitter power reaches the antenna feedpoint — they say
-        nothing about how much of that power is actually radiated into space. Radiation
-        efficiency depends on the ratio of radiation resistance to total loss resistance
-        (conductor + ground + near-field), and varies enormously with installation.
-        Rough ballparks: at <strong>EFHW resonance</strong> (49:1 zone) a well-installed
-        wire is typically <strong>70–90 %</strong> efficient because radiation resistance
-        is high (hundreds to thousands of ohms) and dominates over losses. At
-        <strong>λ/4 anti-resonance</strong> (1:1 Unun zone, ~25–50 Ω) radiation
-        resistance is only ~10–20 Ω — comparable to wire and ground losses — giving
-        <strong>30–60 %</strong> in practice, despite the near-perfect impedance match.
-        A high matching efficiency figure at a low-impedance length should not be
-        interpreted as a high-performance antenna.
+        <strong>Tuner efficiency</strong> (when an ATU is enabled) is estimated from the
+        inductor Q model: <code>Rs = 2πf · L / Q</code> with Q = 120 (typical small
+        toroidal ATU coil), giving <code>η_tuner = R_load / (R_load + Rs)</code>, clamped
+        to [30%, 98%]. The tooltip line shows the exact value as "tuner eff xx%".
+        Capacitor ESR is not modelled. When no ATU is active, η_tuner = 100%.
+      </p>
+      <p style="margin-top:6px">
+        <strong>Radiation efficiency is not modelled.</strong> The percentage shown
+        describes power delivered to the feedpoint, not power radiated. Radiation
+        efficiency depends on radiation resistance vs total loss resistance (conductor +
+        ground + near-field) and varies enormously with installation. At EFHW resonance
+        (49:1 zone) a well-installed wire is typically 70–90% efficient; at λ/4
+        anti-resonance (1:1 zone, ~25–50 Ω) radiation resistance is only ~10–20 Ω —
+        comparable to losses — giving 30–60% despite a near-perfect impedance match.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>ATU L-network solver</h4>
+      <p>
+        When an Antenna Tuner is enabled, the tool runs an analytic <strong>L-network
+        solver</strong> at each point in the tooltip. Two topologies are tried in order:
+        <em>series→shunt</em> (series element facing the antenna, shunt element to ground)
+        and <em>shunt→series</em>. The winning topology, inductance (µH), and capacitance
+        (pF) are shown in the tooltip, along with the inductor-Q efficiency estimate.
+        If neither topology can reach a match within the preset's Lmax/Cmax limits,
+        "No match within tuner limits" is shown and the zone does not light up.
+      </p>
+      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+        ATU presets — <strong>Internal (3:1)</strong>: Lmax 4 µH, Cmax 500 pF;
+        <strong>External (10:1)</strong>: Lmax 24 µH, Cmax 1 200 pF;
+        <strong>Wide-range (20:1)</strong>: Lmax 60 µH, Cmax 3 500 pF.
+        A <em>Custom</em> mode lets you set all three parameters manually.
       </p>
     </div>
 
@@ -754,6 +788,7 @@ header p {
         lengths.
       </p>
     </div>
+
     <div class="notes-section">
       <h4>ITU Region 1 allocation width</h4>
       <p>
@@ -770,6 +805,10 @@ header p {
     <div class="notes-block">
       <h4>How the matching zone ranges were derived</h4>
       <p>
+        Zone overlay bands are <strong>dynamic</strong> — they grow or shrink based
+        on tuner state and selected ATU preset:
+      </p>
+      <p style="margin-top:6px">
         <strong style="color:#ffa000">1:1 Unun (25–100 Ω):</strong>
         A 1:1 unun (UNbalanced–UNbalanced) presents the same impedance on both ports —
         it does not transform the ratio, only suppresses common-mode RF current flowing
@@ -782,20 +821,26 @@ header p {
         spanning <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#4096ff">9:1 Unun + Tuner (75–1 800 Ω):</strong>
-        A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna. A typical L-network
-        tuner can then handle roughly 75–1 800 Ω (approximately ÷6 to ×4 of the
-        450 Ω centre). The range is asymmetric because L-network topology inherently
-        covers a wider ratio in one direction; a T-network tuner may extend further.
+        <strong style="color:#4096ff">9:1 Unun (225–900 Ω without tuner):</strong>
+        A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna (zRef = 450 Ω).
+        Without a tuner the overlay shows the natural SWR ≤ 2:1 window:
+        <code>450 / 2 = 225 Ω</code> to <code>450 × 2 = 900 Ω</code>.
+        When an ATU is active the overlay expands to the tuner preset's maxSWR
+        (e.g. external 10:1 → ~45–4 500 Ω) reflecting the wider range the combined
+        system can handle. Between wire resonances the feedpoint always has a large
+        reactive component X, so complex SWR through the 9:1 is typically 7–15:1
+        even when |Z| ≈ 450 Ω — this is why the zone appears narrow without a tuner
+        and why a counterpoise (3–7 m) that partially cancels the reactance is
+        effectively part of the matching system.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#32c850">49:1 Unun (1 500–5 000 Ω):</strong>
-        A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal.
+        <strong style="color:#32c850">49:1 Unun (1 225–4 900 Ω, shown as ~1 225–5 000 Ω):</strong>
+        A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal (zRef).
         SWR ≤ 2:1 spans <code>2 450 / 2 = 1 225 Ω</code> to <code>2 450 × 2 = 4 900 Ω</code>.
-        The zone shown starts at 1 500 Ω (a conservative lower bound — 1 225 Ω at SWR 2:1
-        is attainable but near the noisy anti-resonance region) and extends to 5 000 Ω,
-        matching the model's impedance ceiling. At 5 000 Ω the SWR is
-        <code>5 000 / 2 450 ≈ 2.0:1</code>, right at the tolerance boundary.
+        The overlay extends to the 5 000 Ω model ceiling, which is within measurement
+        noise of the theoretical boundary. When a tuner is on the band widens to
+        the preset's maxSWR, allowing the ATU to absorb residual mismatch at
+        higher-order harmonics through the 49:1 zone.
       </p>
     </div>
 
@@ -936,7 +981,7 @@ let tunerPreset   = 'external';          // key into TUNER_PRESETS or 'custom'
 let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
 
 // X-axis range state
-let xStartMode = 'highBand'; // 'highBand' | 'lowBand' | 'distance'
+let xStartMode = 'highBand'; // 'highBand' (⅛λ) | 'lowBand' (⅛λ) | 'distance'
 let xEndMode   = 'oneQtrMore'; // 'oneQtrMore' | 'distance'
 let xStartDist = 5;           // metres, used when xStartMode === 'distance'
 let xEndDist   = 21;          // metres, used when xEndMode   === 'distance'
@@ -1227,9 +1272,9 @@ function getXRange() {
 
   let xMin;
   switch (xStartMode) {
-    case 'lowBand':  xMin = lambda_low  / 4; break;
+    case 'lowBand':  xMin = lambda_low  / 8; break;
     case 'distance': xMin = xStartDist;      break;
-    default:         xMin = lambda_high / 4; break; // 'highBand'
+    default:         xMin = lambda_high / 8; break; // 'highBand'
   }
 
   let xMax;
