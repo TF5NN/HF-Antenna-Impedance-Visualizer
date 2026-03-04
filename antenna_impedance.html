@@ -436,7 +436,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.11 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.12 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -732,10 +732,14 @@ header p {
         Real losses vary with power level, frequency, and core material.
       </p>
       <p style="margin-top:6px">
-        <strong>Tuner efficiency</strong> (when an ATU is enabled) is estimated from the
-        inductor Q model: <code>Rs = 2πf · L / Q</code> with Q = 120 (typical small
-        toroidal ATU coil), giving <code>η_tuner = R_load / (R_load + Rs)</code>, clamped
-        to [30%, 98%]. The tooltip line shows the exact value as "tuner eff xx%".
+        <strong>Tuner efficiency</strong> (when an ATU is enabled) uses a stress-aware
+        inductor-Q model. Base inductor ESR: <code>Rs₀ = 2πf · L / Q</code> with Q = 120.
+        An L-network circulates extra reactive current when the impedance ratio is large;
+        the circulating current stress factor is <code>kI² = max(R_load, 50) / min(R_load, 50)</code>
+        (the mismatch ratio). Effective loss resistance: <code>Rs_eff = Rs₀ × kI²</code>.
+        Final efficiency: <code>η_tuner = R_load / (R_load + Rs_eff)</code>, clamped to [30%, 98%].
+        The tooltip shows "tuner eff xx% Q≈Y.Y" — a low Q means an easy match with little
+        circulating current; a high Q (e.g. 5–8) means a hard match and noticeably more heat.
         Capacitor ESR is not modelled. When no ATU is active, η_tuner = 100%.
       </p>
       <p style="margin-top:6px">
@@ -991,12 +995,20 @@ function getTunerParams() {
        : (TUNER_PRESETS[tunerPreset] || TUNER_PRESETS.external);
 }
 
-// Estimates tuner efficiency from inductor loss only (capacitor ESR ignored).
-// Rs = ωL/Q is the equivalent series resistance of the coil; η = Rload/(Rload + Rs).
+// Estimates tuner efficiency using inductor-Q loss scaled by L-match circulating
+// current stress.  For an L-network matching Rload to 50 Ω the loaded Q is:
+//   Q_match = √(max(Rload,50)/min(Rload,50) − 1)
+// Circulating current stress factor kI = √(1+Q²), so loss resistance scales by
+//   kI² = max(Rload,50)/min(Rload,50)  (the impedance mismatch ratio).
+// Rs_eff = (ωL/Q_L) × kI² — higher ratio → more circulating current → more heat.
+// Capacitor ESR is ignored; Q_L = 120 is typical for a small toroidal ATU coil.
 function estimateTunerEff(freq, L_uH, Rload) {
-  const Rs = 2 * Math.PI * freq * L_uH * 1e-6 / TUNER_L_Q;
-  if (Rload <= 0 || Rs <= 0) return 0.98;
-  return Math.max(0.30, Math.min(0.98, Rload / (Rload + Rs)));
+  if (L_uH <= 0) return 0.98;                            // no inductor — negligible loss
+  const Rl    = Math.max(1e-6, Rload);
+  const Rs0   = 2 * Math.PI * freq * L_uH * 1e-6 / TUNER_L_Q;  // base ESR (Ω)
+  const kI2   = Math.max(Rl, 50) / Math.min(Rl, 50);    // circulating-current stress ≥ 1
+  const Rs_eff = Rs0 * kI2;                              // effective loss resistance
+  return Math.max(0.30, Math.min(0.98, Rl / (Rl + Rs_eff)));
 }
 
 // ════════════════════════════════════════════════
@@ -2006,10 +2018,14 @@ function setupHover() {
               if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
               if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
               tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
+              // Match Q shown for transparency (explains why hard matches lose more)
+              const Rl_    = Math.max(1e-6, Za.R);
+              const ratio_ = Math.max(Rl_, 50) / Math.min(Rl_, 50);
+              const Qstr   = L_uH > 0 ? ` &nbsp; Q≈${Math.sqrt(Math.max(0, ratio_ - 1)).toFixed(1)}` : '';
               tunerNote = parts.length
                 ? `<span style="color:#2bd6c8;font-size:0.63rem;display:block;margin-left:14px">` +
                   `${sol.topology}: ${parts.join(' + ')}` +
-                  ` &nbsp; tuner eff ${Math.round(tunerEff * 100)} %</span>`
+                  ` &nbsp; tuner eff ${Math.round(tunerEff * 100)} %${Qstr}</span>`
                 : '';
             } else {
               tunerNote = `<span style="color:#ff7043;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;

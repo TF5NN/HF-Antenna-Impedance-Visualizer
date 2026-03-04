@@ -141,13 +141,15 @@ A real inductor has a quality factor Q that introduces an equivalent series resi
 Rs = 2π · f · L / Q          Q = 120 (typical small toroidal ATU coil)
 ```
 
-The resulting single-pass tuner efficiency is:
+An L-network circulates extra reactive current when the impedance mismatch ratio is large. The circulating-current stress factor scales the effective loss resistance:
 
 ```
-η_tuner = R_load / (R_load + Rs)      clamped to [0.30, 0.98]
+kI² = max(R_load, 50) / min(R_load, 50)     (impedance mismatch ratio, ≥ 1)
+Rs_eff = Rs × kI²
+η_tuner = R_load / (R_load + Rs_eff)         clamped to [0.30, 0.98]
 ```
 
-where R_load is the resistive part of the impedance the inductor drives. Capacitor ESR and switching losses are not modelled. The figure is shown in the tooltip as **"tuner eff xx %"** and feeds into the total efficiency calculation below. Matching logic (whether a zone lights up) is not affected.
+Easy matches (R_load near 50 Ω, kI² ≈ 1) see almost no change. Hard matches (high impedance ratio, kI² >> 1) show noticeably lower efficiency. The tooltip shows **"tuner eff xx% Q≈Y.Y"** — the Q figure is the L-match loaded Q, a measure of how hard the network is working. Capacitor ESR is not modelled. Matching logic (whether a zone lights up) is not affected.
 
 **Total delivered-power efficiency** (the `~xx%` figure in the tooltip):
 
@@ -198,4 +200,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by TF5NN · v1.11*
+*Created by TF5NN · v1.12*

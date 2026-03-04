@@ -5,6 +5,26 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v1.12] — 2026-03-04
+
+### Changed
+- **Stress-aware tuner efficiency model** — `estimateTunerEff()` now accounts for
+  L-network circulating current. An L-match matching `R_load` to 50 Ω has loaded Q:
+  `Q_match = √(max(R_load, 50) / min(R_load, 50) − 1)`.
+  Circulating current stress factor `kI² = 1 + Q²` (= impedance mismatch ratio) scales
+  the effective inductor loss resistance: `Rs_eff = Rs₀ × kI²`.
+  Result: easy matches (near 50 Ω) barely change; hard matches (high impedance ratio)
+  now show noticeably lower tuner efficiency (often 50–75% instead of 90–95%).
+
+### Added
+- **Tooltip Q display** — the tuner note line now shows "Q≈X.Y" alongside "tuner eff xx%",
+  giving users a quick sense of how hard the L-network is working.
+
+### Documentation
+- In-tool model notes: ATU efficiency paragraph updated to describe the stress-aware model.
+
+---
+
 ## [v1.11] — 2026-03-04
 
 ### Changed
