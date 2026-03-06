@@ -315,6 +315,9 @@ header p {
 .toggle-sub input:focus { outline: none; }
 #cpLengthInput { width: 56px; }
 #cpLengthInput:focus { border-color: #c070ff; }
+#coilSlider { width: 100px; vertical-align: middle; }
+#coilInp    { width: 48px; }
+#coilInp:focus { border-color: #f5a623; }
 #ssMinInput { width: 40px; }
 #ssMinInput:focus { border-color: #ffd700; }
 #ssSWRInput { width: 44px; }
@@ -436,7 +439,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.12 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.13 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -512,6 +515,20 @@ header p {
         <span class="cp-unit">Length</span>
         <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
         <span class="cp-unit">m</span>
+      </div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <div class="ctrl-label">Feedpoint Loading Coil</div>
+    <div id="coilControl">
+      <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
+        <span class="zone-swatch"></span>Enable coil
+      </button>
+      <div class="toggle-sub" id="coilWrap">
+        <span class="cp-unit">L</span>
+        <input type="range" id="coilSlider" min="0" max="50" step="0.1" value="0">
+        <input type="number" id="coilInp" value="0" min="0" max="50" step="0.1">
+        <span class="cp-unit">µH</span>
       </div>
     </div>
   </div>
@@ -773,6 +790,26 @@ header p {
     </div>
 
     <div class="notes-block">
+      <h4>Feedpoint loading coil</h4>
+      <p>
+        A series inductor placed at the feedpoint (before the transformer) adds inductive
+        reactance <code>X_L = 2πfL</code> and a small series loss resistance
+        <code>Rs = X_L / Q</code> with Q = 150 (typical standalone wound coil —
+        slightly higher Q than a compact ATU toroid, which is wound for size not Q).
+        The modified feedpoint impedance <code>Z_eff = {R_ant + Rs, X_ant + X_L}</code>
+        propagates through the full matching chain — resonances shift to longer lengths,
+        anti-resonances shift, and zone colour overlaps respond accordingly.
+        Coil efficiency: <code>η_coil = R_ant / (R_ant + Rs)</code> where R_ant is the
+        wire-plus-counterpoise resistance before the coil. A short wire with low radiation
+        resistance paired with a large coil shows significant coil loss — e.g. 30 Ω
+        antenna + 3 Ω coil loss → ~91% coil efficiency. The tooltip shows
+        "Loading coil: X.X µH &nbsp; X<sub>L</sub>=+jXXX Ω &nbsp; coil eff ≈ XX%"
+        and folds coilEff into the total delivered-power estimate. The dashed ghost curve
+        (when counterpoise is active) is unaffected — it always shows wire-only impedance.
+      </p>
+    </div>
+
+    <div class="notes-block">
       <h4>Sweet Spots overlay</h4>
       <p>
         The <strong>★ Sweet Spots</strong> toggle highlights wire lengths where a
@@ -972,6 +1009,7 @@ function swr50({ R, X }) {
 // ════════════════════════════════════════════════
 
 const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical small toroid)
+const COIL_Q    = 150; // feedpoint loading coil Q — standalone wound coil, higher than ATU toroid
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
@@ -1203,6 +1241,10 @@ let isDragging = false;
 let cpEnabled = false;
 let cpLengthM = 5.0;  // metres
 
+// Loading coil state (series inductor at feedpoint, before transformer)
+let coilEnabled = false;
+let coil_uH     = 0;     // inductance in µH (0 = no coil)
+
 // Velocity factor (0.90–1.00) — shifts resonant peaks to match real wire
 let VF = 0.975;
 
@@ -1249,12 +1291,25 @@ function calcZwireComplex(L, freq) {
   return { R, X };
 }
 
-// Complex impedance at feedpoint; adds counterpoise in series when enabled
+// Complex impedance at feedpoint; adds counterpoise and optional loading coil in series
 function calcZcomplex(L, freq) {
   const Zw = calcZwireComplex(L, freq);
-  if (!cpEnabled || cpLengthM <= 0) return Zw;
-  const Zc = calcZwireComplex(cpLengthM, freq);
-  return { R: Zw.R + Zc.R, X: Zw.X + Zc.X };
+  let result = { R: Zw.R, X: Zw.X };
+  if (cpEnabled && cpLengthM > 0) {
+    const Zcp = calcZwireComplex(cpLengthM, freq);
+    result.R += Zcp.R;
+    result.X += Zcp.X;
+  }
+  if (coilEnabled && coil_uH > 0) {
+    // Series loading coil: adds reactance XL and loss resistance Rs = XL/Q
+    const omega = 2 * Math.PI * freq;
+    const Lc    = coil_uH * 1e-6;
+    const XL    = omega * Lc;
+    const Rs    = XL / COIL_Q;
+    result.R   += Rs;
+    result.X   += XL;
+  }
+  return result;
 }
 
 // |Z| magnitude — used for Y-axis position; same visual as before
@@ -1992,11 +2047,29 @@ function setupHover() {
 
     let anyZoneHit = false;
     ab.forEach(band => {
-      const Zc     = calcZcomplex(L, band.freq);
+      const Zc     = calcZcomplex(L, band.freq);  // wire + counterpoise + coil when enabled
       const Z      = calcZmag(Zc);   // |Z| for display
       const Zwire  = cpEnabled ? calcZwire(L, band.freq) : null;
       const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
+
+      // Loading coil info — computed once per band, used in zone eff and displayed
+      let coilEff  = 1.0;
+      let coilNote = '';
+      if (coilEnabled && coil_uH > 0) {
+        const omega  = 2 * Math.PI * band.freq;
+        const Lc     = coil_uH * 1e-6;
+        const XL     = omega * Lc;
+        const Rs     = XL / COIL_Q;
+        // R_ant: antenna resistance before coil loss (back-calc from Zc which already includes Rs)
+        const R_ant  = Math.max(1e-6, Zc.R - Rs);
+        coilEff  = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
+        coilNote = `<span style="color:#f5a623;font-size:0.63rem;display:block;margin-left:14px">` +
+          `Loading coil: ${coil_uH.toFixed(1)} µH` +
+          ` &nbsp; X<sub>L</sub>=+j${XL.toFixed(0)} Ω` +
+          ` &nbsp; coil eff ≈ ${Math.round(coilEff * 100)} %` +
+          `</span>`;
+      }
 
       const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
       if (zoneMatches.length > 0) anyZoneHit = true;
@@ -2032,8 +2105,8 @@ function setupHover() {
             }
           }
 
-          // tunerEff folds into the delivered-power estimate (tooltip display only)
-          const eff    = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * tunerEff * 100);
+          // coilEff and tunerEff fold into the delivered-power estimate (tooltip display only)
+          const eff    = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * tunerEff * coilEff * 100);
           const swrVal = swrAtRadio(Zc, z, band.freq).toFixed(1);
 
           return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
@@ -2059,6 +2132,7 @@ function setupHover() {
         rxNote +
         zoneTags +
         cpNote +
+        coilNote +
         `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
         `</div>`;
     });
@@ -2131,6 +2205,34 @@ function setupCounterpoise() {
     const v = parseFloat(inp.value);
     if (v > 0) { cpLengthM = v; invalidateSweetSpots(); draw(); }
   });
+}
+
+// ════════════════════════════════════════════════
+//  LOADING COIL CONTROLS
+// ════════════════════════════════════════════════
+
+function setupCoil() {
+  const btn    = document.getElementById('coilToggleBtn');
+  const wrap   = document.getElementById('coilWrap');
+  const slider = document.getElementById('coilSlider');
+  const inp    = document.getElementById('coilInp');
+
+  btn.onclick = () => {
+    coilEnabled = !coilEnabled;
+    btn.classList.toggle('on', coilEnabled);
+    wrap.classList.toggle('show', coilEnabled);
+    invalidateCaches(); draw();
+  };
+
+  function applyVal(v) {
+    coil_uH      = Math.max(0, Math.min(50, isNaN(v) ? 0 : v));
+    slider.value = coil_uH;
+    inp.value    = coil_uH.toFixed(1);
+    if (coilEnabled) { invalidateCaches(); draw(); }
+  }
+
+  slider.addEventListener('input', () => applyVal(parseFloat(slider.value)));
+  inp.addEventListener('input',    () => applyVal(parseFloat(inp.value)));
 }
 
 // ════════════════════════════════════════════════
@@ -2242,6 +2344,7 @@ updateLegend();
 setupHover();
 setupVF();
 setupCounterpoise();
+setupCoil();
 setupTuner();
 setupXRange();
 setupSweetSpots();

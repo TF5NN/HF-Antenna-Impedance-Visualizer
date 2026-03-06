@@ -5,6 +5,32 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v1.13] — 2026-03-06
+
+### Added
+- **Feedpoint Loading Coil** — new optional series inductor (0–50 µH, step 0.1) placed at
+  the feedpoint before the transformer. Controlled via a new "Feedpoint Loading Coil"
+  control group (zone-btn toggle + slider + synced numeric input).
+
+  Physics: `XL = 2πfL` added to feedpoint reactance; `Rs = XL / Q` (Q = 150) added to
+  resistance. The modified feedpoint impedance propagates through the full matching chain —
+  impedance curves shift, resonances move to longer wire lengths, zone overlaps change.
+
+  Loss model: `η_coil = R_ant / (R_ant + Rs)` where R_ant is the wire-plus-counterpoise
+  resistance before the coil. Folds into total delivered-power efficiency alongside
+  mismatch, transformer, and tuner efficiencies.
+
+  Tooltip shows "Loading coil: X.X µH &nbsp; X_L=+jXXX Ω &nbsp; coil eff ≈ XX%" per band.
+  Dashed ghost curve (when counterpoise is active) is unaffected — always shows wire-only.
+
+- **New constant** `COIL_Q = 150` — standalone wound coil Q, slightly higher than
+  the ATU toroid `TUNER_L_Q = 120`.
+
+- **In-tool model notes** — new "Feedpoint loading coil" block in the `<details>` panel
+  explaining XL, Rs, Q=150 rationale, η_coil formula, and ghost curve behaviour.
+
+---
+
 ## [v1.12] — 2026-03-04
 
 ### Changed
