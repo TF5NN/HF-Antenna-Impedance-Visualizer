@@ -186,6 +186,7 @@ header p {
   background: var(--surface);
 }
 .xr-side { display: flex; align-items: center; gap: 4px; }
+#rxModeBtn { font-size: 0.72rem; padding: 2px 7px; }
 #legendBar {
   display: flex;
   flex-wrap: wrap;
@@ -313,14 +314,15 @@ header p {
   font-family: monospace;
 }
 .toggle-sub input:focus { outline: none; }
-#cpLengthInput { width: 56px; }
+#cpLengthInput { width: 72px; }   /* was 56px */
 #cpLengthInput:focus { border-color: #c070ff; }
 #coilSlider { width: 100px; vertical-align: middle; }
 #coilInp    { width: 48px; }
 #coilInp:focus { border-color: #f5a623; }
-#ssMinInput { width: 40px; }
+.adv-section { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+#ssMinInput { width: 56px; }   /* was 40px */
 #ssMinInput:focus { border-color: #ffd700; }
-#ssSWRInput { width: 44px; }
+#ssSWRInput { width: 60px; }   /* was 44px */
 #ssSWRInput:focus { border-color: #ffd700; }
 
 /* ─── VELOCITY FACTOR CONTROL ─────────────────── */
@@ -377,6 +379,32 @@ header p {
 .ss-range-full { color: var(--muted2); font-size: 0.65rem; }
 .ss-band { font-weight: 700; }
 .ss-zone { font-size: 0.65rem; opacity: 0.8; }
+
+/* ─── INSPECT PANEL ───────────────────────────── */
+#inspectPanel {
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 20px;
+  font-size: 0.72rem;
+}
+#inspectPanel.show { display: flex; }
+#inspectPanel .ip-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted2);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+#inspectPanel .ip-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 1px 0; }
+#inspectPanel .ip-band { font-weight: 700; min-width: 28px; }
+#inspectPanel .ip-z    { font-family: monospace; color: var(--text); }
+#inspectPanel .ip-rx   { color: #484f58; font-size: 0.68em; }
+#inspectPanel .ip-loss { font-size: 0.65rem; color: var(--muted); margin-left: 8px; }
+#inspectPanel .ip-eff  { font-weight: 600; }
 
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
@@ -439,7 +467,7 @@ header p {
 <header>
   <h1>HF End-Fed Antenna Impedance</h1>
   <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.13 &nbsp;·&nbsp; TF5NN &copy;</span>
+  <span id="versionLabel">v1.14 &nbsp;·&nbsp; TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -518,17 +546,25 @@ header p {
       </div>
     </div>
   </div>
-  <div class="ctrl-group">
-    <div class="ctrl-label">Feedpoint Loading Coil</div>
-    <div id="coilControl">
-      <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
-        <span class="zone-swatch"></span>Enable coil
+  <div class="ctrl-group" id="advancedGroup">
+    <div class="ctrl-label">Advanced / Experimental</div>
+    <div id="advancedControl">
+      <button class="zone-btn" id="advancedToggleBtn" style="--zc: #888">
+        <span class="zone-swatch"></span>Advanced / Experimental
       </button>
-      <div class="toggle-sub" id="coilWrap">
-        <span class="cp-unit">L</span>
-        <input type="range" id="coilSlider" min="0" max="50" step="0.1" value="0">
-        <input type="number" id="coilInp" value="0" min="0" max="50" step="0.1">
-        <span class="cp-unit">µH</span>
+      <div class="toggle-sub" id="advancedWrap">
+        <div class="adv-section">
+          <span class="cp-unit" style="font-weight:600">Feedpoint Loading Coil</span>
+          <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
+            <span class="zone-swatch"></span>Enable coil
+          </button>
+          <div class="toggle-sub" id="coilWrap">
+            <span class="cp-unit">L</span>
+            <input type="range" id="coilSlider" min="0" max="50" step="0.1" value="0">
+            <input type="number" id="coilInp" value="0" min="0" max="50" step="0.1">
+            <span class="cp-unit">µH</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -549,6 +585,7 @@ header p {
   </div>
 </div>
 
+<div id="inspectPanel"></div>
 <div id="graphWrap">
   <canvas id="graph"></canvas>
 </div>
@@ -575,6 +612,9 @@ header p {
     <span class="cp-unit" id="xEndDistUnit" style="display:none">m</span>
     <span class="cp-unit">:End</span>
   </div>
+  <button id="rxModeBtn" class="zone-btn" style="--zc:#a0a0ff;margin-left:auto">
+    <span class="zone-swatch"></span>R/X view
+  </button>
 </div>
 
 <div id="legendBar"></div>
@@ -1234,6 +1274,7 @@ let CANVAS_H   = 500; // CSS pixel height (updated in resizeAndDraw)
 
 // Pin (locked inspect line) state
 let bwMode     = false; // line width proportional to ITU R1 band allocation
+let rxMode     = false; // when true: plot R (solid) and |X| (dashed) instead of |Z|
 let pinL       = null;  // wire length in metres, null = no pin
 let isDragging = false;
 
@@ -1652,24 +1693,37 @@ function draw() {
     }
   }
 
-  // Solid curves — effective impedance (wire + counterpoise when active)
+  // Solid curves — |Z| or R/X depending on rxMode
   ab.forEach(band => {
     const dL = (xRange.xMax - xRange.xMin) / STEPS;
-    ctx.strokeStyle = band.color;
     ctx.lineWidth = bandLineWidth(band);
     ctx.lineJoin = 'round';
-    ctx.beginPath();
-    let pen = false;
-    for (let i = 0; i <= STEPS; i++) {
-      const L  = xRange.xMin + i * dL;
-      const Z  = calcZ(L, band.freq);
-      const cx = xPx(L, xRange, W);
-      const cy = yPx(Z, H);
-      if (cy < M.top - 2 || cy > M.top + plotH + 2) { pen = false; continue; }
-      if (!pen) { ctx.moveTo(cx, cy); pen = true; }
-      else       { ctx.lineTo(cx, cy); }
+
+    function drawCurve(getVal, dashed) {
+      ctx.strokeStyle = band.color;
+      if (dashed) ctx.setLineDash([6, 4]);
+      else        ctx.setLineDash([]);
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i <= STEPS; i++) {
+        const L  = xRange.xMin + i * dL;
+        const v  = getVal(L);
+        const cx = xPx(L, xRange, W);
+        const cy = yPx(v, H);
+        if (cy < M.top - 2 || cy > M.top + plotH + 2) { pen = false; continue; }
+        if (!pen) { ctx.moveTo(cx, cy); pen = true; }
+        else       { ctx.lineTo(cx, cy); }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
-    ctx.stroke();
+
+    if (rxMode) {
+      drawCurve(L => Math.min(Z_PEAK, Math.max(Z_MIN, calcZcomplex(L, band.freq).R)), false);
+      drawCurve(L => Math.min(Z_PEAK, Math.max(Z_MIN, Math.abs(calcZcomplex(L, band.freq).X))), true);
+    } else {
+      drawCurve(L => calcZ(L, band.freq), false);
+    }
   });
 
   // ── Hover cursor ──
@@ -1733,7 +1787,9 @@ function draw() {
 
       // Dots on band curves
       ab.forEach(band => {
-        const Z  = calcZ(pinL, band.freq);
+        const Z  = rxMode
+          ? Math.min(Z_PEAK, Math.max(Z_MIN, calcZcomplex(pinL, band.freq).R))
+          : calcZ(pinL, band.freq);
         const cy = yPx(Z, H);
         if (cy >= M.top && cy <= M.top + plotH) {
           ctx.fillStyle = band.color;
@@ -1762,8 +1818,16 @@ function draw() {
   ctx.translate(14, M.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
-  ctx.fillText('Impedance (Ω)', 0, 0);
+  ctx.fillText(rxMode ? 'R or |X| (Ω)' : 'Impedance (Ω)', 0, 0);
   ctx.restore();
+
+  // R/X legend (top-left of plot area)
+  if (rxMode) {
+    ctx.fillStyle = 'rgba(200,200,255,0.60)';
+    ctx.font = '9px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('— R   ╌╌ |X|', M.left + 6, M.top + 14);
+  }
 
   // X title
   ctx.textAlign = 'center';
@@ -1785,6 +1849,7 @@ function draw() {
   }
 
   updateSweetSpotsTable();
+  updateInspectPanel();
 }
 
 // ════════════════════════════════════════════════
@@ -1820,6 +1885,84 @@ function updateSweetSpotsTable() {
   });
   el.innerHTML = html;
   el.classList.add('show');
+}
+
+// ════════════════════════════════════════════════
+//  INSPECT PANEL (persistent pin data above graph)
+// ════════════════════════════════════════════════
+
+function updateInspectPanel() {
+  const panel = document.getElementById('inspectPanel');
+  if (!panel) return;
+  if (pinL === null) { panel.classList.remove('show'); panel.innerHTML = ''; return; }
+
+  const ab = getActiveBands();
+  let html = `<div class="ip-title">Inspect: ${formatLength(pinL)}</div>`;
+
+  ab.forEach(band => {
+    const Zc        = calcZcomplex(pinL, band.freq);
+    const Z         = calcZmag(Zc);
+    const lambda    = C / band.freq;
+    const halfwaves = pinL / (lambda / 2);
+    const sign      = Zc.X >= 0 ? '+' : '−';
+    const Xabs      = Math.abs(Zc.X);
+
+    // Coil efficiency
+    let coilEff = 1.0;
+    if (coilEnabled && coil_uH > 0) {
+      const omega = 2 * Math.PI * band.freq;
+      const Rs    = (omega * coil_uH * 1e-6) / COIL_Q;
+      const R_ant = Math.max(1e-6, Zc.R - Rs);
+      coilEff = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
+    }
+
+    // Zone matches
+    const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
+    let zoneHtml = '';
+    zoneMatches.forEach(z => {
+      const Za      = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
+      const mmEff   = mismatchEffComplex(Zc, z.zRef);
+      let tunerEff  = 1.0;
+      let tunerDesc = '';
+      if (tunerEnabled) {
+        const p   = getTunerParams();
+        const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
+        if (sol.matched) {
+          let L_uH = 0;
+          if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
+          if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
+          tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
+          tunerDesc = ` tuner ${Math.round(tunerEff * 100)}%`;
+        } else {
+          tunerDesc = ' no tuner match';
+        }
+      }
+      const total  = Math.round(mmEff * z.xfrmrEff * tunerEff * coilEff * 100);
+      const losses = [
+        `mismatch ${Math.round(mmEff * 100)}%`,
+        `xfrmr ${Math.round(z.xfrmrEff * 100)}%`,
+      ];
+      if (tunerEnabled) losses.push(tunerDesc.trim());
+      if (coilEnabled && coil_uH > 0) losses.push(`coil ${Math.round(coilEff * 100)}%`);
+
+      zoneHtml += `<span style="color:${z.text};font-weight:600">${z.label}</span>` +
+        ` <span class="ip-eff">${total}% delivered</span>` +
+        ` <span class="ip-loss">[${losses.join(' · ')}]</span>`;
+    });
+    if (!zoneHtml) zoneHtml = `<span style="color:var(--muted2);font-size:0.68rem">no match</span>`;
+
+    html +=
+      `<div class="ip-row">` +
+      `<span class="ip-band" style="color:${band.color}">${band.name}</span>` +
+      `<span class="ip-z">${formatZ(Z)}</span>` +
+      `<span class="ip-rx">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
+      `<span style="color:var(--muted2);font-size:0.68rem">${halfwaves.toFixed(2)}×λ/2</span>` +
+      zoneHtml +
+      `</div>`;
+  });
+
+  panel.innerHTML = html;
+  panel.classList.add('show');
 }
 
 // ════════════════════════════════════════════════
@@ -2236,6 +2379,32 @@ function setupCoil() {
 }
 
 // ════════════════════════════════════════════════
+//  ADVANCED / EXPERIMENTAL TOGGLE
+// ════════════════════════════════════════════════
+
+function setupAdvanced() {
+  const btn  = document.getElementById('advancedToggleBtn');
+  const wrap = document.getElementById('advancedWrap');
+  btn.onclick = () => {
+    const on = wrap.classList.toggle('show');
+    btn.classList.toggle('on', on);
+  };
+}
+
+// ════════════════════════════════════════════════
+//  R/X PLOT MODE
+// ════════════════════════════════════════════════
+
+function setupRxMode() {
+  const btn = document.getElementById('rxModeBtn');
+  btn.onclick = () => {
+    rxMode = !rxMode;
+    btn.classList.toggle('on', rxMode);
+    draw();
+  };
+}
+
+// ════════════════════════════════════════════════
 //  X-AXIS RANGE SELECTORS
 // ════════════════════════════════════════════════
 
@@ -2345,6 +2514,8 @@ setupHover();
 setupVF();
 setupCounterpoise();
 setupCoil();
+setupAdvanced();
+setupRxMode();
 setupTuner();
 setupXRange();
 setupSweetSpots();

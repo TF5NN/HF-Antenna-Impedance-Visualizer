@@ -5,6 +5,32 @@ Creator and rights holder: **TF5NN**.
 
 ---
 
+## [v1.14] — 2026-03-07
+
+### Added
+- **Advanced / Experimental collapsible section** — the Feedpoint Loading Coil controls are
+  now hidden inside a collapsible "Advanced / Experimental" ctrl-group, keeping the main
+  control bar uncluttered. Click the button to reveal the coil controls; they retain full
+  function as before.
+
+- **Inspect panel** — a persistent data panel now appears above the graph whenever a pin
+  (inspect length) is set. Shows per-band: impedance magnitude, complex R±jX, half-wave
+  fraction (n×λ/2), matched zone(s) with full loss breakdown (mismatch / transformer /
+  tuner / coil efficiencies and total % delivered). Updates automatically on every state
+  change (tuner preset, coil, counterpoise, etc.). Panel hides when the pin is cleared.
+
+- **R/X view mode** — new "R/X view" toggle button in the X-range control bar. When active,
+  each band is drawn as two curves on the same log-Y axis: R (solid, band colour) and |X|
+  (dashed, same colour). Y-axis label changes to "R or |X| (Ω)"; a small legend "— R  ╌╌ |X|"
+  appears inside the plot. Pin dots track the R curve in this mode. Toggle again to restore
+  the standard |Z| view.
+
+### Changed
+- **Wider numeric inputs** — `#cpLengthInput` widened 56 → 72 px; `#ssMinInput` 40 → 56 px;
+  `#ssSWRInput` 44 → 60 px. Numbers no longer truncate in the fields at typical browser zoom.
+
+---
+
 ## [v1.13] — 2026-03-06
 
 ### Added
