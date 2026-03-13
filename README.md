@@ -189,10 +189,10 @@ This is not a corner case: it is the normal operating condition for a 9:1 random
 
 ## License
 
-Copyright © 2026 TF5NN
+Copyright © 2026 Gunnar B. Guðlaugsson, TF5NN
 
 This project is licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)** licence.
-You are free to share, adapt, and build upon this work — including commercially — as long as you credit **TF5NN** as the original creator.
+You are free to share, adapt, and build upon this work — including commercially — as long as you credit **Gunnar B. Guðlaugsson (TF5NN)** as the original creator.
 
 [![CC BY 4.0](https://licensebuttons.net/l/by/4.0/88x31.png)](https://creativecommons.org/licenses/by/4.0/)
 
@@ -200,4 +200,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by TF5NN · v1.14*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v1.14*

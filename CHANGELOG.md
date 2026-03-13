@@ -1,7 +1,7 @@
 # Changelog
 
 All notable changes to **HF End-Fed Antenna Impedance — Visual Tool**.
-Creator and rights holder: **TF5NN**.
+Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
@@ -246,7 +246,7 @@ Creator and rights holder: **TF5NN**.
 - **README.md** — project description, full feature list, usage instructions,
   impedance model notes, and licence section with CC BY 4.0 badge.
 - **LICENSE** — Creative Commons Attribution 4.0 International. Share, adapt,
-  and build upon this work freely; credit TF5NN as the original creator.
+  and build upon this work freely; credit Gunnar B. Guðlaugsson (TF5NN) as the original creator.
 - **Meta and Open Graph tags** in `<head>` — `<meta name="description">`,
   `<meta name="author">`, `og:title`, `og:description`, and `og:type` for
   proper social sharing link previews.
@@ -271,7 +271,7 @@ Creator and rights holder: **TF5NN**.
   near the pin to signal draggability.
 - **All / None band-select shortcuts** — two small links below the band
   toggles select or clear all bands in one click.
-- **Version label and TF5NN © credit** in the page header.
+- **Version label and Gunnar B. Guðlaugsson (TF5NN) © credit** in the page header.
 
 ### Changed
 - Sweet-spot *min bands* input now auto-defaults to the number of currently
