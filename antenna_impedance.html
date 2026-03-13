@@ -478,11 +478,6 @@ header p {
       <button class="band-sel-btn" id="bandAllBtn">All</button>
       <button class="band-sel-btn" id="bandNoneBtn">None</button>
     </div>
-    <div id="bwModeControl">
-      <button class="zone-btn" id="bwModeBtn" style="--zc: #888888">
-        <span class="zone-swatch"></span>ITU R1 alloc. width
-      </button>
-    </div>
   </div>
   <div class="ctrl-group">
     <div class="ctrl-label">Matching Zones (toggle)</div>
@@ -553,6 +548,11 @@ header p {
         <span class="zone-swatch"></span>Advanced / Experimental
       </button>
       <div class="toggle-sub" id="advancedWrap">
+        <div class="adv-section">
+          <button class="zone-btn" id="bwModeBtn" style="--zc: #888888">
+            <span class="zone-swatch"></span>ITU R1 alloc. width
+          </button>
+        </div>
         <div class="adv-section">
           <span class="cp-unit" style="font-weight:600">Feedpoint Loading Coil</span>
           <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
