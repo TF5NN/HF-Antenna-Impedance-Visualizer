@@ -33,6 +33,43 @@ The tool can also be hosted as a static page on any web server or GitHub Pages �
 
 ---
 
+## ⚠️ Why Loading Coils Are Not Included
+
+This tool models antennas as **lossy open-circuit transmission lines**. That model
+is accurate for:
+
+- End-Fed Half-Wave (EFHW) antennas
+- End-Fed Random Wire (EFRW) antennas
+- Other electrically long wires where standing-wave behaviour dominates
+
+It is **not valid** for:
+
+- Electrically short antennas (much shorter than λ/2)
+- Loaded verticals or whip antennas with series inductors
+
+### Why the model breaks down
+
+Long antennas behave as **distributed systems**: their impedance is governed by
+standing waves, characterised by `βL` (electrical length) and described by
+transmission-line equations. This tool implements those equations directly.
+
+Short antennas with loading coils behave as **lumped-element systems**: the
+antenna is a capacitive load and the coil is a series inductor — described by
+a simple RLC circuit, not by TL equations.
+
+Adding a "loading coil" inside this model does **not** represent a real loaded
+antenna. It adds inductive reactance to a transmission-line feedpoint impedance,
+producing results that look plausible but are physically meaningless for short,
+loaded antennas.
+
+> For accurate modelling of short loaded antennas, a separate tool using a
+> lumped-element model is required.
+
+The loading coil code remains in the source for future reference and may form
+the basis of a dedicated loaded-antenna tool in a later release.
+
+---
+
 ## Model Notes
 
 The tool is intentionally educational rather than a full EM simulator. Real antenna impedance is also shaped by height above ground, nearby objects, soil conductivity, and wire geometry. The sections below trace the signal path from raw wire impedance through to the efficiency figure shown in the tooltip.

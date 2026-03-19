@@ -316,10 +316,13 @@ header p {
 .toggle-sub input:focus { outline: none; }
 #cpLengthInput { width: 72px; }   /* was 56px */
 #cpLengthInput:focus { border-color: #c070ff; }
+/* === LOADING COIL FEATURE DISABLED ===
+   Reason: Model is not valid for electrically short antennas (see README)
 #coilSlider { width: 100px; vertical-align: middle; }
 #coilInp    { width: 48px; }
 #coilInp:focus { border-color: #f5a623; }
 .adv-section { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+=== END LOADING COIL FEATURE DISABLED === */
 #ssMinInput { width: 56px; }   /* was 40px */
 #ssMinInput:focus { border-color: #ffd700; }
 #ssSWRInput { width: 60px; }   /* was 44px */
@@ -553,6 +556,8 @@ header p {
             <span class="zone-swatch"></span>ITU R1 alloc. width
           </button>
         </div>
+        <!-- === LOADING COIL FEATURE DISABLED ===
+             Reason: Model is not valid for electrically short antennas (see README)
         <div class="adv-section">
           <span class="cp-unit" style="font-weight:600">Feedpoint Loading Coil</span>
           <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
@@ -565,6 +570,7 @@ header p {
             <span class="cp-unit">µH</span>
           </div>
         </div>
+        === END LOADING COIL FEATURE DISABLED === -->
       </div>
     </div>
   </div>
@@ -829,25 +835,25 @@ header p {
       </p>
     </div>
 
+    <!-- === LOADING COIL FEATURE DISABLED ===
+         Reason: Model is not valid for electrically short antennas (see README)
     <div class="notes-block">
       <h4>Feedpoint loading coil</h4>
       <p>
         A series inductor placed at the feedpoint (before the transformer) adds inductive
         reactance <code>X_L = 2πfL</code> and a small series loss resistance
-        <code>Rs = X_L / Q</code> with Q = 150 (typical standalone wound coil —
+        <code>Rs = X_L / Q</code> with Q = 150 (typical standalone wound coil --
         slightly higher Q than a compact ATU toroid, which is wound for size not Q).
         The modified feedpoint impedance <code>Z_eff = {R_ant + Rs, X_ant + X_L}</code>
-        propagates through the full matching chain — resonances shift to longer lengths,
+        propagates through the full matching chain -- resonances shift to longer lengths,
         anti-resonances shift, and zone colour overlaps respond accordingly.
-        Coil efficiency: <code>η_coil = R_ant / (R_ant + Rs)</code> where R_ant is the
+        Coil efficiency: <code>eta_coil = R_ant / (R_ant + Rs)</code> where R_ant is the
         wire-plus-counterpoise resistance before the coil. A short wire with low radiation
-        resistance paired with a large coil shows significant coil loss — e.g. 30 Ω
-        antenna + 3 Ω coil loss → ~91% coil efficiency. The tooltip shows
-        "Loading coil: X.X µH &nbsp; X<sub>L</sub>=+jXXX Ω &nbsp; coil eff ≈ XX%"
-        and folds coilEff into the total delivered-power estimate. The dashed ghost curve
-        (when counterpoise is active) is unaffected — it always shows wire-only impedance.
+        resistance paired with a large coil shows significant coil loss -- e.g. 30 ohm
+        antenna + 3 ohm coil loss gives ~91% coil efficiency.
       </p>
     </div>
+    === END LOADING COIL FEATURE DISABLED === -->
 
     <div class="notes-block">
       <h4>Sweet Spots overlay</h4>
@@ -1049,7 +1055,10 @@ function swr50({ R, X }) {
 // ════════════════════════════════════════════════
 
 const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical small toroid)
-const COIL_Q    = 150; // feedpoint loading coil Q — standalone wound coil, higher than ATU toroid
+// === LOADING COIL FEATURE DISABLED ===
+// Reason: Model is not valid for electrically short antennas (see README)
+// const COIL_Q    = 150; // feedpoint loading coil Q — standalone wound coil, higher than ATU toroid
+// === END LOADING COIL FEATURE DISABLED ===
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
@@ -1282,9 +1291,13 @@ let isDragging = false;
 let cpEnabled = false;
 let cpLengthM = 5.0;  // metres
 
-// Loading coil state (series inductor at feedpoint, before transformer)
-let coilEnabled = false;
-let coil_uH     = 0;     // inductance in µH (0 = no coil)
+// === LOADING COIL FEATURE DISABLED ===
+// Reason: Model is not valid for electrically short antennas (see README)
+// let coilEnabled = false;
+// let coil_uH     = 0;     // inductance in µH (0 = no coil)
+const coilEnabled = false; // safe default — coil permanently disabled
+const coil_uH     = 0;    // safe default — coil permanently disabled
+// === END LOADING COIL FEATURE DISABLED ===
 
 // Velocity factor (0.90–1.00) — shifts resonant peaks to match real wire
 let VF = 0.975;
@@ -1341,15 +1354,18 @@ function calcZcomplex(L, freq) {
     result.R += Zcp.R;
     result.X += Zcp.X;
   }
-  if (coilEnabled && coil_uH > 0) {
-    // Series loading coil: adds reactance XL and loss resistance Rs = XL/Q
-    const omega = 2 * Math.PI * freq;
-    const Lc    = coil_uH * 1e-6;
-    const XL    = omega * Lc;
-    const Rs    = XL / COIL_Q;
-    result.R   += Rs;
-    result.X   += XL;
-  }
+  // === LOADING COIL FEATURE DISABLED ===
+  // Reason: Model is not valid for electrically short antennas (see README)
+  // if (coilEnabled && coil_uH > 0) {
+  //   // Series loading coil: adds reactance XL and loss resistance Rs = XL/Q
+  //   const omega = 2 * Math.PI * freq;
+  //   const Lc    = coil_uH * 1e-6;
+  //   const XL    = omega * Lc;
+  //   const Rs    = XL / COIL_Q;
+  //   result.R   += Rs;
+  //   result.X   += XL;
+  // }
+  // === END LOADING COIL FEATURE DISABLED ===
   return result;
 }
 
@@ -1907,14 +1923,17 @@ function updateInspectPanel() {
     const sign      = Zc.X >= 0 ? '+' : '−';
     const Xabs      = Math.abs(Zc.X);
 
-    // Coil efficiency
-    let coilEff = 1.0;
-    if (coilEnabled && coil_uH > 0) {
-      const omega = 2 * Math.PI * band.freq;
-      const Rs    = (omega * coil_uH * 1e-6) / COIL_Q;
-      const R_ant = Math.max(1e-6, Zc.R - Rs);
-      coilEff = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
-    }
+    // === LOADING COIL FEATURE DISABLED ===
+    // Reason: Model is not valid for electrically short antennas (see README)
+    // let coilEff = 1.0;
+    const coilEff = 1.0; // safe default — coil disabled
+    // if (coilEnabled && coil_uH > 0) {
+    //   const omega = 2 * Math.PI * band.freq;
+    //   const Rs    = (omega * coil_uH * 1e-6) / COIL_Q;
+    //   const R_ant = Math.max(1e-6, Zc.R - Rs);
+    //   coilEff = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
+    // }
+    // === END LOADING COIL FEATURE DISABLED ===
 
     // Zone matches
     const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
@@ -1943,7 +1962,9 @@ function updateInspectPanel() {
         `xfrmr ${Math.round(z.xfrmrEff * 100)}%`,
       ];
       if (tunerEnabled) losses.push(tunerDesc.trim());
-      if (coilEnabled && coil_uH > 0) losses.push(`coil ${Math.round(coilEff * 100)}%`);
+      // === LOADING COIL FEATURE DISABLED ===
+      // if (coilEnabled && coil_uH > 0) losses.push(`coil ${Math.round(coilEff * 100)}%`);
+      // === END LOADING COIL FEATURE DISABLED ===
 
       zoneHtml += `<span style="color:${z.text};font-weight:600">${z.label}</span>` +
         ` <span class="ip-eff">${total}% delivered</span>` +
@@ -2196,23 +2217,27 @@ function setupHover() {
       const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
 
-      // Loading coil info — computed once per band, used in zone eff and displayed
-      let coilEff  = 1.0;
-      let coilNote = '';
-      if (coilEnabled && coil_uH > 0) {
-        const omega  = 2 * Math.PI * band.freq;
-        const Lc     = coil_uH * 1e-6;
-        const XL     = omega * Lc;
-        const Rs     = XL / COIL_Q;
-        // R_ant: antenna resistance before coil loss (back-calc from Zc which already includes Rs)
-        const R_ant  = Math.max(1e-6, Zc.R - Rs);
-        coilEff  = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
-        coilNote = `<span style="color:#f5a623;font-size:0.63rem;display:block;margin-left:14px">` +
-          `Loading coil: ${coil_uH.toFixed(1)} µH` +
-          ` &nbsp; X<sub>L</sub>=+j${XL.toFixed(0)} Ω` +
-          ` &nbsp; coil eff ≈ ${Math.round(coilEff * 100)} %` +
-          `</span>`;
-      }
+      // === LOADING COIL FEATURE DISABLED ===
+      // Reason: Model is not valid for electrically short antennas (see README)
+      // let coilEff  = 1.0;
+      // let coilNote = '';
+      const coilEff  = 1.0;  // safe default — coil disabled
+      const coilNote = '';   // safe default — coil disabled
+      // if (coilEnabled && coil_uH > 0) {
+      //   const omega  = 2 * Math.PI * band.freq;
+      //   const Lc     = coil_uH * 1e-6;
+      //   const XL     = omega * Lc;
+      //   const Rs     = XL / COIL_Q;
+      //   // R_ant: antenna resistance before coil loss (back-calc from Zc which already includes Rs)
+      //   const R_ant  = Math.max(1e-6, Zc.R - Rs);
+      //   coilEff  = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
+      //   coilNote = `<span style="color:#f5a623;font-size:0.63rem;display:block;margin-left:14px">` +
+      //     `Loading coil: ${coil_uH.toFixed(1)} µH` +
+      //     ` &nbsp; X<sub>L</sub>=+j${XL.toFixed(0)} Ω` +
+      //     ` &nbsp; coil eff ≈ ${Math.round(coilEff * 100)} %` +
+      //     `</span>`;
+      // }
+      // === END LOADING COIL FEATURE DISABLED ===
 
       const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
       if (zoneMatches.length > 0) anyZoneHit = true;
@@ -2354,29 +2379,32 @@ function setupCounterpoise() {
 //  LOADING COIL CONTROLS
 // ════════════════════════════════════════════════
 
-function setupCoil() {
-  const btn    = document.getElementById('coilToggleBtn');
-  const wrap   = document.getElementById('coilWrap');
-  const slider = document.getElementById('coilSlider');
-  const inp    = document.getElementById('coilInp');
-
-  btn.onclick = () => {
-    coilEnabled = !coilEnabled;
-    btn.classList.toggle('on', coilEnabled);
-    wrap.classList.toggle('show', coilEnabled);
-    invalidateCaches(); draw();
-  };
-
-  function applyVal(v) {
-    coil_uH      = Math.max(0, Math.min(50, isNaN(v) ? 0 : v));
-    slider.value = coil_uH;
-    inp.value    = coil_uH.toFixed(1);
-    if (coilEnabled) { invalidateCaches(); draw(); }
-  }
-
-  slider.addEventListener('input', () => applyVal(parseFloat(slider.value)));
-  inp.addEventListener('input',    () => applyVal(parseFloat(inp.value)));
-}
+// === LOADING COIL FEATURE DISABLED ===
+// Reason: Model is not valid for electrically short antennas (see README)
+// function setupCoil() {
+//   const btn    = document.getElementById('coilToggleBtn');
+//   const wrap   = document.getElementById('coilWrap');
+//   const slider = document.getElementById('coilSlider');
+//   const inp    = document.getElementById('coilInp');
+//
+//   btn.onclick = () => {
+//     coilEnabled = !coilEnabled;
+//     btn.classList.toggle('on', coilEnabled);
+//     wrap.classList.toggle('show', coilEnabled);
+//     invalidateCaches(); draw();
+//   };
+//
+//   function applyVal(v) {
+//     coil_uH      = Math.max(0, Math.min(50, isNaN(v) ? 0 : v));
+//     slider.value = coil_uH;
+//     inp.value    = coil_uH.toFixed(1);
+//     if (coilEnabled) { invalidateCaches(); draw(); }
+//   }
+//
+//   slider.addEventListener('input', () => applyVal(parseFloat(slider.value)));
+//   inp.addEventListener('input',    () => applyVal(parseFloat(inp.value)));
+// }
+// === END LOADING COIL FEATURE DISABLED ===
 
 // ════════════════════════════════════════════════
 //  ADVANCED / EXPERIMENTAL TOGGLE
@@ -2513,7 +2541,9 @@ updateLegend();
 setupHover();
 setupVF();
 setupCounterpoise();
-setupCoil();
+// === LOADING COIL FEATURE DISABLED ===
+// setupCoil();
+// === END LOADING COIL FEATURE DISABLED ===
 setupAdvanced();
 setupRxMode();
 setupTuner();

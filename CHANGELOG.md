@@ -5,6 +5,16 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Disabled loading coil feature** (code preserved but commented out)
+  - Reason: The current transmission-line-based model is not valid for electrically short, loaded antennas
+  - Prevents misleading results when users attempt to model whip antennas with loading coils
+  - Loading coil support may return in a future dedicated tool using a lumped-element model
+
+---
+
 ## [v1.14] — 2026-03-07
 
 ### Added
