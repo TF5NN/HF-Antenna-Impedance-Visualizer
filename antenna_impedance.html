@@ -491,8 +491,8 @@ header p {
 }
 .mode-btn:hover { color: var(--text); }
 
-/* Mode-specific visibility — JS sets display directly */
-.dip-only { display: none; }
+/* Mode-specific visibility — JS owns all display state via setMode() */
+/* .dip-only starts hidden; setupMode() calls setMode('ef') to initialise */
 
 /* ─── DIPOLE CONTROLS ───────────────────────────── */
 #dipWireLenInput   { width: 74px; }
@@ -660,7 +660,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
   <!-- ═══════════════════════════════════════════════
        DIPOLE-ONLY CONTROLS
        ═══════════════════════════════════════════════ -->
-  <div class="ctrl-group dip-only">
+  <div class="ctrl-group dip-only" style="display:none">
     <div class="ctrl-label">Wire Length</div>
     <div id="dipWireControl">
       <input type="number" id="dipWireLenInput" min="0.5" max="9999" step="0.01" placeholder="m">
@@ -668,7 +668,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
       <button class="pin-clear-btn" id="dipWireLenResetBtn" title="Reset to λ/2 of lowest band">↺</button>
     </div>
   </div>
-  <div class="ctrl-group dip-only">
+  <div class="ctrl-group dip-only" style="display:none">
     <div class="ctrl-label">Feedpoint Position</div>
     <div id="dipPosControl">
       <input type="range" id="dipPosSlider" min="1" max="99" step="1" value="50">
@@ -684,7 +684,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
       </button>
     </div>
   </div>
-  <div class="ctrl-group dip-only">
+  <div class="ctrl-group dip-only" style="display:none">
     <div class="ctrl-label">Matching (toggle)</div>
     <div id="dipZoneBtns">
       <button class="zone-btn on" id="dz0Btn" style="--zc: #ffa000">
@@ -3305,13 +3305,15 @@ function setMode(mode) {
   // Mode bar buttons
   document.getElementById('modeEFBtn').classList.toggle('on', mode === 'ef');
   document.getElementById('modeDipBtn').classList.toggle('on', mode === 'dip');
-  // EF-only controls
+  // EF-only controls: remove inline style to show (CSS has no hiding rule); hide with inline none
   document.querySelectorAll('.ef-only').forEach(el => {
-    el.style.display = mode === 'ef' ? '' : 'none';
+    if (mode === 'ef') el.style.removeProperty('display');
+    else el.style.display = 'none';
   });
-  // Dip-only controls
+  // Dip-only controls: remove inline style to show (CSS default kicks in); hide with inline none
   document.querySelectorAll('.dip-only').forEach(el => {
-    el.style.display = mode === 'dip' ? '' : 'none';
+    if (mode === 'dip') el.style.removeProperty('display');
+    else el.style.display = 'none';
   });
   // Reset pin on mode switch
   pinL = null;
