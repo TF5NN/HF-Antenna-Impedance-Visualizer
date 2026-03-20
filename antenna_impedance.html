@@ -358,7 +358,8 @@ header p {
 .pin-clear-btn:hover { color: var(--text); }
 
 /* ─── SWEET SPOTS RESULTS TABLE ───────────────── */
-#sweetSpotsTable {
+#sweetSpotsTable,
+#dipSweetSpotsTable {
   display: none;
   flex-direction: column;
   gap: 3px;
@@ -367,7 +368,8 @@ header p {
   padding: 6px 20px;
   font-size: 0.71rem;
 }
-#sweetSpotsTable.show { display: flex; }
+#sweetSpotsTable.show,
+#dipSweetSpotsTable.show { display: flex; }
 #sweetSpotsTable .ss-header {
   font-size: 0.65rem;
   text-transform: uppercase;
@@ -705,8 +707,21 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
       <input type="number" id="dipCustomRatioInp" value="4" min="1" max="100" step="0.5">
       <span class="cp-unit">:1</span>
     </div>
+    <div id="dipSweetSpotsControl">
+      <button class="zone-btn" id="dipSweetSpotsBtn" style="--zc: #ffd700">
+        <span class="zone-swatch"></span>Sweet Spots
+      </button>
+      <div class="toggle-sub" id="dipSsMinWrap">
+        <span class="cp-unit">min</span>
+        <input type="number" id="dipSsMinInput" value="1" min="1" max="11" step="1">
+        <span class="cp-unit">bands &nbsp; SWR≤</span>
+        <input type="number" id="dipSsSWRInput" value="2.0" min="1.0" max="10.0" step="0.1">
+      </div>
+    </div>
   </div>
 </div>
+
+<div id="dipSweetSpotsTable"></div>
 
 <div id="inspectPanel"></div>
 <div id="graphWrap">
@@ -1433,7 +1448,16 @@ let sweetSpotsSWR   = 2.0;  // uniform SWR threshold at radio for sweet-spot cou
 let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
 let swrStripCache   = null; // null = stale; [[[L1,L2], ...], ...] per-zone SWR<2 segments
 
-function invalidateSweetSpots() { sweetSpotsCache = null; swrStripCache = null; }
+let dipSweetSpotsOn    = false;
+let dipSweetSpotsMin   = 1;
+let dipSweetSpotsSWR   = 2.0;  // SWR threshold for dipole sweet-spot scan
+let dipSweetSpotsCache = null; // null = stale; [[p1,p2], ...] feedpoint-position segments
+
+function invalidateSweetSpots() {
+  sweetSpotsCache    = null;
+  swrStripCache      = null;
+  dipSweetSpotsCache = null;
+}
 
 // Hover state + canvas CSS dimensions
 let hoverCx    = null;
@@ -2191,6 +2215,44 @@ function drawDipole() {
     ctx.fillText(`${dz.label}  ${Math.round(zRef)} Ω`, M.left + plotW + 5, midY + 4);
   });
 
+  // ── Dipole sweet spot overlay (≥N bands in a matching zone simultaneously) ──
+  const DIP_SS_SCAN = 500;
+  if (dipSweetSpotsOn && ab.length >= dipSweetSpotsMin) {
+    if (!dipSweetSpotsCache) {
+      const segs = [];
+      let inSpot = false, spotStart = 0;
+      for (let i = 0; i <= DIP_SS_SCAN; i++) {
+        const pos  = 0.01 + (i / DIP_SS_SCAN) * (xEnd - 0.01);
+        const hits = ab.filter(band => {
+          const Zc = calcDipoleZ(pos, totalLen, band.freq);
+          return DIPOLE_ZONES.some(dz => dz.on && swrAfterDipoleZone(Zc, dz, band.freq) < dipSweetSpotsSWR);
+        }).length;
+        if (hits >= dipSweetSpotsMin && !inSpot) { spotStart = pos; inSpot = true; }
+        else if (hits < dipSweetSpotsMin && inSpot) { segs.push([spotStart, pos]); inSpot = false; }
+      }
+      if (inSpot) segs.push([spotStart, xEnd]);
+      dipSweetSpotsCache = segs;
+    }
+
+    dipSweetSpotsCache.forEach(([p1, p2]) => {
+      const x1 = posToX(p1), x2 = posToX(p2);
+      const w  = x2 - x1, mid = (x1 + x2) / 2;
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
+      ctx.fillRect(x1, M.top, w, plotH);
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
+      ctx.fillRect(x1, M.top, 2, plotH);
+      ctx.fillRect(x2 - 2, M.top, 2, plotH);
+      ctx.fillStyle = '#ffd700cc';
+      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('★', mid, M.top + 13);
+    });
+    updateDipSweetSpotsTable();
+  } else {
+    const el = document.getElementById('dipSweetSpotsTable');
+    if (el) el.classList.remove('show');
+  }
+
   // ── Y grid ──
   Y_TICKS.forEach(val => {
     if (val < Y_AXIS_MIN || val > Y_AXIS_MAX) return;
@@ -2493,6 +2555,48 @@ function updateSweetSpotsTable() {
   el.classList.add('show');
 }
 
+function syncDipSweetSpotsMin() {
+  const n   = getActiveBands().length;
+  dipSweetSpotsMin = Math.max(1, n);
+  const inp = document.getElementById('dipSsMinInput');
+  if (inp) inp.value = dipSweetSpotsMin;
+}
+
+function updateDipSweetSpotsTable() {
+  const el = document.getElementById('dipSweetSpotsTable');
+  if (!el) return;
+  if (!dipSweetSpotsOn || !dipSweetSpotsCache || dipSweetSpotsCache.length === 0) {
+    el.classList.remove('show');
+    return;
+  }
+  const ab       = getActiveBands();
+  const totalLen = getDipoleLen();
+  let html = '<div class="ss-header">★ Sweet spot feedpoint positions</div>';
+
+  dipSweetSpotsCache.forEach(([p1, p2]) => {
+    const centre = (p1 + p2) / 2;
+    const pct    = v => `${Math.round(v * 100)}%`;
+    const bandTags = ab.map(band => {
+      const Zc  = calcDipoleZ(centre, totalLen, band.freq);
+      const dz  = DIPOLE_ZONES.find(z => z.on && inDipoleZone(Zc, z, band.freq));
+      if (!dz) return '';
+      const { zRef } = getDipoleZoneParams(dz);
+      const eff = Math.round(mismatchEffComplex(Zc, zRef) * dz.xfrmrEff * 100);
+      return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
+             `<span class="ss-zone" style="color:${dz.text}">${dz.label}&nbsp;~${eff}%</span>`;
+    }).filter(Boolean).join(' &nbsp;');
+    html +=
+      `<div class="ss-row">` +
+      `<span class="ss-star">★</span>` +
+      `<span class="ss-range">${pct(centre)}` +
+      ` <span class="ss-range-full">(${pct(p1)}–${pct(p2)})</span></span>` +
+      bandTags +
+      `</div>`;
+  });
+  el.innerHTML = html;
+  el.classList.add('show');
+}
+
 // ════════════════════════════════════════════════
 //  INSPECT PANEL (persistent pin data above graph)
 // ════════════════════════════════════════════════
@@ -2607,6 +2711,7 @@ function buildBandButtons() {
         dipSwrStripCache = null;
         updateDipoleWireLenDisplay();
       }
+      syncDipSweetSpotsMin();
       resizeAndDraw();
     };
     wrap.appendChild(btn);
@@ -3296,6 +3401,34 @@ function setupDipole() {
       draw();
     });
   }
+
+  // Sweet Spots
+  const dipSsBtn  = document.getElementById('dipSweetSpotsBtn');
+  const dipSsWrap = document.getElementById('dipSsMinWrap');
+  const dipSsInp  = document.getElementById('dipSsMinInput');
+  const dipSsSwrInp = document.getElementById('dipSsSWRInput');
+  syncDipSweetSpotsMin();
+  if (dipSsBtn) {
+    dipSsBtn.onclick = () => {
+      dipSweetSpotsOn = !dipSweetSpotsOn;
+      dipSsBtn.classList.toggle('on', dipSweetSpotsOn);
+      if (dipSsWrap) dipSsWrap.classList.toggle('show', dipSweetSpotsOn);
+      dipSweetSpotsCache = null;
+      draw();
+    };
+  }
+  if (dipSsInp) {
+    dipSsInp.addEventListener('input', () => {
+      const v = parseInt(dipSsInp.value);
+      if (v >= 1) { dipSweetSpotsMin = v; dipSweetSpotsCache = null; draw(); }
+    });
+  }
+  if (dipSsSwrInp) {
+    dipSsSwrInp.addEventListener('input', () => {
+      const v = parseFloat(dipSsSwrInp.value);
+      if (v >= 1.0) { dipSweetSpotsSWR = v; dipSweetSpotsCache = null; draw(); }
+    });
+  }
 }
 
 function setMode(mode) {
@@ -3315,10 +3448,15 @@ function setMode(mode) {
     if (mode === 'dip') el.style.removeProperty('display');
     else el.style.display = 'none';
   });
-  // Reset pin on mode switch
+  // Reset pin and caches on mode switch
   pinL = null;
   invalidateSweetSpots();
   dipSwrStripCache = null;
+  // Hide the other mode's results table
+  const efTable  = document.getElementById('sweetSpotsTable');
+  const dipTable = document.getElementById('dipSweetSpotsTable');
+  if (mode === 'ef'  && dipTable) dipTable.classList.remove('show');
+  if (mode === 'dip' && efTable)  efTable.classList.remove('show');
   if (mode === 'dip') updateDipoleWireLenDisplay();
 }
 
