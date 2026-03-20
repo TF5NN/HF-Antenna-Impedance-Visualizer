@@ -1,6 +1,6 @@
-# HF End-Fed Antenna Impedance — Visual Tool
+# HF Antenna Impedance Visualizer
 
-An interactive, browser-based educational tool for amateur radio operators that visualises how the feedpoint impedance of an HF end-fed wire antenna varies with wire length across the major amateur bands.
+An interactive, browser-based educational tool for amateur radio operators that visualises how feedpoint impedance varies across HF wire antennas — both end-fed and dipole configurations.
 
 No installation, no build step — open `antenna_impedance.html` directly in any modern browser.
 
@@ -8,15 +8,32 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 
 ## Features
 
+### Both modes
 - **11 HF bands** — 160 m through 6 m, individually toggleable
-- **Three matching zones** — 49:1 Unun, 9:1 Unun + Tuner, 1:1 Unun; colour-shaded on the graph
+- **Wire velocity factor** — slider adjusts for insulated vs. bare wire (0.90 – 1.00)
+- **Antenna Tuner** — analytic L-network solver with three presets (internal 3:1, external 10:1, wide-range 20:1) plus custom
+- **Log-scale Y-axis** — 10 – 5 000 Ω, HiDPI-aware canvas
+- **Hover tooltip** — real-time impedance and SWR for every active band under the cursor
+- **Mode switcher** — toggle between End-Fed and Dipole modes at the top of the control panel
+
+### End-Fed mode
+- **Three matching zones** — 49:1 Unun, 9:1 Unun + Tuner, 1:1 Balun; colour-shaded on the graph
 - **★ Sweet Spots overlay** — highlights wire lengths where multiple bands simultaneously fall inside matching zones; adjustable minimum-band threshold
 - **Sweet Spots results table** — lists every sweet-spot cluster with its centre length, usable range, and per-band zone/SWR
 - **Inspect pin** — draggable vertical line (or type a length) that shows the impedance and SWR for every active band at that exact wire length
 - **Counterpoise modelling** — shows the effect of an added counterpoise wire on effective feedpoint impedance
-- **Wire velocity factor** — slider adjusts for insulated vs. bare wire (0.90 – 1.00)
-- **ITU Region 1 allocation width** — toggle that scales each band's curve thickness proportionally to its ITU R1 bandwidth (logarithmic, 1 – 4 px); wider line = more operating room
-- **Hover tooltip** — real-time impedance, SWR, and matching efficiency for every active band under the cursor
+- **ITU Region 1 allocation width** — toggle that scales each band's curve thickness proportionally to its ITU R1 bandwidth
+
+### Dipole mode
+- **X-axis = feedpoint position** — 0% (one end) to 100% (other end), with 50% = centre-fed
+- **Four matching zones** — 1:1 (50 Ω), 4:1 (200 Ω), 6:1 (300 Ω), Custom ratio; colour-shaded overlays
+- **Wire length control** — auto (λ/2 of lowest active band × VF) or manual override; "Reset to λ/2" clears override
+- **Feedpoint position controls** — slider + numeric input + preset buttons (50% centre, 33% OCF, 25% extreme OCF)
+- **Half-view toggle** — collapse X-axis to 0–50% (one arm) to zoom in on one side
+- **Common-mode risk strip** — colour bar at the bottom of the graph: green (near centre) → orange → red (extreme OCF)
+- **SWR strips** below the X-axis — one row per active dipole zone showing where each band is matched
+- **Click-to-set feedpoint** — click or drag on the canvas to move the feedpoint indicator
+- **Inspect panel** — per-band R+jX, SWR after transformer, and delivered efficiency at the selected feedpoint position
 
 ---
 
@@ -24,10 +41,13 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 
 1. Download or clone this repository.
 2. Open `antenna_impedance.html` in a web browser (Chrome, Firefox, Safari, Edge — all work).
-3. Toggle the bands and matching zones you care about.
-4. Hover over the graph to read off impedance and SWR at any wire length.
-5. Enable **★ Sweet Spots** to find multi-band lengths.
-6. Drag the **inspect pin** or type a length to lock a measurement in place.
+3. Select **End Fed** or **Dipole** mode with the buttons at the top of the control panel.
+4. Toggle the bands and matching zones you care about.
+5. Hover over the graph to read off impedance and SWR at any wire length / feedpoint position.
+
+**End-Fed mode:** Enable **★ Sweet Spots** to find multi-band wire lengths. Drag the inspect pin or type a length to lock a measurement.
+
+**Dipole mode:** Use the feedpoint slider or preset buttons (50%/33%/25%) to explore centre-fed and off-centre-fed configurations. Click directly on the graph to set the feedpoint position. The common-mode risk strip indicates how much asymmetry the chosen feedpoint introduces.
 
 The tool can also be hosted as a static page on any web server or GitHub Pages — no server-side code is required.
 
@@ -35,11 +55,11 @@ The tool can also be hosted as a static page on any web server or GitHub Pages �
 
 ## ⚠️ Why Loading Coils Are Not Included
 
-This tool models antennas as **lossy open-circuit transmission lines**. That model
-is accurate for:
+This tool models antennas as **lossy open-circuit transmission lines**. That model is accurate for:
 
 - End-Fed Half-Wave (EFHW) antennas
 - End-Fed Random Wire (EFRW) antennas
+- Centre-fed and off-centre-fed dipoles
 - Other electrically long wires where standing-wave behaviour dominates
 
 It is **not valid** for:
@@ -49,99 +69,96 @@ It is **not valid** for:
 
 ### Why the model breaks down
 
-Long antennas behave as **distributed systems**: their impedance is governed by
-standing waves, characterised by `βL` (electrical length) and described by
-transmission-line equations. This tool implements those equations directly.
+Long antennas behave as **distributed systems**: their impedance is governed by standing waves, characterised by `βL` (electrical length) and described by transmission-line equations. This tool implements those equations directly.
 
-Short antennas with loading coils behave as **lumped-element systems**: the
-antenna is a capacitive load and the coil is a series inductor — described by
-a simple RLC circuit, not by TL equations.
+Short antennas with loading coils behave as **lumped-element systems**: the antenna is a capacitive load and the coil is a series inductor — described by a simple RLC circuit, not by TL equations.
 
-Adding a "loading coil" inside this model does **not** represent a real loaded
-antenna. It adds inductive reactance to a transmission-line feedpoint impedance,
-producing results that look plausible but are physically meaningless for short,
-loaded antennas.
+Adding a "loading coil" inside this model does **not** represent a real loaded antenna. It adds inductive reactance to a transmission-line feedpoint impedance, producing results that look plausible but are physically meaningless for short, loaded antennas.
 
-> For accurate modelling of short loaded antennas, a separate tool using a
-> lumped-element model is required.
+> For accurate modelling of short loaded antennas, a separate tool using a lumped-element model is required.
 
-The loading coil code remains in the source for future reference and may form
-the basis of a dedicated loaded-antenna tool in a later release.
+The loading coil code remains in the source for future reference and may form the basis of a dedicated loaded-antenna tool in a later release.
 
 ---
 
 ## Model Notes
 
-The tool is intentionally educational rather than a full EM simulator. Real antenna impedance is also shaped by height above ground, nearby objects, soil conductivity, and wire geometry. The sections below trace the signal path from raw wire impedance through to the efficiency figure shown in the tooltip.
+The tool is intentionally educational rather than a full EM simulator. Real antenna impedance is also shaped by height above ground, nearby objects, soil conductivity, and wire geometry.
 
 ---
 
-### 1 — Antenna Feedpoint Impedance
+### 1 — End-Fed Antenna Feedpoint Impedance
 
-The wire is modelled as a **lossy open-circuit transmission line**. For a wire of length *L* at frequency *f* the feedpoint presents a complex impedance Z = R + jX, where:
+The wire is modelled as a **lossy open-circuit transmission line**. For a wire of length *L* at frequency *f*:
 
 ```
-β  = 2πf / (c · VF)          phase constant (rad/m); VF = velocity factor
+β  = 2πf / (c · VF)          phase constant (rad/m)
 α  = α₀ · (f / f₀)           attenuation constant (Np/m), scales with frequency
-                               so that R_peak ≈ 3 000 Ω at every band's λ/2
 
 D  = cosh(2αL) − cos(2βL)    common denominator
 
 R  = Z₀ · sinh(2αL) / D      resistive part  (Ω)
-X  = Z₀ · sin(2βL)  / D      reactive part   (Ω, positive = inductive)
+X  = Z₀ · sin(2βL)  / D      reactive part   (Ω)
 
 Z₀ = 450 Ω  (effective characteristic impedance of a typical HF wire)
 ```
 
-**Behaviour at key lengths:**
-
-| Wire length | Condition | Effect |
-|-------------|-----------|--------|
-| L = n·λ/2 (resonance) | cos(2βL) → 1, D → small | R peaks (2 000 – 5 000 Ω) |
-| L = n·λ/4 (anti-resonance) | cos(2βL) → −1, D large | R drops to floor (~25 Ω) |
-
-**Harmonic-order correction** — a wire at its *n*th harmonic resonance radiates more efficiently than the flat-α model predicts. The attenuation is reduced by:
+**Harmonic-order correction** — attenuation is reduced at higher harmonics:
 
 ```
 α_eff  = α / √n_eff        n_eff = max(1,  2L / λ_eff)
 ```
 
-At the fundamental (n_eff = 1) α is unchanged. At the 2λ resonance (n_eff = 4, e.g. 10 m on a 40 m wire) α is halved, doubling R_peak from ~750 Ω to ~1 500 Ω — consistent with real EFHW measurements.
-
-Anti-resonance dips are clamped to Z_MIN = 25 Ω and peaks to Z_MAX = 5 000 Ω to reflect practical wire behaviour.
+Anti-resonance dips are clamped to Z_MIN = 25 Ω and peaks to Z_MAX = 5 000 Ω.
 
 ---
 
-### 2 — SWR and Reflection-Coefficient Math
+### 2 — Dipole Feedpoint Impedance
 
-The **complex reflection coefficient** at a reference impedance Z_ref = 50 Ω is:
+A dipole of total length *L* with feedpoint at position *p* (0.0 = one end, 1.0 = other end) is modelled as two open-circuit stubs in parallel:
+
+- Left arm: `La = p × L`
+- Right arm: `Lb = (1 − p) × L`
+- Feedpoint impedance: `Z_feed = Za ∥ Zb` (complex parallel combination)
+
+Each arm uses the same coth formula but with dipole-calibrated constants:
+
+```
+Z0_DIP   = 600 Ω
+α_DIP    = 0.0231 Np/m  at f₀ = 3.65 MHz
+α_eff    = α_DIP · √(f / f₀) / √n_eff
+```
+
+**Calibration check:** at 14 MHz, centre-fed λ/2 dipole (VF = 0.975), each arm = 5.22 m → R ≈ 70 Ω, X ≈ 0 Ω (as expected at resonance).
+
+Edge case: feedpoint at 0% or 100% (end-fed) — one arm has zero length, feedpoint impedance equals the other arm alone (EFHW-like high impedance).
+
+**Common-mode risk** (indicated by the colour strip at the bottom of the graph):
+
+| Feedpoint range | Risk level |
+|----------------|------------|
+| 40%–60% | Low — near-symmetric currents |
+| 25%–40% or 60%–75% | Moderate — OCF |
+| 0%–25% or 75%–100% | High — extreme OCF, strong common-mode |
+
+---
+
+### 3 — SWR and Reflection-Coefficient Math
 
 ```
 Γ = (Za − 50) / (Za + 50)        Za = antenna impedance after transformer division
 
-|Γ| = |Za − 50| / |Za + 50|      magnitude, computed with full complex arithmetic
-```
+|Γ| = |Za − 50| / |Za + 50|      magnitude, full complex arithmetic
 
-From this:
-
+SWR        = (1 + |Γ|) / (1 − |Γ|)
+η_mismatch = 1 − |Γ|²
 ```
-SWR            = (1 + |Γ|) / (1 − |Γ|)
-η_mismatch     = 1 − |Γ|²          (fraction of incident power transferred)
-```
-
-Both numerator and denominator use `Math.hypot(R ± 50, X)` so that reactance is always included — the SWR shown in the tooltip is the true complex SWR, not a resistive approximation.
 
 ---
 
-### 3 — Transformer Matching: Math and Efficiency
+### 4 — Transformer Matching
 
-Each matching zone uses an **impedance transformer** (Unun or Balun) to shift the antenna's high impedance down to the 50 Ω radio reference. The transformation is exact:
-
-```
-Za_radio = Zc / ratio        ratio = n²  (e.g. 49 for a 49:1 Unun)
-```
-
-Design impedances (= ratio × 50 Ω):
+End-Fed zones:
 
 | Zone | Transformer | ratio | Z_ref |
 |------|-------------|-------|-------|
@@ -149,78 +166,45 @@ Design impedances (= ratio × 50 Ω):
 | 9:1 Unun  | Wound 1:9  |  9 |   450 Ω |
 | 1:1 Balun | Choke      |  1 |    50 Ω |
 
-**Insertion efficiency** is a fixed constant per zone, chosen to reflect measured ferrite-toroid losses at HF:
+Dipole zones:
 
-| Zone | η_transformer |
-|------|---------------|
-| 49:1 Unun | 90 % |
-| 9:1 Unun  | 90 % |
-| 1:1 Balun | 100 % (choke only, negligible loss) |
-
-The **coloured overlay band** on the graph shows the impedance window the transformer covers. When an ATU is active the band expands to `[Z_ref / maxSWR … Z_ref × maxSWR]` to reflect the wider impedance range the combined system can handle.
+| Zone | Transformer | ratio | Z_ref |
+|------|-------------|-------|-------|
+| 1:1 | Direct feed / choke | 1 |  50 Ω |
+| 4:1 Balun | Wound 4:1 |  4 | 200 Ω |
+| 6:1 Balun | Wound 6:1 |  6 | 300 Ω |
+| Custom | User-defined ratio | n | 50 × n Ω |
 
 ---
 
-### 4 — ATU L-network Matching and Efficiency
+### 5 — ATU L-network Matching and Efficiency
 
-When the **Antenna Tuner** toggle is on, an analytic **L-network solver** (`solveL`) attempts to match the impedance presented at the transformer output to 50 Ω. Two topologies are tried in order:
-
-1. **series → shunt** — series element (L or C) facing the antenna, shunt element to ground.
-2. **shunt → series** — shunt element across the antenna terminals, series element to the radio.
-
-Each solution is constrained by the ATU preset's **Lmax** (µH) and **Cmax** (pF). The tooltip shows the winning topology and exact component values, or "No match within tuner limits" if neither topology fits.
-
-**Inductor-Q loss model (v1):**
-
-A real inductor has a quality factor Q that introduces an equivalent series resistance:
+When the Antenna Tuner is on, an analytic L-network solver attempts to match the transformer output to 50 Ω. Two topologies are tried (series→shunt and shunt→series). Inductor-Q loss model:
 
 ```
-Rs = 2π · f · L / Q          Q = 120 (typical small toroidal ATU coil)
-```
-
-An L-network circulates extra reactive current when the impedance mismatch ratio is large. The circulating-current stress factor scales the effective loss resistance:
-
-```
-kI² = max(R_load, 50) / min(R_load, 50)     (impedance mismatch ratio, ≥ 1)
+Rs = 2π · f · L / Q          Q = 120
+kI² = max(R_load, 50) / min(R_load, 50)
 Rs_eff = Rs × kI²
-η_tuner = R_load / (R_load + Rs_eff)         clamped to [0.30, 0.98]
+η_tuner = R_load / (R_load + Rs_eff)    clamped [0.30, 0.98]
 ```
 
-Easy matches (R_load near 50 Ω, kI² ≈ 1) see almost no change. Hard matches (high impedance ratio, kI² >> 1) show noticeably lower efficiency. The tooltip shows **"tuner eff xx% Q≈Y.Y"** — the Q figure is the L-match loaded Q, a measure of how hard the network is working. Capacitor ESR is not modelled. Matching logic (whether a zone lights up) is not affected.
-
-**Total delivered-power efficiency** (the `~xx%` figure in the tooltip):
+**Total delivered-power efficiency:**
 
 ```
 η_total = η_mismatch × η_transformer × η_tuner
 ```
 
-This is *power delivered to the feedpoint*, not power radiated. Radiation efficiency (dependent on wire height, ground quality, nearby objects) is a separate quantity and is not modelled here.
-
 ---
 
-### 5 — Counterpoise Model
+### 6 — Counterpoise Model (End-Fed mode)
 
-When **Show effect** is enabled, a counterpoise of length L_cp is modelled as a second open-circuit wire added **in series** at the feedpoint:
+When **Show effect** is enabled, a counterpoise is modelled as a series stub:
 
 ```
 Z_feedpoint = Z_wire(L, f) + Z_counterpoise(L_cp, f)
 ```
 
-Both components use the same lossy transmission-line formula. Electrically, the counterpoise acts as a series stub that modifies the effective feedpoint impedance seen by the transformer.
-
-**Limitations:** this series-stub approximation is a first-order model. It is least accurate near **λ/4 counterpoise lengths** (which is also the 1:1 Unun zone) where `cot(βL_cp) ≈ 0`, ground-plane physics and common-mode current paths dominate, and the actual impedance depends heavily on installation geometry. The ghost curves shown when counterpoise is active are therefore illustrative rather than definitive.
-
----
-
-### 6 — Why the 9:1 Unun Struggles Without a Counterpoise
-
-The 9:1 Unun is designed for random-wire antennas that present approximately **450 Ω resistive** at the feedpoint (9 × 50 Ω). However, the transmission-line model reveals a fundamental challenge:
-
-Between wire resonances — where the wire is neither at λ/2 nor at λ/4 — the impedance always has a large **reactive component X** alongside a moderate R. Even when |Z| ≈ 450 Ω, the reactive part can be 3–10× larger than R, driving the complex SWR after the 9:1 to 7–15:1.
-
-A **counterpoise of suitable length** adds its own impedance in series. When that series impedance partially cancels the wire's reactance, the net |X| drops and R stays in the 225–900 Ω window — bringing the system into the 9:1's natural match band without a tuner.
-
-This is not a corner case: it is the normal operating condition for a 9:1 random-wire installation. A counterpoise of **3–7 m** is a functional part of the matching system, not an optional accessory. The tool demonstrates this visually — enabling the counterpoise with a length of 3–5 m typically unlocks multiple green matching windows on the 9:1 SWR strip that are absent without it.
+This approximation is least accurate near λ/4 counterpoise lengths where ground-plane physics dominate. The ghost curves shown are illustrative rather than definitive.
 
 ---
 
@@ -237,4 +221,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by Gunnar B. Guðlaugsson (TF5NN) · v1.14*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.0*

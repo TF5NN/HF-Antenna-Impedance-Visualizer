@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Interactive HF end-fed antenna impedance visualisation for amateur radio operators. Explore wire length vs. impedance across 160–6 m bands, matching zones, sweet spots, and ITU Region 1 allocation widths. Educational tool for EFHW antenna design.">
+<meta name="description" content="Interactive HF antenna impedance visualiser for amateur radio operators. Supports End-Fed (EFHW/EFRW) and Dipole (centre-fed, OCF) antennas across 160–6 m bands. Educational tool for antenna design and matching.">
 <meta name="author" content="Gunnar B. Guðlaugsson, TF5NN">
-<meta property="og:title" content="HF End-Fed Antenna Impedance — Visual Tool">
-<meta property="og:description" content="Interactive impedance visualiser for HF end-fed antennas. Explore 160–6 m bands, matching zones (49:1, 9:1, 1:1), sweet spots, and ITU R1 allocation widths. Educational tool for amateur radio.">
+<meta property="og:title" content="HF Antenna Impedance Visualizer">
+<meta property="og:description" content="Interactive impedance visualiser for HF end-fed and dipole antennas. Explore 160–6 m bands, matching zones, feedpoint selection, and more. Educational tool for amateur radio.">
 <meta property="og:type" content="website">
-<title>HF End-Fed Antenna Impedance — Visual Tool</title>
+<title>HF Antenna Impedance Visualizer</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -463,17 +463,83 @@ header p {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* ─── MODE SWITCHER ─────────────────────────────── */
+#modeBar {
+  flex: 0 0 100%;
+  display: flex;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.mode-btn {
+  padding: 5px 20px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.mode-btn.on {
+  border-color: var(--text);
+  color: var(--text);
+  background: rgba(201,209,217,0.08);
+}
+.mode-btn:hover { color: var(--text); }
+
+/* Mode-specific visibility — JS sets display directly */
+.dip-only { display: none; }
+
+/* ─── DIPOLE CONTROLS ───────────────────────────── */
+#dipWireLenInput   { width: 74px; }
+#dipPosInput       { width: 50px; }
+#dipCustomRatioInp { width: 52px; }
+#dipPosSlider {
+  width: 110px;
+  accent-color: #5c9af5;
+  cursor: pointer;
+  vertical-align: middle;
+}
+#dipPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+.fp-preset-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.69rem;
+  font-family: monospace;
+}
+.fp-preset-btn:hover { color: var(--text); border-color: var(--muted); }
+#dipZoneBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* In dipole mode: hide EF-specific x-range selectors */
+body.dipole-mode #xRangeControls .xr-side { display: none; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>HF End-Fed Antenna Impedance</h1>
-  <p>Educational model · Impedance vs. wire length using centre-of-band frequencies · Hover graph for details</p>
-  <span id="versionLabel">v1.14 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <h1>HF Antenna Impedance Visualizer</h1>
+  <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
+  <span id="versionLabel">v2.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
+  <div id="modeBar">
+    <button class="mode-btn on" id="modeEFBtn">End Fed</button>
+    <button class="mode-btn" id="modeDipBtn">Dipole</button>
+  </div>
   <div class="ctrl-group">
     <div class="ctrl-label">HF Bands (toggle)</div>
     <div id="bandBtns"></div>
@@ -482,7 +548,7 @@ header p {
       <button class="band-sel-btn" id="bandNoneBtn">None</button>
     </div>
   </div>
-  <div class="ctrl-group">
+  <div class="ctrl-group ef-only">
     <div class="ctrl-label">Matching Zones (toggle)</div>
     <div id="zoneBtns">
       <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
@@ -528,7 +594,7 @@ header p {
     </div>
     <div class="tuner-hint" id="tunerHint">Tuner off — showing raw SWR after transformer</div>
   </div>
-  <div class="ctrl-group">
+  <div class="ctrl-group ef-only">
     <div class="ctrl-label">Counterpoise</div>
     <div id="cpControl">
       <button class="zone-btn" id="cpToggleBtn" style="--zc: #c070ff">
@@ -541,7 +607,7 @@ header p {
       </div>
     </div>
   </div>
-  <div class="ctrl-group" id="advancedGroup">
+  <div class="ctrl-group ef-only" id="advancedGroup">
     <div class="ctrl-label">Advanced / Experimental</div>
     <div id="advancedControl">
       <button class="zone-btn" id="advancedToggleBtn" style="--zc: #888">
@@ -583,12 +649,61 @@ header p {
       <span id="vfDisplay">0.975</span>
     </div>
   </div>
-  <div class="ctrl-group">
+  <div class="ctrl-group ef-only">
     <div class="ctrl-label">Inspect length</div>
     <div id="pinControl">
       <input type="number" id="pinInput" min="0.1" max="999" step="0.1" placeholder="m">
       <span class="cp-unit">m</span>
       <button class="pin-clear-btn" id="pinClearBtn" title="Remove pin">×</button>
+    </div>
+  </div>
+  <!-- ═══════════════════════════════════════════════
+       DIPOLE-ONLY CONTROLS
+       ═══════════════════════════════════════════════ -->
+  <div class="ctrl-group dip-only">
+    <div class="ctrl-label">Wire Length</div>
+    <div id="dipWireControl">
+      <input type="number" id="dipWireLenInput" min="0.5" max="9999" step="0.01" placeholder="m">
+      <span class="cp-unit">m</span>
+      <button class="pin-clear-btn" id="dipWireLenResetBtn" title="Reset to λ/2 of lowest band">↺</button>
+    </div>
+  </div>
+  <div class="ctrl-group dip-only">
+    <div class="ctrl-label">Feedpoint Position</div>
+    <div id="dipPosControl">
+      <input type="range" id="dipPosSlider" min="1" max="99" step="1" value="50">
+      <input type="number" id="dipPosInput" value="50" min="1" max="99" step="1">
+      <span class="cp-unit">%</span>
+    </div>
+    <div id="dipPresets">
+      <button class="fp-preset-btn" id="dipPreset50">50% centre</button>
+      <button class="fp-preset-btn" id="dipPreset33">33% OCF</button>
+      <button class="fp-preset-btn" id="dipPreset25">25% OCF</button>
+      <button class="zone-btn" id="dipHalfViewBtn" style="--zc:#888;font-size:0.70rem;padding:3px 9px">
+        <span class="zone-swatch"></span>0–50% view
+      </button>
+    </div>
+  </div>
+  <div class="ctrl-group dip-only">
+    <div class="ctrl-label">Matching (toggle)</div>
+    <div id="dipZoneBtns">
+      <button class="zone-btn on" id="dz0Btn" style="--zc: #ffa000">
+        <span class="zone-swatch"></span>1:1
+      </button>
+      <button class="zone-btn on" id="dz1Btn" style="--zc: #4096ff">
+        <span class="zone-swatch"></span>4:1
+      </button>
+      <button class="zone-btn" id="dz2Btn" style="--zc: #32c850">
+        <span class="zone-swatch"></span>6:1
+      </button>
+      <button class="zone-btn" id="dz3Btn" style="--zc: #c070ff">
+        <span class="zone-swatch"></span>Custom
+      </button>
+    </div>
+    <div class="toggle-sub" id="dipCustomRatioWrap" style="display:none">
+      <span class="cp-unit">ratio</span>
+      <input type="number" id="dipCustomRatioInp" value="4" min="1" max="100" step="0.5">
+      <span class="cp-unit">:1</span>
     </div>
   </div>
 </div>
@@ -628,21 +743,36 @@ header p {
 <div id="legendBar"></div>
 
 <div id="infoBar">
-  <div class="info-item">
+  <div class="info-item ef-only">
     <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
     <strong>49:1 Unun:</strong>&nbsp;shaded band 1500–5000 Ω; strip = SWR ≤ 3:1 at radio (tuner widens window when on).
   </div>
-  <div class="info-item">
+  <div class="info-item ef-only">
     <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
     <strong>9:1 Unun:</strong>&nbsp;shaded band 75–1800 Ω; strip = SWR ≤ 2:1 at radio (tuner adds L-network match when on).
   </div>
-  <div class="info-item">
+  <div class="info-item ef-only">
     <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
     <strong>1:1 Balun:</strong>&nbsp;shaded band 25–100 Ω; strip = SWR ≤ 2:1 direct to 50 Ω (tuner extends range when on).
   </div>
-  <div class="info-item" style="color:var(--muted2);font-size:0.75rem">
+  <div class="info-item ef-only" style="color:var(--muted2);font-size:0.75rem">
     Antenna Tuner toggle applies to all active zones simultaneously.
     Preset sets the rated matching range (Internal 3:1 · External 10:1 · Wide-range 20:1).
+  </div>
+  <div class="info-item dip-only" style="display:none">
+    <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
+    <strong>1:1 (direct):</strong>&nbsp;shaded band near 50 Ω; strip shows where Zfeed ≤ 2:1 direct.
+  </div>
+  <div class="info-item dip-only" style="display:none">
+    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
+    <strong>4:1 Balun:</strong>&nbsp;shaded band near 200 Ω; classic choice for off-centre-fed dipoles.
+  </div>
+  <div class="info-item dip-only" style="display:none">
+    <span class="info-swatch" style="background: rgba(50,200,80,0.5)"></span>
+    <strong>6:1 Balun:</strong>&nbsp;shaded band near 300 Ω; suits asymmetric or higher-impedance feedpoints.
+  </div>
+  <div class="info-item dip-only" style="color:var(--muted2);font-size:0.75rem;display:none">
+    Colour strip at graph base: green = low common-mode risk (near centre), orange = moderate, red = high (extreme OCF).
   </div>
   <div class="info-item" id="scaleInfo" style="margin-left: auto; color: var(--muted2)"></div>
 </div>
@@ -1009,6 +1139,33 @@ const ZONES = [
 ];
 
 // ════════════════════════════════════════════════
+//  DIPOLE MODE DATA
+// ════════════════════════════════════════════════
+
+const DIPOLE_ZONES = [
+  {
+    id: 'dz0', label: '1:1', ratio: 1, swrLimit: 2.0,
+    zRef: 50, xfrmrEff: 1.00,
+    fill:   'rgba(255,160,0,0.13)',  stroke: 'rgba(255,160,0,0.65)',  text: '#ffa000', on: true,
+  },
+  {
+    id: 'dz1', label: '4:1', ratio: 4, swrLimit: 2.0,
+    zRef: 200, xfrmrEff: 0.94,
+    fill:   'rgba(64,150,255,0.10)', stroke: 'rgba(64,150,255,0.65)', text: '#4096ff', on: true,
+  },
+  {
+    id: 'dz2', label: '6:1', ratio: 6, swrLimit: 2.0,
+    zRef: 300, xfrmrEff: 0.92,
+    fill:   'rgba(50,200,80,0.13)',  stroke: 'rgba(50,200,80,0.65)',  text: '#32c850', on: false,
+  },
+  {
+    id: 'dz3', label: 'Custom', ratio: null, swrLimit: 2.0,
+    zRef: null, xfrmrEff: 0.90,
+    fill:   'rgba(192,112,255,0.10)', stroke: 'rgba(192,112,255,0.65)', text: '#c070ff', on: false,
+  },
+];
+
+// ════════════════════════════════════════════════
 //  MATCHING EFFICIENCY
 //  Mismatch efficiency: fraction of forward power
 //  actually delivered to the load.
@@ -1293,6 +1450,16 @@ let isDragging = false;
 let cpEnabled = false;
 let cpLengthM = 5.0;  // metres
 
+// Antenna mode
+let antennaMode = 'ef';   // 'ef' | 'dip'
+
+// Dipole state
+let dipoleLen         = null;   // metres; null = auto (λ/2 of lowest active band)
+let dipolePos         = 0.50;   // feedpoint position 0.0–1.0
+let dipoleHalfView    = false;  // true = show only 0–50% of wire
+let dipoleCustomRatio = 4;      // ratio for Custom dipole zone
+let dipSwrStripCache  = null;   // null = stale; cached SWR strip segments for dipole
+
 // === LOADING COIL FEATURE DISABLED ===
 // Reason: Model is not valid for electrically short antennas (see README)
 // let coilEnabled = false;
@@ -1383,6 +1550,98 @@ function calcZ(L, freq) {
 }
 
 // ════════════════════════════════════════════════
+//  DIPOLE PHYSICS MODEL — parallel open-ended stubs
+//
+//  A dipole of length L fed at position p (0.0–1.0):
+//    left arm  = p × L     → open-ended TL stub
+//    right arm = (1−p) × L → open-ended TL stub
+//  Z_feed = Z_left ∥ Z_right  (complex parallel)
+//
+//  Calibrated: Z0_DIP=600Ω, ALPHA_DIP=0.0231 Np/m @3.65MHz
+//  → ~70 Ω at centre of λ/2 dipole at 14 MHz (VF=0.975).
+//  sqrt(f) frequency scaling — same as EFHW model.
+// ════════════════════════════════════════════════
+
+const Z0_DIP         = 600;      // Ω — characteristic impedance for a dipole wire
+const ALPHA_DIP      = 0.0231;   // Np/m at ALPHA_DIP_FREF
+const ALPHA_DIP_FREF = 3.65e6;   // Hz reference
+
+// Complex impedance of one dipole arm as an open-ended TL stub
+function calcDipoleArm(armLen, freq) {
+  if (armLen <= 0.01) return { R: Z_PEAK, X: 0 };
+  const lambda_eff = (C / freq) * VF;
+  const betaL      = (2 * Math.PI * armLen) / lambda_eff;
+  const alpha      = ALPHA_DIP * Math.sqrt(freq / ALPHA_DIP_FREF);
+  const n_eff      = Math.max(1, (2 * armLen) / lambda_eff);
+  const alphaEff   = alpha / Math.sqrt(n_eff);
+  const a2 = 2 * alphaEff * armLen;
+  const b2 = 2 * betaL;
+  const D  = Math.cosh(a2) - Math.cos(b2);
+  if (D < 1e-12) return { R: Z_PEAK, X: 0 };
+  return {
+    R: Math.min(Z_PEAK, Math.max(0, Z0_DIP * Math.sinh(a2) / D)),
+    X: Z0_DIP * Math.sin(b2) / D,
+  };
+}
+
+// Complex parallel combination of two impedances
+function complexParallel(Za, Zb) {
+  const numR = Za.R * Zb.R - Za.X * Zb.X;
+  const numX = Za.R * Zb.X + Za.X * Zb.R;
+  const denR = Za.R + Zb.R;
+  const denX = Za.X + Zb.X;
+  const den2 = denR * denR + denX * denX;
+  if (den2 < 1e-20) return { R: Z_PEAK, X: 0 };
+  return {
+    R: (numR * denR + numX * denX) / den2,
+    X: (numX * denR - numR * denX) / den2,
+  };
+}
+
+// Feedpoint impedance at position pos (0.0–1.0) on a wire of totalLen metres
+function calcDipoleZ(pos, totalLen, freq) {
+  const La = Math.max(0.01, pos * totalLen);
+  const Lb = Math.max(0.01, (1 - pos) * totalLen);
+  return complexParallel(calcDipoleArm(La, freq), calcDipoleArm(Lb, freq));
+}
+
+// Resolved wire length: manual override or auto λ/2 of lowest active band
+function getDipoleLen() {
+  if (dipoleLen !== null) return dipoleLen;
+  const ab = getActiveBands();
+  if (!ab.length) return 10;
+  const lowestFreq = Math.min(...ab.map(b => b.freq));
+  return (C / lowestFreq / 2) * VF;
+}
+
+// Effective ratio/zRef for a dipole zone (handles Custom zone)
+function getDipoleZoneParams(dz) {
+  const ratio = dz.ratio !== null ? dz.ratio : dipoleCustomRatio;
+  const zRef  = dz.zRef  !== null ? dz.zRef  : 50 * dipoleCustomRatio;
+  return { ratio, zRef };
+}
+
+// SWR at radio after dipole zone transformer (+ tuner if on)
+function swrAfterDipoleZone(Zc, dz, freq) {
+  const { ratio } = getDipoleZoneParams(dz);
+  const Za = { R: Zc.R / ratio, X: Zc.X / ratio };
+  const rawSwr = swr50(Za);
+  if (tunerEnabled) {
+    const p = getTunerParams();
+    if (rawSwr <= p.maxSWR) {
+      const sol = solveL(Za, freq, p.Lmax, p.Cmax);
+      if (sol.matched) return 1.0;
+    }
+  }
+  return rawSwr;
+}
+
+function inDipoleZone(Zc, dz, freq) {
+  const limit = tunerEnabled ? getTunerParams().maxSWR : (dz.swrLimit || 2.0);
+  return swrAfterDipoleZone(Zc, dz, freq) <= limit;
+}
+
+// ════════════════════════════════════════════════
 //  COORDINATE HELPERS
 // ════════════════════════════════════════════════
 
@@ -1451,6 +1710,8 @@ function niceStep(raw) {
 // ════════════════════════════════════════════════
 
 function draw() {
+  if (antennaMode === 'dip') { drawDipole(); return; }
+
   const canvas = document.getElementById('graph');
   const ctx    = canvas.getContext('2d');
   const dpr    = window.devicePixelRatio || 1;
@@ -1871,13 +2132,340 @@ function draw() {
 }
 
 // ════════════════════════════════════════════════
+//  DIPOLE DRAW
+// ════════════════════════════════════════════════
+
+function drawDipole() {
+  // Keep wire-length input display in sync with auto value
+  const lenInpEl = document.getElementById('dipWireLenInput');
+  if (lenInpEl && dipoleLen === null && document.activeElement !== lenInpEl) {
+    lenInpEl.value = getDipoleLen().toFixed(2);
+    lenInpEl.style.opacity = '0.55';
+  }
+
+  const canvas = document.getElementById('graph');
+  const ctx    = canvas.getContext('2d');
+  const dpr    = window.devicePixelRatio || 1;
+  const W = CANVAS_W, H = CANVAS_H;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const ab       = getActiveBands();
+  const totalLen = getDipoleLen();
+  const xEnd     = dipoleHalfView ? 0.5 : 1.0;   // max position fraction shown
+  const plotW    = W - M.left - M.right;
+  const plotH    = H - M.top - M.bottom;
+  const DSTEPS   = 400;
+
+  function posToX(pos) { return M.left + (pos / xEnd) * plotW; }
+
+  // ── Background ──
+  ctx.fillStyle = '#090d13';
+  ctx.fillRect(M.left, M.top, plotW, plotH);
+
+  // ── Matching zone overlays (horizontal bands on Y-axis) ──
+  DIPOLE_ZONES.forEach(dz => {
+    if (!dz.on) return;
+    const { zRef } = getDipoleZoneParams(dz);
+    const effectiveSWR = tunerEnabled ? getTunerParams().maxSWR : (dz.swrLimit || 2.0);
+    const dynZMin = Math.max(Y_AXIS_MIN, zRef / effectiveSWR);
+    const dynZMax = Math.min(Y_AXIS_MAX, zRef * effectiveSWR);
+    const y1 = yPx(dynZMax, H);
+    const y2 = yPx(dynZMin, H);
+
+    ctx.fillStyle = dz.fill;
+    ctx.fillRect(M.left, y1, plotW, y2 - y1);
+    ctx.strokeStyle = dz.stroke;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([7, 5]);
+    [y1, y2].forEach(y => {
+      ctx.beginPath(); ctx.moveTo(M.left, y); ctx.lineTo(M.left + plotW, y); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // Right-side label
+    const midY = (y1 + y2) / 2;
+    ctx.fillStyle = dz.text;
+    ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${dz.label}  ${Math.round(zRef)} Ω`, M.left + plotW + 5, midY + 4);
+  });
+
+  // ── Y grid ──
+  Y_TICKS.forEach(val => {
+    if (val < Y_AXIS_MIN || val > Y_AXIS_MAX) return;
+    const y     = yPx(val, H);
+    const major = Y_MAJOR.has(val);
+    ctx.strokeStyle = major ? '#1e2630' : '#141820';
+    ctx.lineWidth   = major ? 1 : 0.5;
+    ctx.beginPath(); ctx.moveTo(M.left, y); ctx.lineTo(M.left + plotW, y); ctx.stroke();
+    ctx.fillStyle  = major ? '#8b949e' : '#50585e';
+    ctx.font       = major ? '11px monospace' : '9px monospace';
+    ctx.textAlign  = 'right';
+    ctx.fillText(formatZ(val), M.left - 5, y + 4);
+  });
+
+  // ── X grid (at 0%, 25%, 50%, 75%, 100%) ──
+  const xTicks = dipoleHalfView
+    ? [0, 0.125, 0.25, 0.375, 0.5]
+    : [0, 0.25, 0.5, 0.75, 1.0];
+  xTicks.forEach(p => {
+    const cx = posToX(p);
+    ctx.strokeStyle = p === 0.5 ? '#2e3a4a' : '#1e2630';
+    ctx.lineWidth   = p === 0.5 ? 1 : 0.5;
+    ctx.beginPath(); ctx.moveTo(cx, M.top); ctx.lineTo(cx, M.top + plotH); ctx.stroke();
+    ctx.fillStyle  = '#8b949e';
+    ctx.font       = '11px monospace';
+    ctx.textAlign  = 'center';
+    const lbl = p === 0.5 ? '50% (centre)' : `${Math.round(p * 100)}%`;
+    ctx.fillText(lbl, cx, M.top + plotH + 17);
+  });
+
+  // ── Common-mode risk strip (thin bar at bottom of plot area) ──
+  const CMR_H = 5;
+  for (let i = 0; i < DSTEPS; i++) {
+    const pos  = (i / DSTEPS) * xEnd;
+    const posF = pos;  // 0.0–xEnd
+    // Mirror: position 0.75 is same risk as 0.25 (use distance from 0.5)
+    const dist = Math.abs(posF - 0.5);
+    let color;
+    if (dist > 0.25) color = 'rgba(220,60,60,0.75)';
+    else if (dist > 0.10) color = 'rgba(240,150,0,0.75)';
+    else color = 'rgba(50,200,80,0.75)';
+    const x1 = posToX(pos);
+    const x2 = posToX((i + 1) / DSTEPS * xEnd);
+    ctx.fillStyle = color;
+    ctx.fillRect(x1, M.top + plotH - CMR_H, x2 - x1 + 1, CMR_H);
+  }
+  ctx.fillStyle = 'rgba(200,200,200,0.35)';
+  ctx.font = '8px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('← common-mode risk →', M.left + 3, M.top + plotH - 1);
+
+  // ── Impedance curves ──
+  ab.forEach(band => {
+    ctx.lineWidth = 2;
+    ctx.lineJoin  = 'round';
+    ctx.setLineDash([]);
+
+    function drawCurve(getVal, dashed) {
+      ctx.strokeStyle = band.color;
+      ctx.setLineDash(dashed ? [6, 4] : []);
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i <= DSTEPS; i++) {
+        const pos = (i / DSTEPS) * xEnd;
+        const v   = getVal(pos);
+        const cx  = posToX(pos);
+        const cy  = yPx(v, H);
+        if (cy < M.top - 2 || cy > M.top + plotH + 2) { pen = false; continue; }
+        if (!pen) { ctx.moveTo(cx, cy); pen = true; }
+        else      { ctx.lineTo(cx, cy); }
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (rxMode) {
+      drawCurve(pos => {
+        const Zc = calcDipoleZ(pos, totalLen, band.freq);
+        return Math.min(Z_PEAK, Math.max(Z_MIN, Zc.R));
+      }, false);
+      drawCurve(pos => {
+        const Zc = calcDipoleZ(pos, totalLen, band.freq);
+        return Math.min(Z_PEAK, Math.max(Z_MIN, Math.abs(Zc.X)));
+      }, true);
+    } else {
+      drawCurve(pos => {
+        const Zc = calcDipoleZ(pos, totalLen, band.freq);
+        return Math.min(Z_PEAK, Math.max(Z_MIN, calcZmag(Zc)));
+      }, false);
+    }
+  });
+
+  // ── SWR-match strips ──
+  {
+    const STRIP_H   = 5;
+    const STRIP_GAP = 2;
+    const stripBaseY = M.top + plotH + 28;
+    const SCAN = 300;
+
+    if (!dipSwrStripCache) {
+      dipSwrStripCache = DIPOLE_ZONES.map(dz => {
+        if (!dz.on) return [];
+        const segs = []; let inSeg = false, segP0 = 0;
+        for (let i = 0; i <= SCAN; i++) {
+          const pos = (i / SCAN) * xEnd;
+          const hit = ab.some(band => {
+            const Zc = calcDipoleZ(pos, totalLen, band.freq);
+            return inDipoleZone(Zc, dz, band.freq);
+          });
+          if (hit && !inSeg) { segP0 = pos; inSeg = true; }
+          else if (!hit && inSeg) { segs.push([segP0, pos]); inSeg = false; }
+        }
+        if (inSeg) segs.push([segP0, xEnd]);
+        return segs;
+      });
+    }
+
+    let row = 0;
+    DIPOLE_ZONES.forEach((dz, zi) => {
+      if (!dz.on) return;
+      const y = stripBaseY + row * (STRIP_H + STRIP_GAP);
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillRect(M.left, y, plotW, STRIP_H);
+      ctx.fillStyle = dz.stroke.replace(/[\d.]+\)$/, '0.85)');
+      (dipSwrStripCache[zi] || []).forEach(([p1, p2]) => {
+        const x1 = posToX(p1);
+        const x2 = posToX(Math.min(p2, xEnd));
+        ctx.fillRect(x1, y, Math.max(1, x2 - x1), STRIP_H);
+      });
+      ctx.fillStyle = dz.text;
+      ctx.font = '8px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`SWR<${dz.swrLimit}`, M.left + plotW + 8, y + STRIP_H - 1);
+      row++;
+    });
+  }
+
+  // ── Feedpoint indicator ──
+  if (dipolePos >= 0 && dipolePos <= xEnd) {
+    const fpX = posToX(dipolePos);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(fpX, M.top); ctx.lineTo(fpX, M.top + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle  = 'rgba(255,255,255,0.65)';
+    ctx.font       = 'bold 10px system-ui, sans-serif';
+    ctx.textAlign  = 'center';
+    ctx.fillText(`${Math.round(dipolePos * 100)}%`, fpX, M.top - 5);
+
+    // Dots on curves at feedpoint
+    ab.forEach(band => {
+      const Zc  = calcDipoleZ(dipolePos, totalLen, band.freq);
+      const val = rxMode
+        ? Math.min(Z_PEAK, Math.max(Z_MIN, Zc.R))
+        : Math.min(Z_PEAK, Math.max(Z_MIN, calcZmag(Zc)));
+      const cy = yPx(val, H);
+      ctx.fillStyle = band.color;
+      ctx.beginPath();
+      ctx.arc(fpX, cy, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  }
+
+  // ── Hover cursor line ──
+  if (hoverCx !== null && hoverCx >= M.left && hoverCx <= M.left + plotW) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(hoverCx, M.top); ctx.lineTo(hoverCx, M.top + plotH); ctx.stroke();
+  }
+
+  // ── Axis titles ──
+  ctx.fillStyle = '#8b949e';
+  ctx.font      = '12px system-ui, sans-serif';
+  ctx.save();
+  ctx.translate(14, M.top + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText(rxMode ? 'R or |X| (Ω)' : 'Impedance (Ω)', 0, 0);
+  ctx.restore();
+
+  if (rxMode) {
+    ctx.fillStyle = 'rgba(200,200,255,0.60)';
+    ctx.font      = '9px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('— R   ╌╌ |X|', M.left + 6, M.top + 14);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.fillText('Feedpoint Position (%)', M.left + plotW / 2, H - 8);
+
+  // Wire length annotation (top-right)
+  const lenStr = `Wire: ${totalLen.toFixed(1)} m${dipoleLen === null ? ' (auto λ/2)' : ''}`;
+  ctx.fillStyle = '#3a4252';
+  ctx.font      = '9px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(lenStr, M.left + plotW - 4, M.top + 13);
+
+  updateDipoleInspectPanel();
+}
+
+// ════════════════════════════════════════════════
 //  SWEET SPOTS RESULTS TABLE
 // ════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════
+//  DIPOLE INSPECT PANEL
+// ════════════════════════════════════════════════
+
+function updateDipoleInspectPanel() {
+  const panel = document.getElementById('inspectPanel');
+  if (!panel) return;
+  const ab       = getActiveBands();
+  const totalLen = getDipoleLen();
+  const pos      = dipolePos;
+  const pctLabel = `${Math.round(pos * 100)}%`;
+
+  let html = `<div class="ip-title">Feedpoint at ${pctLabel} — wire ${totalLen.toFixed(1)} m</div>`;
+
+  ab.forEach(band => {
+    const Zc   = calcDipoleZ(pos, totalLen, band.freq);
+    const Z    = calcZmag(Zc);
+    const sign = Zc.X >= 0 ? '+' : '−';
+    const Xabs = Math.abs(Zc.X);
+
+    const activeDZ = DIPOLE_ZONES.filter(dz => dz.on);
+    const zoneMatches = activeDZ.filter(dz => inDipoleZone(Zc, dz, band.freq));
+    let zoneHtml = '';
+
+    zoneMatches.forEach(dz => {
+      const { ratio, zRef } = getDipoleZoneParams(dz);
+      const Za     = { R: Zc.R / ratio, X: Zc.X / ratio };
+      const mmEff  = mismatchEffComplex(Zc, zRef);
+      let tunerEff = 1.0, tunerDesc = '';
+      if (tunerEnabled) {
+        const p   = getTunerParams();
+        const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
+        if (sol.matched) {
+          let L_uH = 0;
+          if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
+          if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
+          tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
+          tunerDesc = ` tuner ${Math.round(tunerEff * 100)}%`;
+        } else {
+          tunerDesc = ' no tuner match';
+        }
+      }
+      const total  = Math.round(mmEff * dz.xfrmrEff * tunerEff * 100);
+      const losses = [`mismatch ${Math.round(mmEff * 100)}%`, `xfrmr ${Math.round(dz.xfrmrEff * 100)}%`];
+      if (tunerEnabled) losses.push(tunerDesc.trim());
+      zoneHtml += `<span style="color:${dz.text};font-weight:600">${dz.label}</span>` +
+        ` <span class="ip-eff">${total}% delivered</span>` +
+        ` <span class="ip-loss">[${losses.join(' · ')}]</span>`;
+    });
+    if (!zoneHtml) zoneHtml = `<span style="color:var(--muted2);font-size:0.68rem">no match</span>`;
+
+    const swr50val = swr50({ R: Zc.R, X: Zc.X });
+    html +=
+      `<div class="ip-row">` +
+      `<span class="ip-band" style="color:${band.color}">${band.name}</span>` +
+      `<span class="ip-z">${formatZ(Z)}</span>` +
+      `<span class="ip-rx">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
+      zoneHtml +
+      `</div>`;
+  });
+
+  panel.innerHTML = html;
+  panel.classList.add('show');
+}
 
 function updateSweetSpotsTable() {
   const el = document.getElementById('sweetSpotsTable');
   if (!el) return;
-  if (!sweetSpotsOn || !sweetSpotsCache || sweetSpotsCache.length === 0) {
+  if (antennaMode === 'dip' || !sweetSpotsOn || !sweetSpotsCache || sweetSpotsCache.length === 0) {
     el.classList.remove('show');
     return;
   }
@@ -1910,6 +2498,7 @@ function updateSweetSpotsTable() {
 // ════════════════════════════════════════════════
 
 function updateInspectPanel() {
+  if (antennaMode === 'dip') { updateDipoleInspectPanel(); return; }
   const panel = document.getElementById('inspectPanel');
   if (!panel) return;
   if (pinL === null) { panel.classList.remove('show'); panel.innerHTML = ''; return; }
@@ -2014,6 +2603,10 @@ function buildBandButtons() {
       syncSweetSpotsMin();
       invalidateSweetSpots();
       updateLegend();
+      if (antennaMode === 'dip' && dipoleLen === null) {
+        dipSwrStripCache = null;
+        updateDipoleWireLenDisplay();
+      }
       resizeAndDraw();
     };
     wrap.appendChild(btn);
@@ -2164,9 +2757,16 @@ function setupHover() {
                    cy >= M.top  && cy <= CANVAS_H - M.bottom;
     if (!inPlot) return;
     isDragging = true;
-    pinL = pxToL(cx, getXRange(), CANVAS_W);
-    syncPinInput(pinL);
-    draw();
+    if (antennaMode === 'dip') {
+      const xEnd  = dipoleHalfView ? 0.5 : 1.0;
+      const plotW = CANVAS_W - M.left - M.right;
+      const pos   = Math.max(0.01, Math.min(0.99, ((cx - M.left) / plotW) * xEnd));
+      applyDipolePos(pos);
+    } else {
+      pinL = pxToL(cx, getXRange(), CANVAS_W);
+      syncPinInput(pinL);
+      draw();
+    }
   });
 
   document.addEventListener('mouseup', () => { isDragging = false; });
@@ -2193,6 +2793,13 @@ function setupHover() {
 
     // While dragging, update pin position
     if (isDragging && inPlot) {
+      if (antennaMode === 'dip') {
+        const xEnd  = dipoleHalfView ? 0.5 : 1.0;
+        const plotW2 = W - M.left - M.right;
+        const pos   = Math.max(0.01, Math.min(0.99, ((cx - M.left) / plotW2) * xEnd));
+        applyDipolePos(pos);
+        return;
+      }
       pinL = pxToL(cx, xRange, W);
       syncPinInput(pinL);
     }
@@ -2204,6 +2811,45 @@ function setupHover() {
     }
 
     hoverCx = cx;
+
+    // Dipole mode hover: show feedpoint tooltip
+    if (antennaMode === 'dip') {
+      const xEnd  = dipoleHalfView ? 0.5 : 1.0;
+      const plotW2 = W - M.left - M.right;
+      const pos   = Math.max(0.01, Math.min(0.99, ((cx - M.left) / plotW2) * xEnd));
+      const totalLen = getDipoleLen();
+      let html = `<div class="tt-title">Position: ${Math.round(pos * 100)}%</div>`;
+      ab.forEach(band => {
+        const Zc  = calcDipoleZ(pos, totalLen, band.freq);
+        const Z   = calcZmag(Zc);
+        const sign = Zc.X >= 0 ? '+' : '−';
+        const Xabs = Math.abs(Zc.X);
+        const activeDZ = DIPOLE_ZONES.filter(dz => dz.on);
+        const tags = activeDZ.filter(dz => inDipoleZone(Zc, dz, band.freq))
+          .map(dz => {
+            const { zRef } = getDipoleZoneParams(dz);
+            const eff = Math.round(mismatchEffComplex(Zc, zRef) * dz.xfrmrEff * 100);
+            return `<span class="tt-tag" style="color:${dz.text}">${dz.label} ~${eff}%</span>`;
+          }).join(' ');
+        html +=
+          `<div class="tt-row">` +
+          `<span class="tt-dot" style="background:${band.color}"></span>` +
+          `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
+          `<span class="tt-z">${formatZ(Z)}</span>` +
+          `<span class="tt-frac" style="font-size:0.68rem">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
+          (tags || '') +
+          `</div>`;
+      });
+      tooltip.innerHTML  = html;
+      tooltip.style.display = 'block';
+      const tx = e.clientX + 14, ty = e.clientY - 10;
+      const tr = tooltip.getBoundingClientRect();
+      tooltip.style.left = Math.min(tx, window.innerWidth  - tr.width  - 8) + 'px';
+      tooltip.style.top  = Math.min(ty, window.innerHeight - tr.height - 8) + 'px';
+      if (hoverCx !== cx) { hoverCx = cx; draw(); }
+      return;
+    }
+
     const L = pxToL(cx, xRange, W);
 
     const cpHeader = cpEnabled
@@ -2534,6 +3180,152 @@ function resizeAndDraw() {
 }
 
 // ════════════════════════════════════════════════
+//  DIPOLE MODE SETUP
+// ════════════════════════════════════════════════
+
+function applyDipolePos(pos) {
+  dipolePos = Math.max(0.01, Math.min(0.99, pos));
+  const slider = document.getElementById('dipPosSlider');
+  const input  = document.getElementById('dipPosInput');
+  if (slider) slider.value = Math.round(dipolePos * 100);
+  if (input)  input.value  = Math.round(dipolePos * 100);
+  dipSwrStripCache = null;
+  draw();
+}
+
+function updateDipoleWireLenDisplay() {
+  const inp = document.getElementById('dipWireLenInput');
+  if (!inp || document.activeElement === inp) return;
+  const len = getDipoleLen();
+  inp.value = len.toFixed(2);
+  inp.style.opacity = dipoleLen === null ? '0.5' : '1';
+}
+
+function buildDipoleZoneButtons() {
+  DIPOLE_ZONES.forEach(dz => {
+    const btn = document.getElementById(dz.id + 'Btn');
+    if (!btn) return;
+    btn.classList.toggle('on', dz.on);
+    btn.style.setProperty('--zc', dz.text);
+    btn.onclick = () => {
+      dz.on = !dz.on;
+      btn.classList.toggle('on', dz.on);
+      const customWrap = document.getElementById('dipCustomRatioWrap');
+      if (customWrap) customWrap.style.display = DIPOLE_ZONES[3].on ? 'inline-flex' : 'none';
+      dipSwrStripCache = null;
+      draw();
+    };
+  });
+}
+
+function setupDipole() {
+  // Wire length input
+  const wireLenInp   = document.getElementById('dipWireLenInput');
+  const wireLenReset = document.getElementById('dipWireLenResetBtn');
+  if (wireLenInp) {
+    updateDipoleWireLenDisplay();
+    wireLenInp.addEventListener('change', () => {
+      const v = parseFloat(wireLenInp.value);
+      if (!isNaN(v) && v > 0.1) {
+        dipoleLen = v;
+        wireLenInp.style.opacity = '1';
+      }
+      dipSwrStripCache = null;
+      draw();
+    });
+  }
+  if (wireLenReset) {
+    wireLenReset.onclick = () => {
+      dipoleLen = null;
+      updateDipoleWireLenDisplay();
+      dipSwrStripCache = null;
+      draw();
+    };
+  }
+
+  // Feedpoint position — slider
+  const slider = document.getElementById('dipPosSlider');
+  const posInp = document.getElementById('dipPosInput');
+  if (slider) {
+    slider.value = Math.round(dipolePos * 100);
+    slider.addEventListener('input', () => {
+      const v = parseInt(slider.value, 10) / 100;
+      applyDipolePos(v);
+    });
+  }
+  if (posInp) {
+    posInp.value = Math.round(dipolePos * 100);
+    posInp.addEventListener('change', () => {
+      const v = parseFloat(posInp.value) / 100;
+      applyDipolePos(v);
+    });
+  }
+
+  // Preset buttons
+  ['dipPreset50', 'dipPreset33', 'dipPreset25'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.onclick = () => {
+      const pct = id === 'dipPreset50' ? 0.50 : id === 'dipPreset33' ? 0.33 : 0.25;
+      applyDipolePos(pct);
+    };
+  });
+
+  // Half-view toggle
+  const halfBtn = document.getElementById('dipHalfViewBtn');
+  if (halfBtn) {
+    halfBtn.onclick = () => {
+      dipoleHalfView = !dipoleHalfView;
+      halfBtn.classList.toggle('on', dipoleHalfView);
+      dipSwrStripCache = null;
+      draw();
+    };
+  }
+
+  // Zone buttons
+  buildDipoleZoneButtons();
+
+  // Custom ratio
+  const customInp = document.getElementById('dipCustomRatioInp');
+  if (customInp) {
+    customInp.value = dipoleCustomRatio;
+    customInp.addEventListener('change', () => {
+      const v = parseFloat(customInp.value);
+      if (!isNaN(v) && v >= 1) dipoleCustomRatio = v;
+      dipSwrStripCache = null;
+      draw();
+    });
+  }
+}
+
+function setMode(mode) {
+  antennaMode = mode;
+  // Toggle body class for CSS overrides
+  document.body.classList.toggle('dipole-mode', mode === 'dip');
+  // Mode bar buttons
+  document.getElementById('modeEFBtn').classList.toggle('on', mode === 'ef');
+  document.getElementById('modeDipBtn').classList.toggle('on', mode === 'dip');
+  // EF-only controls
+  document.querySelectorAll('.ef-only').forEach(el => {
+    el.style.display = mode === 'ef' ? '' : 'none';
+  });
+  // Dip-only controls
+  document.querySelectorAll('.dip-only').forEach(el => {
+    el.style.display = mode === 'dip' ? '' : 'none';
+  });
+  // Reset pin on mode switch
+  pinL = null;
+  invalidateSweetSpots();
+  dipSwrStripCache = null;
+  if (mode === 'dip') updateDipoleWireLenDisplay();
+}
+
+function setupMode() {
+  document.getElementById('modeEFBtn').onclick  = () => { setMode('ef');  draw(); };
+  document.getElementById('modeDipBtn').onclick = () => { setMode('dip'); draw(); };
+}
+
+// ════════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════════
 
@@ -2553,6 +3345,8 @@ setupXRange();
 setupSweetSpots();
 setupBwMode();
 setupPinControl();
+setupMode();
+setupDipole();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
 </script>

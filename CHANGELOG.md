@@ -1,13 +1,51 @@
 # Changelog
 
-All notable changes to **HF End-Fed Antenna Impedance — Visual Tool**.
+All notable changes to **HF Antenna Impedance Visualizer**.
 Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
-## [Unreleased]
+## [v2.0] — 2026-03-20
 
-### Changed
+### Added — Dipole mode
+
+- **Dipole antenna mode** — a new top-level mode alongside the existing End-Fed mode,
+  accessible via the "End Fed / Dipole" segment control at the top of the control panel.
+- **X-axis = feedpoint position** — the dipole graph shows impedance vs. feedpoint position
+  (0–100% of total wire length) rather than wire length. 0% and 100% are the wire ends; 50% is centre.
+- **Dipole physics model** — two open-circuit transmission-line stubs in parallel.
+  Each arm uses the coth(γL) formula with dipole-calibrated constants (Z₀ = 600 Ω,
+  α₀ = 0.0231 Np/m at 3.65 MHz, sqrt(f) frequency scaling, harmonic-order correction).
+  Calibration: 14 MHz λ/2 dipole → R ≈ 70 Ω, X ≈ 0 Ω at centre (50%).
+- **Four dipole matching zones** — 1:1 (50 Ω), 4:1 (200 Ω), 6:1 (300 Ω), Custom (user-defined ratio);
+  colour-shaded overlays on the Y-axis and SWR strips below the X-axis.
+- **Wire length control** — auto mode (λ/2 of lowest active band × VF) with "Reset to λ/2" button;
+  manual numeric override locks the length.
+- **Feedpoint position controls** — slider (1–99%), numeric input, and preset buttons:
+  50% (centre), 33% (OCF), 25% (extreme OCF).
+- **Half-view toggle** — collapses the X-axis to 0–50% to zoom in on one arm.
+- **Common-mode risk strip** — a colour bar at the bottom of the dipole graph:
+  green (40–60%, near centre), orange (25–40% or 60–75%, OCF), red (0–25% or 75–100%, extreme OCF).
+- **Click-to-set feedpoint** — click or drag anywhere on the canvas in dipole mode to set the
+  feedpoint position indicator.
+- **Dipole inspect panel** — per-band R+jX, |Z|, matched zones with SWR and delivered efficiency
+  at the selected feedpoint position.
+- **SWR strips below X-axis** — one row per active dipole zone, cached for performance.
+
+### Changed — Rename and restructure
+
+- **Tool renamed** from "HF End-Fed Antenna Impedance — Visual Tool" to
+  **"HF Antenna Impedance Visualizer"** (`<title>`, `<h1>`, subtitle, meta description).
+- **Version bump** v1.14 → v2.0.
+- **Mode-aware UI** — EF-specific controls (Matching Zones, Counterpoise, Advanced, Inspect Length)
+  are hidden in Dipole mode. Dipole controls are hidden in End-Fed mode. Global controls (Bands,
+  VF slider, Tuner) remain visible in both modes.
+- **Tuner** is now a shared control visible in both modes; state (`tunerEnabled`, `tunerPreset`) is
+  shared across modes.
+- **`draw()`** dispatches to `drawEF()` (existing, unchanged) or `drawDipole()` (new) based on mode.
+  All existing EFHW calculations are untouched.
+
+### Changed — Loading coil (carried from Unreleased)
 - **Disabled loading coil feature** (code preserved but commented out)
   - Reason: The current transmission-line-based model is not valid for electrically short, loaded antennas
   - Prevents misleading results when users attempt to model whip antennas with loading coils
