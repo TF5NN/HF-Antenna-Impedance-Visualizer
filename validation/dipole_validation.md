@@ -1,6 +1,6 @@
 # Dipole Mode Validation Report
 
-**Version:** v2.0.2 · **Date:** 2026-03-20
+**Version:** v2.2.0 · **Date:** 2026-03-20
 
 **Tool:** `antenna_impedance.html`
 **Focus:** Dipole mode only
@@ -15,7 +15,7 @@ Core formula (`calcDipoleArm`):
 - αEff = α / √n_eff
 - a2 = 2 × αEff × armLen ; b2 = 2 × βL
 - D = cosh(a2) − cos(b2)
-- R_arm = Z₀ × sinh(a2) / D ; X_arm = Z₀ × sin(b2) / D
+- R_arm = Z₀ × sinh(a2) / D ; X_arm = −Z₀ × sin(b2) / D   ← sign fixed in v2.2.0 (BUG-2)
 - Z_feed = complexParallel(arm_a, arm_b)
 
 ---
@@ -70,30 +70,30 @@ reasonable options as feedpoint moves off-centre.
 *pos = 50% (centre):* La = Lb = 10.22 m → a2 = 0.4403, b2 = π → R = 65 Ω, X = 0 Ω (see Test 1)
 
 *pos = 33%:* La = 6.75 m, Lb = 13.69 m
-- Arm a: a2=0.291, b2=2.073 → R_a=116 Ω, X_a=+345 Ω
-- Arm b: a2=0.590, b2=4.210 → R_b=226 Ω, X_b=−317 Ω
-- Parallel: R=**403 Ω**, X=**+87 Ω** ; |Z|≈412 Ω
-- After 4:1 (÷4): R′=101, X′=22 → Γ=0.363 → **SWR = 2.14**
+- Arm a: a2=0.291, b2=2.073 → R_a=116 Ω, X_a=**−345 Ω** (capacitive: La < λ/4 ✓)
+- Arm b: a2=0.590, b2=4.210 → R_b=226 Ω, X_b=**+317 Ω** (inductive: λ/4 < Lb < λ/2 ✓)
+- Parallel: R=**403 Ω**, X=**−87 Ω** ; |Z|≈412 Ω
+- After 4:1 (÷4): R′=101, X′=−22 → Γ=0.363 → **SWR = 2.14**
 
 *pos = 25%:* La = 5.11 m, Lb = 15.33 m
-- Arm a: a2=0.220, b2=π/2 → R_a=130 Ω, X_a=+586 Ω
-- Arm b: a2=0.661, b2=3π/2 → R_b=352 Ω, X_b=−491 Ω
-- Parallel: R=**722 Ω**, X=**+153 Ω** ; |Z|≈739 Ω
-- After 6:1 (÷6): R′=120, X′=26 → Γ=0.435 → **SWR = 2.54**
+- Arm a: a2=0.220, b2=π/2 → R_a=130 Ω, X_a=**−586 Ω** (capacitive: La < λ/4 ✓)
+- Arm b: a2=0.661, b2=3π/2 → R_b=352 Ω, X_b=**+491 Ω** (inductive: λ/4 < Lb < λ/2 ✓)
+- Parallel: R=**722 Ω**, X=**−153 Ω** ; |Z|≈739 Ω
+- After 6:1 (÷6): R′=120, X′=−26 → Γ=0.435 → **SWR = 2.54**
 
 *pos = 10%:* La = 2.04 m, Lb = 18.40 m
-- Arm a: a2=0.088, b2=0.628 → R_a=272 Ω, X_a=+1811 Ω
-- Arm b: a2=0.793, b2=5.655 → R_b=1032 Ω, X_b=−691 Ω
-- Parallel: R=**1313 Ω**, X=**+162 Ω** ; |Z|≈1323 Ω
+- Arm a: a2=0.088, b2=0.628 → R_a=272 Ω, X_a=**−1811 Ω** (capacitive: La ≪ λ/4 ✓)
+- Arm b: a2=0.793, b2=5.655 → R_b=1032 Ω, X_b=**+691 Ω** (inductive: λ/4 < Lb < λ/2 ✓)
+- Parallel: R=**1313 Ω**, X=**−162 Ω** ; |Z|≈1323 Ω
 
 **Observed:**
 
 | pos  | La (m) | Lb (m) | R (Ω) | X (Ω) | Best zone | SWR after zone |
 |:----:|:------:|:------:|:-----:|:-----:|:---------:|:--------------:|
 | 50%  | 10.22  | 10.22  | 65    | 0     | 1:1       | 1.30           |
-| 33%  | 6.75   | 13.69  | 403   | 87    | 4:1       | 2.14           |
-| 25%  | 5.11   | 15.33  | 722   | 153   | 6:1       | 2.54           |
-| 10%  | 2.04   | 18.40  | 1313  | 162   | —         | >3             |
+| 33%  | 6.75   | 13.69  | 403   | −87   | 4:1       | 2.14           |
+| 25%  | 5.11   | 15.33  | 722   | −153  | 6:1       | 2.54           |
+| 10%  | 2.04   | 18.40  | 1313  | −162  | —         | >3             |
 
 **Verdict: PARTIAL PASS ⚠**
 
@@ -138,9 +138,9 @@ by construction — there is no floating-point path that could introduce asymmet
 
 | pos  | mirror | R (Ω) | X (Ω) | Symmetric? |
 |:----:|:------:|:-----:|:-----:|:----------:|
-| 33%  | 67%    | 403   | 87    | ✓          |
-| 25%  | 75%    | 722   | 153   | ✓          |
-| 10%  | 90%    | 1313  | 162   | ✓          |
+| 33%  | 67%    | 403   | −87   | ✓          |
+| 25%  | 75%    | 722   | −153  | ✓          |
+| 10%  | 90%    | 1313  | −162  | ✓          |
 
 **Verdict: PASS ✓** — Exact symmetry is guaranteed by the commutativity of `complexParallel`.
 
@@ -155,26 +155,29 @@ Wire = λ/2, 40m band, feedpoint swept from 10% to 90%.
 
 **Observed (40m, L = 20.44 m):**
 
-| pos  | R (Ω) | \|X\| (Ω) | Notes                          |
-|:----:|:-----:|:---------:|:-------------------------------|
-| 10%  | 1313  | 162       | Near end — high Z, X non-zero  |
-| 25%  | 722   | 153       | Off-centre — both elevated     |
-| 33%  | 403   | 87        | OCF region — X falling         |
-| 50%  | 65    | 0         | **Resonance — X = 0 exactly**  |
-| 67%  | 403   | 87        | Mirror of 33%                  |
-| 75%  | 722   | 153       | Mirror of 25%                  |
-| 90%  | 1313  | 162       | Mirror of 10%                  |
+| pos  | R (Ω) | \|X\| (Ω) | X sign | Notes                          |
+|:----:|:-----:|:---------:|:------:|:-------------------------------|
+| 10%  | 1313  | 162       | −      | Near end — high Z, capacitive  |
+| 25%  | 722   | 153       | −      | Off-centre — both elevated     |
+| 33%  | 403   | 87        | −      | OCF region — X falling         |
+| 50%  | 65    | 0         | 0      | **Resonance — X = 0 exactly**  |
+| 67%  | 403   | 87        | −      | Mirror of 33% (short arm left) |
+| 75%  | 722   | 153       | −      | Mirror of 25%                  |
+| 90%  | 1313  | 162       | −      | Mirror of 10%                  |
 
-At centre (50%): R = 65 Ω (moderate), |X| = 0 (exact minimum).
-Moving off-centre: both R and |X| increase smoothly and symmetrically.
+At centre (50%): R = 65 Ω (moderate), X = 0 (exact minimum).
+Moving off-centre: both R and |X| increase smoothly and symmetrically. The sign fix (v2.2.0)
+confirms X < 0 (capacitive) at all off-centre positions for a λ/2 wire — the shorter arm
+dominates and is capacitive since La < λ/4, while the longer arm (inductive) only partially
+cancels it in the parallel combination.
 
 |X| reaches its minimum of 0 Ω precisely at the resonant λ/2 feedpoint (50%).
 There is no secondary |X| dip within the 10–90% range for a λ/2 wire at its design frequency —
 the centre is the only resonant point.
 
 **Verdict: PASS ✓** — R is moderate at centre (65 Ω); |X| dips to zero exactly at resonance.
-Both curves increase monotonically and symmetrically toward the ends, consistent with a
-standing-wave current distribution on a resonant λ/2 dipole.
+Both curves increase monotonically and symmetrically toward the ends. X sign is now physically
+correct (capacitive for the dominant short-arm contribution at off-centre positions).
 
 ---
 
@@ -188,6 +191,25 @@ standing-wave current distribution on a resonant λ/2 dipole.
 | 4 — R/\|X\| view | PASS ✓ | R moderate at centre, \|X\|=0 at resonance |
 
 **Overall verdict: Dipole model is physically realistic and self-consistent.**
+
+### v2.2.0 change — BUG-2 resolved
+
+**BUG-2 (dipole arm X sign error) — FIXED in v2.2.0**
+
+`calcDipoleArm` used `X = +Z0_DIP × sin(b2) / D`.
+The open-stub coth identity gives a **negative** imaginary part:
+`Im[coth(a+jb)] = −sin(2b) / [cosh(2a)−cos(2b)]`
+
+Fix applied (antenna_impedance.html line 1618):
+```js
+// Before: X:  Z0_DIP * Math.sin(b2) / D,
+// After:  X: -Z0_DIP * Math.sin(b2) / D,  // −: open-stub coth decomposition
+```
+
+**Impact:** X values in tooltip now show the correct sign. Short arms (< λ/4) correctly
+display capacitive reactance (X < 0). SWR, zone activation, and all R values are **unaffected**
+(SWR depends on |Z|, not sign of X). All test verdicts and SWR numbers in this report
+are unchanged.
 
 ### Concerns
 

@@ -534,7 +534,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 <header>
   <h1>HF Antenna Impedance Visualizer</h1>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
-  <span id="versionLabel">v2.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <span id="versionLabel">v2.2 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -1588,6 +1588,16 @@ function calcZ(L, freq) {
 //    right arm = (1−p) × L → open-ended TL stub
 //  Z_feed = Z_left ∥ Z_right  (complex parallel)
 //
+//  Exact real/imag decomposition (same coth identity as EFHW):
+//    R =  Z0_DIP · sinh(2αL) / D
+//    X = −Z0_DIP · sin(2βL)  / D     D = cosh(2αL) − cos(2βL)
+//
+//  Sign derivation: coth(a+jb) = [sinh(2a) − j·sin(2b)] / [cosh(2a)−cos(2b)]
+//  → imaginary part is NEGATIVE.  Consequences (per arm):
+//    • armLen < λ/4  → sin(2βL) > 0  → X < 0  (capacitive)   ✓ open stub theory
+//    • armLen = λ/4  → sin(π) = 0    → X = 0  (transition)    ✓ (resonance)
+//    • λ/4 < L < λ/2 → sin(2βL) < 0  → X > 0  (inductive)    ✓
+//
 //  Normalisation: alpha = ALPHA_DIP_K / lambda_eff  (Np/m)
 //  This makes α × L_arm = K/4 = constant for any resonant λ/4 arm,
 //  so a centre-fed λ/2 dipole lands at R ≈ 65 Ω, X ≈ 0
@@ -1615,7 +1625,7 @@ function calcDipoleArm(armLen, freq) {
   if (D < 1e-12) return { R: Z_PEAK, X: 0 };
   return {
     R: Math.min(Z_PEAK, Math.max(0, Z0_DIP * Math.sinh(a2) / D)),
-    X: Z0_DIP * Math.sin(b2) / D,
+    X: -Z0_DIP * Math.sin(b2) / D,  // −: open-stub coth decomposition gives negative imag part
   };
 }
 

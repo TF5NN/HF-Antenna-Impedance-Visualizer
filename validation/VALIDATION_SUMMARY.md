@@ -1,11 +1,11 @@
 # Validation Master Summary
 
 **Tool:** `antenna_impedance.html`
-**Version:** v2.1.0 · **Date:** 2026-03-20
+**Version:** v2.2.0 · **Date:** 2026-03-20
 **Method:** Analytic (source-code trace + Node.js computation)
 **Reports covered:**
 - `endfed_validation.md` — End Fed mode
-- `dipole_validation.md` — Dipole mode
+- `dipole_validation.md` — Dipole mode — **arm X sign fix applied and re-validated**
 - `tuner_matching_validation.md` — Matching zones + ATU
 - `counterpoise_validation.md` — Counterpoise (CP) — **sign fix applied and re-validated**
 
@@ -68,7 +68,26 @@ calculations are unaffected (SWR depends on |X|, not sign).
 
 ---
 
-### W2 — Dipole OCF impedance magnitude overestimated
+### ~~W2 — Dipole arm X sign error~~ — **FIXED in v2.2.0**
+
+**Original issue:** `calcDipoleArm` used `X = +Z0_DIP × sin(b2) / D`. Short arms (armLen < λ/4)
+appeared inductive (+X) but open-stub theory requires them to be capacitive (−X).
+
+**Root cause:** The same coth identity applies: `Im[coth(a+jb)] = −sin(2b)/[cosh(2a)−cos(2b)]`.
+The minus sign was missing (identical oversight to BUG-1 / W1 in `calcZwireComplex`).
+
+**Fix applied (antenna_impedance.html line 1618):**
+```js
+// Before: X:  Z0_DIP * Math.sin(b2) / D,
+// After:  X: -Z0_DIP * Math.sin(b2) / D,  // −: open-stub coth decomposition
+```
+
+**Validation:** All test verdicts and SWR values in `dipole_validation.md` v2.2.0 are unchanged.
+Short arms now correctly show capacitive X (< 0). Tooltip X values are now physically correct.
+
+---
+
+### W3 — Dipole OCF impedance magnitude overestimated
 
 **Issue:** 400 Ω modelled at 33% feedpoint vs ~120–200 Ω measured on real OCF dipoles — a 2–3× magnitude error. This shifts the 4:1 matching zone 3–9 percentage points from its textbook position.
 
@@ -121,5 +140,6 @@ calculations are unaffected (SWR depends on |X|, not sign).
 | CP | T3 — Qualitative realism | ⚠ Pass with caveats |
 
 **14 of 15 tests pass cleanly. 1 partial/caveat. 0 hard failures.**
-W1 (CP sign error) has been fixed. W2 (OCF impedance magnitude) remains a structural model
-limitation. The core physics engine is sound.
+W1 (CP sign error) fixed in v2.1.0. W2 (dipole arm X sign error) fixed in v2.2.0.
+W3 (OCF impedance magnitude) remains a structural model limitation.
+The core physics engine is sound; all X signs now match open-stub theory.
