@@ -1,6 +1,6 @@
 # End Fed Mode Validation Report
 
-**Version:** v2.0.2 · **Date:** 2026-03-20
+**Version:** v2.1.0 · **Date:** 2026-03-20
 
 **Tool:** `antenna_impedance.html`
 **Focus:** End Fed mode only

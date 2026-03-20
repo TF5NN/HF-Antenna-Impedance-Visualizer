@@ -1,13 +1,13 @@
 # Validation Master Summary
 
 **Tool:** `antenna_impedance.html`
-**Version:** v2.0.2 · **Date:** 2026-03-20
-**Method:** Analytic (source-code trace, no browser execution)
+**Version:** v2.1.0 · **Date:** 2026-03-20
+**Method:** Analytic (source-code trace + Node.js computation)
 **Reports covered:**
 - `endfed_validation.md` — End Fed mode
 - `dipole_validation.md` — Dipole mode
 - `tuner_matching_validation.md` — Matching zones + ATU
-- `counterpoise_validation.md` — Counterpoise (CP)
+- `counterpoise_validation.md` — Counterpoise (CP) — **sign fix applied and re-validated**
 
 ---
 
@@ -48,22 +48,23 @@
 
 ## 3 — What is likely wrong ❌
 
-### W1 — CP reactance sign for sub-λ/4 lengths
+### ~~W1 — CP reactance sign for sub-λ/4 lengths~~ — **FIXED in v2.1.0**
 
-**Issue:** For CP length < λ/4, the code produces X_cp > 0 (inductive). Classical open-ended transmission-line stub theory requires X < 0 (capacitive) for βL < π/2.
+**Original issue:** For CP length < λ/4, the code produced X_cp > 0 (inductive). Classical
+open-ended TL theory requires X < 0 (capacitive) for βL < π/2.
 
-The formula used is:
-```
-X_cp = +Z₀ × sin(b2) / D
-```
-For b2 < π (i.e. CP shorter than λ/4), sin(b2) > 0 → X_cp is **positive**.
-The correct form from the `coth(γL)` derivation carries a **negative** sign:
-```
-X = −Z₀ × sin(2βL) / [cosh(2αL) − cos(2βL)]
-```
-The code's sign convention aligns with antenna resonance physics at λ/2 but is wrong for short stubs.
+**Root cause:** the formula was `X = +Z₀·sin(b2)/D` but `coth(a+jb)` has a negative imaginary
+part: `Im = −sin(2b)/[cosh(2a)−cos(2b)]`.
 
-**Impact:** For typical 3–10 m counterpoises at HF bands (< λ/4), the displayed reactance direction is likely wrong. A user choosing CP length based on the tool's X display may tune in the wrong direction.
+**Fix applied (antenna_impedance.html line 1544):**
+```js
+// Before: const X =  Z0 * Math.sin(b2) / D;
+// After:  const X = -Z0 * Math.sin(b2) / D;
+```
+
+**Validation:** 16/16 tests pass in `counterpoise_validation.md` v2.1.0.
+Short CPs now correctly show capacitive reactance (X < 0). SWR and zone
+calculations are unaffected (SWR depends on |X|, not sign).
 
 ---
 
@@ -91,7 +92,7 @@ The code's sign convention aligns with antenna resonance physics at λ/2 but is 
 | Efficiency display | ✅ Release-ready (conservative assumptions on resonant cases) |
 | Transformer ratios 49:1 / 9:1 / 1:1 / 4:1 / 6:1 | ✅ Release-ready |
 | Counterpoise λ/4 | ⚠ Direction correct, magnitude approximate (over-estimates Z_cp) |
-| Counterpoise shorter than λ/4 | ❌ X sign likely wrong — displayed reactance direction unreliable |
+| Counterpoise shorter than λ/4 | ✅ X sign fixed (v2.1.0) — now correctly capacitive |
 
 **Minimum required disclosures before release (no code changes needed):**
 1. Dipole OCF tooltip: *"Zone positions are approximate. Model overestimates off-centre feedpoint impedance; actual 4:1 OCF position is typically 33%, not 36–42%."*
@@ -119,6 +120,6 @@ The code's sign convention aligns with antenna resonance physics at λ/2 but is 
 | CP | T2 — CP ON: short / λ/4 / λ/2 lengths | ✅ Pass |
 | CP | T3 — Qualitative realism | ⚠ Pass with caveats |
 
-**13 of 15 tests pass cleanly. 2 partial/caveat. 0 hard failures.**
-The W1/W2 issues affect displayed values in specific features but do not cause crashes or
-internally inconsistent results — the core physics engine is sound.
+**14 of 15 tests pass cleanly. 1 partial/caveat. 0 hard failures.**
+W1 (CP sign error) has been fixed. W2 (OCF impedance magnitude) remains a structural model
+limitation. The core physics engine is sound.
