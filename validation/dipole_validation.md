@@ -1,6 +1,6 @@
 # Dipole Mode Validation Report
 
-**Version:** v2.2.0 · **Date:** 2026-03-20
+**Version:** v2.3.0 · **Date:** 2026-03-20
 
 **Tool:** `antenna_impedance.html`
 **Focus:** Dipole mode only
@@ -211,17 +211,47 @@ display capacitive reactance (X < 0). SWR, zone activation, and all R values are
 (SWR depends on |Z|, not sign of X). All test verdicts and SWR numbers in this report
 are unchanged.
 
-### Concerns
+### v2.3.0 change — OCF labelling (UI only, no physics change)
+
+**Root cause analysis (v2.3.0):** A detailed investigation was performed into why the model
+overestimates OCF feedpoint impedance. Root cause confirmed:
+
+- The parallel open-stub model computes arm currents independently from the source voltage.
+- Real dipoles have a sinusoidal current distribution — `I(p) = I_max × sin(p × π)` — enforced
+  by current continuity in the wire. This reduces feedpoint current at off-centre positions.
+- Mutual inductive coupling between unequal arms further reduces effective feedpoint impedance.
+- No simple `sin^n(pπ)` correction can match the non-uniform overestimate across all positions
+  without clean physical derivation. `sin²(pπ)` reduces error from 2–3× to 1.5–2.5× (insufficient);
+  `sin⁴(pπ)` gives numerically plausible results but lacks a justifiable derivation.
+
+**Decision:** Following the design principle "prefer honest labelling over fake accuracy",
+no correction factor was applied to the physics model. Instead, UI disclosures were added
+wherever the feedpoint is > 10 percentage points from centre (pos < 40% or pos > 60%):
+
+1. **Hover tooltip** — appends `⚠ OCF position — model overestimates Z` note with real-world
+   Windom reference (~120–200 Ω at 33%).
+2. **Inspect panel** — same note appended after band rows when selected feedpoint is OCF.
+3. **Graph canvas** — small `"Z approx."` label drawn above the feedpoint % marker for OCF positions.
+
+**Impact on test verdicts:** None. All R/X/SWR values and zone activations are unchanged.
+Only the UI presentation is modified.
+
+**Reference values (from literature/NEC thin-wire simulations):**
+| Feedpoint | Model R (Ω) | Real / NEC (Ω) | Ratio |
+|:---------:|:-----------:|:--------------:|:-----:|
+| 50% (centre) | 65 | 65–75 | 1.0× ✓ |
+| 33% (Windom) | 403 | 120–200 | 2.0–3.4× |
+| 25% | 722 | 200–350 | 2.1–3.6× |
+
+### Remaining Concerns
 
 1. **Off-centre impedance overestimated** (~400 Ω at 33% vs published ~120–200 Ω for real OCF
-   dipoles). Root cause: the parallel open-stub model omits mutual coupling between arms.
-   Effect: zone highlights appear slightly further from the ends than the classical OCF positions.
-   Severity: **low** — the model remains usable as an educational tool; users should treat
-   zone boundaries as approximate guides, not precise engineering values.
+   dipoles). Root cause: parallel open-stub model omits mutual coupling. No simple correction
+   is derivable without curve-fitting. **Mitigated by UI labelling added in v2.3.0.**
 
 2. **4:1 zone borderline at 33%** — SWR = 2.14 after matching, just above the 2.0 display
-   threshold. The zone illuminates at ~36–42% on the 40m band. This may surprise users who
-   expect a highlight at the textbook OCF position. A note in the UI or tooltip would help.
+   threshold. The zone illuminates at ~36–42% on the 40m band. Users are now warned of this
+   via the OCF tooltip and inspect panel notes. **Partially mitigated by UI labelling in v2.3.0.**
 
 3. **Band-invariant centre-fed result** (R = 65 Ω for all bands) is intentional and acceptable
    for an educational visualiser, consistent with the same approach used in EFHW mode.

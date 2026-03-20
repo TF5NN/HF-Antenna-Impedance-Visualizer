@@ -1,7 +1,7 @@
 # Validation Master Summary
 
 **Tool:** `antenna_impedance.html`
-**Version:** v2.2.0 · **Date:** 2026-03-20
+**Version:** v2.3.0 · **Date:** 2026-03-20
 **Method:** Analytic (source-code trace + Node.js computation)
 **Reports covered:**
 - `endfed_validation.md` — End Fed mode
@@ -34,8 +34,8 @@
 
 | # | Area | Issue | Severity |
 |---|------|-------|---------|
-| C1 | Dipole OCF impedance | Model gives ~400 Ω at 33%; real OCF dipoles measure ~120–200 Ω. The parallel open-stub model omits mutual inductive coupling between arms. 4:1 zone lights at ~36–42%, not 33%. | **Medium** — wrong position guidance for OCF users |
-| C2 | Dipole 6:1 zone at 25% | SWR=2.54 after 6:1 — outside the 2.0 limit. Zone may not highlight at the textbook 25% OCF position. | **Medium** — zone boundary misleads |
+| C1 | Dipole OCF impedance | Model gives ~400 Ω at 33%; real ~120–200 Ω. 4:1 zone lights at ~36–42%, not 33%. **Mitigated v2.3.0**: tooltip, inspect panel, and graph all now warn "Z approx." for pos > 10 pp from centre. | **Low** — disclosed in UI |
+| C2 | Dipole 6:1 zone at 25% | SWR=2.54 after 6:1 — outside the 2.0 limit. Zone may not highlight at the textbook 25% OCF position. **Mitigated v2.3.0**: same OCF warning applies. | **Low** — disclosed in UI |
 | C3 | Dipole tuner zone widening | With tuner ON, dipole zone acceptance limit jumps to maxSWR (up to 20); EFHW only widens to swrLimit=3.0. Dipole mode can show zone active even without a confirmed L-network match. | **Medium** — overclaims matchability in dipole mode |
 | C4 | Tuner maxSWR hard cutoff | Real tuners have soft rolloff; model refuses to invoke `solveL` above the threshold even if the L-network would succeed. A "10:1 tuner" shows zero coverage at 10.01:1. | **Low** — conservative, not dangerous |
 | C5 | Tuner efficiency Q=120 fixed | Widerange tuner at 160m with 40+ µH: real toroid Q drops to 60–80. Efficiency values for widerange at low bands are optimistic. | **Low** |
@@ -87,13 +87,26 @@ Short arms now correctly show capacitive X (< 0). Tooltip X values are now physi
 
 ---
 
-### W3 — Dipole OCF impedance magnitude overestimated
+### W3 — Dipole OCF impedance magnitude overestimated — **mitigated in v2.3.0**
 
-**Issue:** 400 Ω modelled at 33% feedpoint vs ~120–200 Ω measured on real OCF dipoles — a 2–3× magnitude error. This shifts the 4:1 matching zone 3–9 percentage points from its textbook position.
+**Issue:** 400 Ω modelled at 33% feedpoint vs ~120–200 Ω measured on real OCF dipoles — a 2–3×
+magnitude error. This shifts the 4:1 matching zone 3–9 percentage points from its textbook position.
 
-**Root cause:** The parallel open-stub model treats each arm as an independent open-ended TL. Real dipole arms are mutually coupled (inductive coupling reduces effective feed impedance at off-centre positions). This is a structural limitation of the simplified model, not a code bug.
+**Root cause (confirmed v2.3.0 analysis):** The parallel open-stub model treats each arm as an
+independent TL. Real dipole arms share a continuous wire with a sinusoidal current distribution
+`I(p) = I_max × sin(p×π)`, enforced by current continuity. The model ignores this constraint and
+also omits mutual inductive coupling between unequal arms. No simple `sin^n(pπ)` correction is
+derivable with clean physical justification — the overestimate factor is non-uniform across positions.
 
-**Impact:** Zone positions in OCF configurations are approximate guides only.
+**Decision:** No physics change (design principle: "prefer honest labelling over fake accuracy").
+
+**Mitigation added in v2.3.0:** UI warnings appear whenever feedpoint is > 10 pp from centre:
+- Hover tooltip: `⚠ OCF position — model overestimates Z`, with real Windom reference
+- Inspect panel: same note below band rows
+- Graph canvas: `"Z approx."` label above OCF feedpoint marker
+
+**Residual impact:** Zone positions in OCF configurations remain approximate guides only.
+The model is suitable for educational use with the added disclosures.
 
 ---
 
@@ -105,7 +118,7 @@ Short arms now correctly show capacitive X (< 0). Tooltip X values are now physi
 |---|---|
 | EFHW impedance, harmonics, 49:1 zone | ✅ Release-ready |
 | Dipole centre-fed (1:1 zone) | ✅ Release-ready |
-| Dipole OCF / off-centre (4:1, 6:1 zones) | ⚠ Educational use only — zone positions are approximate |
+| Dipole OCF / off-centre (4:1, 6:1 zones) | ⚠ Educational use — zone positions approximate; UI warnings added v2.3.0 |
 | Tuner matching — EFHW | ✅ Release-ready |
 | Tuner matching — Dipole (zone widening with tuner ON) | ⚠ More permissive than EFHW; disclose |
 | Efficiency display | ✅ Release-ready (conservative assumptions on resonant cases) |

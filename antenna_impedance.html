@@ -278,7 +278,8 @@ header p {
   border: 1px solid currentColor;
   opacity: 0.85;
 }
-.tt-cp-note { font-size: 0.65rem; color: var(--muted); font-family: monospace; }
+.tt-cp-note  { font-size: 0.65rem; color: var(--muted); font-family: monospace; }
+.tt-ocf-note { font-size: 0.65rem; color: #6e7681; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.4; }
 
 /* ─── COUNTERPOISE CONTROL ────────────────────── */
 #cpControl {
@@ -408,8 +409,9 @@ header p {
 #inspectPanel .ip-band { font-weight: 700; min-width: 28px; }
 #inspectPanel .ip-z    { font-family: monospace; color: var(--text); }
 #inspectPanel .ip-rx   { color: #484f58; font-size: 0.68em; }
-#inspectPanel .ip-loss { font-size: 0.65rem; color: var(--muted); margin-left: 8px; }
-#inspectPanel .ip-eff  { font-weight: 600; }
+#inspectPanel .ip-loss     { font-size: 0.65rem; color: var(--muted); margin-left: 8px; }
+#inspectPanel .ip-eff      { font-weight: 600; }
+#inspectPanel .ip-ocf-note { font-size: 0.64rem; color: #6e7681; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.5; }
 
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
@@ -534,7 +536,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 <header>
   <h1>HF Antenna Impedance Visualizer</h1>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
-  <span id="versionLabel">v2.2 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <span id="versionLabel">v2.3 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -2423,6 +2425,12 @@ function drawDipole() {
     ctx.font       = 'bold 10px system-ui, sans-serif';
     ctx.textAlign  = 'center';
     ctx.fillText(`${Math.round(dipolePos * 100)}%`, fpX, M.top - 5);
+    // OCF note alongside feedpoint marker — model overestimates Z outside ±10 pp of centre
+    if (Math.abs(dipolePos - 0.5) > 0.10) {
+      ctx.fillStyle = '#6e7681';
+      ctx.font      = '8px system-ui, sans-serif';
+      ctx.fillText('Z approx.', fpX, M.top - 14);
+    }
 
     // Dots on curves at feedpoint
     ab.forEach(band => {
@@ -2541,6 +2549,13 @@ function updateDipoleInspectPanel() {
       `</div>`;
   });
 
+  // OCF warning — model overestimates feedpoint Z by ~2–3× outside the centre region.
+  if (Math.abs(pos - 0.5) > 0.10) {
+    html += `<div class="ip-ocf-note">` +
+      `⚠ Off-centre feed — model overestimates Z (parallel-stub approx., no mutual coupling).<br>` +
+      `Real Windom at 33%: ~120–200 Ω · Zone boundaries are approximate guides only.` +
+      `</div>`;
+  }
   panel.innerHTML = html;
   panel.classList.add('show');
 }
@@ -2966,6 +2981,14 @@ function setupHover() {
           (tags || '') +
           `</div>`;
       });
+      // OCF warning: model overestimates feedpoint Z by ~2–3× outside the centre region.
+      // Threshold: > 10 pp from centre (i.e. pos < 40% or pos > 60%).
+      if (Math.abs(pos - 0.5) > 0.10) {
+        html += `<div class="tt-ocf-note">` +
+          `⚠ OCF position — model overestimates Z (parallel-stub approx. ignores mutual coupling).<br>` +
+          `Real Windom at 33%: ~120–200 Ω &nbsp;·&nbsp; zone boundaries are approximate.` +
+          `</div>`;
+      }
       tooltip.innerHTML  = html;
       tooltip.style.display = 'block';
       const tx = e.clientX + 14, ty = e.clientY - 10;
