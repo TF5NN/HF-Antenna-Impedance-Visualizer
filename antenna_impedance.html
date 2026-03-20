@@ -1501,8 +1501,15 @@ let VF = 0.975;
 //  Z_in = Z0 · coth(γL),  γ = ALPHA + jβ,  β = 2π/λ_eff
 //
 //  Exact real/imag decomposition:
-//    R = Z0 · sinh(2αL) / D
-//    X = Z0 · sin(2βL)  / D      D = cosh(2αL) − cos(2βL)
+//    R =  Z0 · sinh(2αL) / D
+//    X = −Z0 · sin(2βL)  / D     D = cosh(2αL) − cos(2βL)
+//
+//  Sign derivation: coth(a+jb) = [sinh(2a) − j·sin(2b)] / [cosh(2a)−cos(2b)]
+//  → imaginary part is NEGATIVE.  Consequences:
+//    • L < λ/4  → sin(2βL) > 0  → X < 0  (capacitive)   ✓ open stub theory
+//    • L = λ/4  → sin(π) = 0    → X = 0  (transition)    ✓
+//    • λ/4<L<λ/2→ sin(2βL) < 0  → X > 0  (inductive)    ✓
+//    • L = λ/2  → sin(2π) = 0   → X = 0  (series res.)   ✓
 //
 //  This produces complex impedance {R, X} where:
 //  • At λ/2 resonance: X → 0,  R ≈ Z0/(αL) ≈ 3000 Ω (80m)
@@ -1534,7 +1541,7 @@ function calcZwireComplex(L, freq) {
   const D  = Math.cosh(a2) - Math.cos(b2);
   if (D < 1e-12) return { R: Z_PEAK, X: 0 };
   const R = Math.min(Z_PEAK, Math.max(0, Z0 * Math.sinh(a2) / D));
-  const X = Z0 * Math.sin(b2) / D;   // signed: inductive (+) or capacitive (−)
+  const X = -Z0 * Math.sin(b2) / D;  // −: open-stub coth decomposition gives negative imag part
   return { R, X };
 }
 
