@@ -1,5 +1,7 @@
 # Tuner & Matching Validation Report
 
+**Version:** v2.0.2 · **Date:** 2026-03-20
+
 **Tool:** `antenna_impedance.html`
 **Focus:** Matching zones + ATU (antenna tuner) logic — both EF and Dipole modes
 **Method:** Analytic computation from source code (no browser execution)

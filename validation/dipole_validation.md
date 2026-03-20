@@ -1,5 +1,7 @@
 # Dipole Mode Validation Report
 
+**Version:** v2.0.2 · **Date:** 2026-03-20
+
 **Tool:** `antenna_impedance.html`
 **Focus:** Dipole mode only
 **Method:** Analytic computation from source code (not visual inspection)
