@@ -121,15 +121,30 @@ A dipole of total length *L* with feedpoint at position *p* (0.0 = one end, 1.0 
 - Right arm: `Lb = (1 − p) × L`
 - Feedpoint impedance: `Z_feed = Za ∥ Zb` (complex parallel combination)
 
-Each arm uses the same coth formula but with dipole-calibrated constants:
+Each arm uses the same coth formula with dipole-calibrated constants:
 
 ```
-Z0_DIP   = 600 Ω
-α_DIP    = 0.0231 Np/m  at f₀ = 3.65 MHz
-α_eff    = α_DIP · √(f / f₀) / √n_eff
+Z0_DIP  = 600 Ω
+α       = K / λ_eff   (Np/m)     K = 0.8806 (dimensionless)
+α_eff   = α / √n_eff             n_eff = max(1, 2·L_arm / λ_eff)
 ```
 
-**Calibration check:** at 14 MHz, centre-fed λ/2 dipole (VF = 0.975), each arm = 5.22 m → R ≈ 70 Ω, X ≈ 0 Ω (as expected at resonance).
+**Why `α = K / λ_eff`?** For a resonant quarter-wave arm, `L_arm = λ_eff / 4`, so:
+
+```
+α · L_arm  =  (K / λ_eff) · (λ_eff / 4)  =  K / 4   — constant, independent of frequency or VF
+```
+
+This means the centre-fed λ/2 model gives the same impedance at every HF band and at any velocity factor setting. K is chosen so that the centre result lands at **R ≈ 65 Ω** (within the 1:1 direct-feed window):
+
+```
+K  =  4 · arctanh(2 · Z_target / Z0_DIP)
+   =  4 · arctanh(130 / 600)  ≈  0.8806
+```
+
+> **This is a simplified standing-wave / feedpoint-position model, not a full EM solver.** It is normalised to give a realistic centre-fed λ/2 baseline. OCF results are approximate and installation-dependent (height above ground, nearby conductors, and feed-line common-mode all affect real antenna impedance).
+
+**Calibration:** centre-fed λ/2 dipole → R ≈ 65 Ω, X ≈ 0 at every HF band.
 
 Edge case: feedpoint at 0% or 100% (end-fed) — one arm has zero length, feedpoint impedance equals the other arm alone (EFHW-like high impedance).
 

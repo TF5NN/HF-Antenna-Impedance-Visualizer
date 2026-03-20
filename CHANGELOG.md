@@ -5,6 +5,38 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v2.0.2] — 2026-03-20
+
+### Fixed — Dipole mode impedance normalisation
+
+- **Dipole centre-fed impedance now consistent across all bands.**
+  The previous model used `α = α₀ · √(f / f₀)`, which caused the
+  product `α · L_arm` to scale as `1/√f` — giving R ≈ 49 Ω at 10 m
+  but R ≈ 172 Ω at 160 m for a centre-fed λ/2 dipole.
+
+  Fixed by changing the attenuation formula to:
+
+  ```
+  α = K / λ_eff     (K = 0.8806, dimensionless)
+  ```
+
+  Because `L_arm = λ_eff / 4` at resonance, `α · L_arm = K / 4 = const`
+  regardless of frequency or velocity factor. The calibration constant K
+  is derived analytically:
+
+  ```
+  K = 4 · arctanh(2 · Z_target / Z₀)  =  4 · arctanh(130 / 600)  ≈  0.8806
+  ```
+
+  Result: centre-fed λ/2 dipole gives **R ≈ 65 Ω, X ≈ 0** at every HF
+  band (160 m – 10 m) at any velocity factor setting. OCF shape is
+  preserved — impedance rises smoothly from ~65 Ω at 50% toward high
+  values near the wire ends (~400 Ω at 33%, ~740 Ω at 25%).
+- README Dipole model section updated with the normalisation derivation
+  and an explicit note that this is a simplified educational model.
+
+---
+
 ## [v2.0] — 2026-03-20
 
 ### Added — Dipole mode

@@ -1581,21 +1581,25 @@ function calcZ(L, freq) {
 //    right arm = (1−p) × L → open-ended TL stub
 //  Z_feed = Z_left ∥ Z_right  (complex parallel)
 //
-//  Calibrated: Z0_DIP=600Ω, ALPHA_DIP=0.0231 Np/m @3.65MHz
-//  → ~70 Ω at centre of λ/2 dipole at 14 MHz (VF=0.975).
-//  sqrt(f) frequency scaling — same as EFHW model.
+//  Normalisation: alpha = ALPHA_DIP_K / lambda_eff  (Np/m)
+//  This makes α × L_arm = K/4 = constant for any resonant λ/4 arm,
+//  so a centre-fed λ/2 dipole lands at R ≈ 65 Ω, X ≈ 0
+//  at every HF band and velocity factor.
+//
+//  K = 4 × arctanh(2 × Z_target / Z0_DIP)
+//    = 4 × arctanh(130/600) ≈ 0.8806
 // ════════════════════════════════════════════════
 
-const Z0_DIP         = 600;      // Ω — characteristic impedance for a dipole wire
-const ALPHA_DIP      = 0.0231;   // Np/m at ALPHA_DIP_FREF
-const ALPHA_DIP_FREF = 3.65e6;   // Hz reference
+const Z0_DIP      = 600;      // Ω  — characteristic impedance of the dipole wire model
+const ALPHA_DIP_K = 0.8806;   // dimensionless; alpha = K / lambda_eff  (Np/m)
+                               // Calibration: centre-fed λ/2 → R ≈ 65 Ω, X ≈ 0 at all bands
 
 // Complex impedance of one dipole arm as an open-ended TL stub
 function calcDipoleArm(armLen, freq) {
   if (armLen <= 0.01) return { R: Z_PEAK, X: 0 };
   const lambda_eff = (C / freq) * VF;
   const betaL      = (2 * Math.PI * armLen) / lambda_eff;
-  const alpha      = ALPHA_DIP * Math.sqrt(freq / ALPHA_DIP_FREF);
+  const alpha      = ALPHA_DIP_K / lambda_eff;          // Np/m; scales as f/VF → αL_arm constant at resonance
   const n_eff      = Math.max(1, (2 * armLen) / lambda_eff);
   const alphaEff   = alpha / Math.sqrt(n_eff);
   const a2 = 2 * alphaEff * armLen;
