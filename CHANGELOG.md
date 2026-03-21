@@ -5,6 +5,56 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v2.4.0] — 2026-03-21
+
+### Fixed — Tuner matching: Q-based gate prevents false positives
+
+The tuner previously indicated a match whenever the L-network analytic solver
+(`solveL`) found component values within the preset's physical L/C limits.
+It did **not** check whether the required network Q was physically realistic,
+leading to false positives in cases with large |X|/R ratios or extreme
+transformation ratios — cases where a real ATU would struggle or fail.
+
+**Root cause:** `swrAtRadio()` gated only on `rawSWR ≤ maxSWR` (the tuner's
+rated range), then called `solveL()`. Component-limit checks alone are not
+sufficient to reject high-Q matches.
+
+**Fix — three minimal changes:**
+
+1. **`Qmax` added to each tuner preset:**
+   - Internal: `Qmax = 4` (Q ≤ 4 for small internal tuners)
+   - External: `Qmax = 9` (Q ≤ 9 for typical standalone ATUs)
+   - Wide-range: `Qmax = 17` (Q ≤ 17 for large tuners with big coils)
+
+2. **New `canTune(Za, p)` helper** — computes and gates on network Q:
+   ```
+   Q_transform = √(max(R, 50) / min(R, 50) − 1)
+   Q_reactive  = |X| / R
+   Q_total     = Q_transform + Q_reactive
+   match OK    ⟺  Q_total ≤ Qmax
+   ```
+   Also rejects degenerate edge cases: R ≤ 1 Ω, R ≥ 10 kΩ, |X| > 10·R,
+   transformation ratio > 100:1.
+
+3. **`swrAtRadio()` calls `canTune()` before `solveL()`:**
+   If `canTune()` returns false, the zone does not activate — no match claimed.
+
+**No change to:** `solveL()`, `estimateTunerEff()`, `inZone()`, or any
+antenna, CP, or dipole model code.
+
+**Behaviour change (examples):**
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| R=50, X=5 (easy) | match ✓ | match ✓ |
+| R=200, X=80 (moderate) | all tuners match | Internal + External match ✓ |
+| R=50, X=300 (high reactance) | all tuners match | External + Wide-range only ✓ |
+| R=50, X=700 (\|X\| > 10·R) | all tuners match | rejected by all presets ✓ |
+| R=3000 via 49:1 → Za≈61 Ω | match ✓ | match ✓ (unchanged) |
+| R=3000 direct (1:1) → ratio=60 | wide-range matches | wide-range only (Q_t≈7.7) ✓ |
+
+---
+
 ## [v2.0.2] — 2026-03-20
 
 ### Fixed — Dipole mode impedance normalisation
