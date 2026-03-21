@@ -536,7 +536,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 <header>
   <h1>HF Antenna Impedance Visualizer</h1>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
-  <span id="versionLabel">v2.3 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <span id="versionLabel">v2.5.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -1249,7 +1249,7 @@ const TUNER_PRESETS = {
 
 let tunerEnabled  = false;
 let tunerPreset   = 'external';          // key into TUNER_PRESETS or 'custom'
-let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
+let tunerCustom   = { Lmax: 24, Cmax: 1200, maxSWR: 10, Qmax: Infinity }; // Qmax=∞: component limits only
 
 // X-axis range state
 let xStartMode = 'highBand'; // 'highBand' (⅛λ) | 'lowBand' (⅛λ) | 'distance'

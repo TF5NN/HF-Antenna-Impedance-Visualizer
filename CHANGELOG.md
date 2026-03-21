@@ -5,6 +5,84 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v2.5.0] — 2026-03-21
+
+### Fixed — Custom ATU preset non-functional (v2.4.0 regression)
+
+`tunerCustom` was initialised without a `Qmax` field. In JavaScript,
+`Q_total <= undefined` evaluates to `false` (NaN comparison), so `canTune()`
+always returned `false` for the custom preset — meaning the custom tuner
+**never showed a match** after v2.4.0.
+
+**Fix:** added `Qmax: Infinity` to `tunerCustom` initialisation:
+
+```js
+// Before (broken):
+let tunerCustom = { Lmax: 24, Cmax: 1200, maxSWR: 10 };
+
+// After (v2.5.0):
+let tunerCustom = { Lmax: 24, Cmax: 1200, maxSWR: 10, Qmax: Infinity };
+```
+
+`Qmax: Infinity` means the Q formula is bypassed for the custom preset; only
+the SWR gate and `solveL()` component limits apply. This restores the pre-v2.4.0
+custom-tuner behaviour while remaining consistent with the Q-gate design intent
+(user-provided explicit L/C limits = no additional Q constraint).
+
+### Added — Counterpoise UX guidance
+
+A short guidance note now appears below the counterpoise length input whenever
+the counterpoise is toggled **on**:
+
+> *λ/4 length is most stable — short CP acts capacitive, long acts inductive.
+> CP can improve or worsen matching depending on length.*
+
+Implemented as a hidden `#cpGuidance` div, shown/hidden alongside
+`#cpLenWrap` by `setupCounterpoise()`. No styling changes; text uses the
+existing muted colour (`#8b949e`).
+
+### Added — Tuner Q-rejection tooltip hint
+
+When the tuner is enabled but no EFHW zone matches the current hover position,
+each band row in the tooltip now shows a subtle muted-grey note:
+
+> *Match unlikely — required tuner Q too high*
+
+Condition: `tunerEnabled && zoneMatches.length === 0 && any EFHW zone active`.
+Does not appear in dipole-only mode (EFHW zones inactive) or when any zone
+matches. Styling: `color: #6e7681`, small text — informational, not alarming.
+
+### Validation — Q-gate analytic report
+
+Added `validation/qgate_validation.md` with a full analytic trace of the
+Q-based feasibility gate (`canTune`) introduced in v2.4.0.
+
+**Key findings:**
+
+1. All 6 required test cases (A–F) produce the correct PASS/FAIL pattern per
+   tuner preset — gating is safe and correct.
+
+2. The **operative gate** preventing false matches is the `rawSwr > p.maxSWR`
+   SWR gate, not the Qmax formula. Mathematical proof: the maximum achievable
+   Q_total for any Za satisfying SWR ≤ maxSWR is bounded at ~1.65 / ~3.0 / ~4.4
+   for the internal/external/wide-range presets respectively — below all three
+   Qmax values (4 / 9 / 17). The Qmax values act as a redundant safety net.
+
+3. `canTune` is correctly called in `swrAtRadio()` (EFHW path) but not in
+   `swrAfterDipoleZone()` (dipole path). Analysis shows no practical impact —
+   the SWR gate covers the same cases on both paths.
+
+4. Custom preset regression (W4, see above) found during validation.
+
+`validation/VALIDATION_SUMMARY.md` updated: C9 resolved, W4 documented and
+fixed, C10 (Qmax advisory) added, Q-gate tests T-A through T-F added.
+
+### Changed — Version label
+
+HTML version label bumped from v2.3 to v2.5.0.
+
+---
+
 ## [v2.4.0] — 2026-03-21
 
 ### Fixed — Tuner matching: Q-based gate prevents false positives
