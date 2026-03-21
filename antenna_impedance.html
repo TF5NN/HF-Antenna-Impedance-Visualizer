@@ -609,6 +609,10 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
         <span class="cp-unit">m</span>
       </div>
+      <div id="cpGuidance" style="display:none;font-size:0.68rem;color:#8b949e;line-height:1.5;padding:4px 2px 0">
+        λ/4 length is most stable — short CP acts capacitive, long acts inductive.
+        CP can improve or worsen matching depending on length.
+      </div>
     </div>
   </div>
   <div class="ctrl-group ef-only" id="advancedGroup">
@@ -3054,6 +3058,15 @@ function setupHover() {
 
       const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
       if (zoneMatches.length > 0) anyZoneHit = true;
+
+      // Tuner rejection hint: show when tuner is on, at least one EFHW zone is active,
+      // but none matched. Covers both SWR-gate and Q-gate rejection.
+      let tunerRejectNote = '';
+      if (tunerEnabled && zoneMatches.length === 0 && ZONES.some(z => z.on)) {
+        tunerRejectNote = `<span style="color:#6e7681;font-size:0.62rem;display:block;margin-left:14px">` +
+          `Match unlikely — required tuner Q too high</span>`;
+      }
+
       const zoneTags = zoneMatches
         .map(z => {
           const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
@@ -3112,6 +3125,7 @@ function setupHover() {
         `<span class="tt-z">${formatZ(Z)}</span>` +
         rxNote +
         zoneTags +
+        tunerRejectNote +
         cpNote +
         coilNote +
         `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
@@ -3170,14 +3184,16 @@ function setupVF() {
 // ════════════════════════════════════════════════
 
 function setupCounterpoise() {
-  const btn  = document.getElementById('cpToggleBtn');
-  const wrap = document.getElementById('cpLenWrap');
-  const inp  = document.getElementById('cpLengthInput');
+  const btn      = document.getElementById('cpToggleBtn');
+  const wrap     = document.getElementById('cpLenWrap');
+  const guidance = document.getElementById('cpGuidance');
+  const inp      = document.getElementById('cpLengthInput');
 
   btn.onclick = () => {
     cpEnabled = !cpEnabled;
     btn.classList.toggle('on', cpEnabled);
     wrap.classList.toggle('show', cpEnabled);
+    if (guidance) guidance.style.display = cpEnabled ? 'block' : 'none';
     invalidateSweetSpots();
     draw();
   };
