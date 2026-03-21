@@ -1238,9 +1238,9 @@ const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical smal
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
-  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3  },   // Internal (3:1)
-  external:  { Lmax: 24, Cmax: 1200, maxSWR: 10 },   // External (10:1)
-  widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20 },   // Wide-range (20:1)
+  internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3,  Qmax: 4  },   // Internal (3:1)
+  external:  { Lmax: 24, Cmax: 1200, maxSWR: 10, Qmax: 9  },   // External (10:1)
+  widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20, Qmax: 17 },   // Wide-range (20:1)
 };
 
 let tunerEnabled  = false;
@@ -1388,6 +1388,21 @@ function solveL(Zin, freq, Lmax_uH, Cmax_pF) {
 //  MATCHING PIPELINE  (Zant → transformer → tuner → radio)
 // ────────────────────────────────────────────────
 
+// Returns true if Za = {R, X} is realistically matchable by tuner preset p.
+// Uses a Q-based feasibility check to reject cases where an L-network would
+// require unrealistically high component Q (large |X|/R or extreme ratio).
+// Q_total = Q_transform + Q_reactive must be ≤ preset.Qmax.
+function canTune(Za, p) {
+  const R = Za.R, X = Za.X;
+  if (R <= 1 || R >= 10000) return false;          // degenerate impedance
+  if (Math.abs(X) > 10 * R) return false;          // reactive overload
+  const ratio = Math.max(R, 50) / Math.min(R, 50);
+  if (ratio > 100) return false;                    // extreme transformation
+  const Q_transform = Math.sqrt(ratio - 1);
+  const Q_reactive  = Math.abs(X) / R;
+  return (Q_transform + Q_reactive) <= p.Qmax;
+}
+
 // SWR at the radio after transformer + optional tuner.
 // When tunerEnabled the L-network solver is tried for every active zone.
 // The tuner only helps when rawSwr ≤ preset.maxSWR (the rated matching range);
@@ -1399,6 +1414,7 @@ function swrAtRadio(Zc, zone, freq) {
 
   const p = getTunerParams();
   if (rawSwr > p.maxSWR) return rawSwr;   // outside tuner's rated range
+  if (!canTune(Za, p)) return rawSwr;     // Q check: reject high-Q matches
 
   const r = solveL(Za, freq, p.Lmax, p.Cmax);
   return r.matched ? 1.0 : rawSwr;
