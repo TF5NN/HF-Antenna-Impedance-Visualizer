@@ -1242,6 +1242,10 @@ const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical smal
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
+  // Qmax is a secondary safety net — the SWR gate (rawSwr > maxSWR) is always
+  // the primary operative check.  Within the rated SWR range, max achievable
+  // Q_total is ~1.65 / ~3.0 / ~4.4, well below these Qmax values.
+  // See validation/qgate_validation.md §Key analytical finding.
   internal:  { Lmax: 4,  Cmax: 500,  maxSWR: 3,  Qmax: 4  },   // Internal (3:1)
   external:  { Lmax: 24, Cmax: 1200, maxSWR: 10, Qmax: 9  },   // External (10:1)
   widerange: { Lmax: 60, Cmax: 3500, maxSWR: 20, Qmax: 17 },   // Wide-range (20:1)
@@ -1688,14 +1692,15 @@ function getDipoleZoneParams(dz) {
   return { ratio, zRef };
 }
 
-// SWR at radio after dipole zone transformer (+ tuner if on)
+// SWR at radio after dipole zone transformer (+ tuner if on).
+// Mirrors swrAtRadio(): SWR gate first, then Q gate (canTune), then L-network solver.
 function swrAfterDipoleZone(Zc, dz, freq) {
   const { ratio } = getDipoleZoneParams(dz);
   const Za = { R: Zc.R / ratio, X: Zc.X / ratio };
   const rawSwr = swr50(Za);
   if (tunerEnabled) {
     const p = getTunerParams();
-    if (rawSwr <= p.maxSWR) {
+    if (rawSwr <= p.maxSWR && canTune(Za, p)) {
       const sol = solveL(Za, freq, p.Lmax, p.Cmax);
       if (sol.matched) return 1.0;
     }
@@ -1705,7 +1710,7 @@ function swrAfterDipoleZone(Zc, dz, freq) {
 
 function inDipoleZone(Zc, dz, freq) {
   const limit = tunerEnabled ? getTunerParams().maxSWR : (dz.swrLimit || 2.0);
-  return swrAfterDipoleZone(Zc, dz, freq) <= limit;
+  return swrAfterDipoleZone(Zc, dz, freq) < limit;   // strict <, consistent with inZone()
 }
 
 // ════════════════════════════════════════════════

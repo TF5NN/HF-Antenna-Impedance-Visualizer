@@ -5,6 +5,48 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v2.6.0] — 2026-03-24
+
+### Fixed — `inDipoleZone` used `<=` while `inZone` used `<`
+
+`inDipoleZone()` checked `swrAfterDipoleZone(...) <= limit`, but the EFHW
+equivalent `inZone()` checks `s < limit` (strict less-than). At the exact SWR
+boundary a dipole zone would activate while the EFHW equivalent would not —
+an asymmetric and unintended behaviour. Fixed to `<` on line 1708.
+
+The dipole sweet-spot scan (`swrAfterDipoleZone(...) < dipSweetSpotsSWR` on
+line 2271) already used strict `<`, so it now agrees with `inDipoleZone`.
+
+### Fixed — Dipole tuner path missing `canTune()` Q-gate
+
+`swrAfterDipoleZone()` invoked `solveL()` directly without first calling
+`canTune()`, while the EFHW path `swrAtRadio()` calls `canTune()` before
+`solveL()`. The analytic validation (`qgate_validation.md` §C3) showed no
+practical impact in normal use (the SWR gate covers the same cases), but the
+asymmetry was a latent inconsistency for edge-case custom L/C limits.
+
+Fixed by folding the `canTune` check into the SWR-gate condition:
+
+```js
+// Before:
+if (rawSwr <= p.maxSWR) {
+  const sol = solveL(Za, freq, p.Lmax, p.Cmax);
+
+// After:
+if (rawSwr <= p.maxSWR && canTune(Za, p)) {
+  const sol = solveL(Za, freq, p.Lmax, p.Cmax);
+```
+
+Both paths now follow the identical gate ordering: SWR → Q → component limits.
+
+### Changed — Qmax clarifying comment
+
+Added a four-line comment above `TUNER_PRESETS` explaining that `Qmax` values
+are a secondary safety net, not the primary operative gate (which is the SWR
+gate). References `validation/qgate_validation.md` for the mathematical proof.
+
+---
+
 ## [v2.5.0] — 2026-03-21
 
 ### Fixed — Custom ATU preset non-functional (v2.4.0 regression)

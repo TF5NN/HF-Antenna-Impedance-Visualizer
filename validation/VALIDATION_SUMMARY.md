@@ -44,7 +44,7 @@
 |---|------|-------|---------|
 | C1 | Dipole OCF impedance | Model gives ~400 Ω at 33%; real ~120–200 Ω. 4:1 zone lights at ~36–42%, not 33%. **Mitigated v2.3.0**: tooltip, inspect panel, and graph all now warn "Z approx." for pos > 10 pp from centre. | **Low** — disclosed in UI |
 | C2 | Dipole 6:1 zone at 25% | SWR=2.54 after 6:1 — outside the 2.0 limit. Zone may not highlight at the textbook 25% OCF position. **Mitigated v2.3.0**: same OCF warning applies. | **Low** — disclosed in UI |
-| C3 | Dipole tuner zone widening | `swrAfterDipoleZone()` does not call `canTune()`. Q-gate analysis shows this has no practical impact (SWR gate covers same cases), but dipole path is marginally more permissive for edge-case custom L/C limits. | **Low** — qgate_validation.md §F |
+| ~~C3~~ | ~~Dipole tuner zone widening~~ | ~~`swrAfterDipoleZone()` does not call `canTune()`.~~ **Resolved v2.6.0**: `canTune()` added to dipole path; both paths now follow SWR → Q → component-limit gate ordering. | **Resolved** |
 | C4 | Tuner maxSWR hard cutoff | Real tuners have soft rolloff; model refuses to invoke `solveL` above the threshold even if the L-network would succeed. A "10:1 tuner" shows zero coverage at 10.01:1. | **Low** — conservative, not dangerous |
 | C5 | Tuner efficiency Q=120 fixed | Widerange tuner at 160m with 40+ µH: real toroid Q drops to 60–80. Efficiency values for widerange at low bands are optimistic. | **Low** |
 | C6 | Capacitor loss fixed at 2% | High-voltage-stress ATU caps can lose more; not modelled. | **Low** |
@@ -146,7 +146,7 @@ mode — consistent with user-provided explicit component limits and pre-v2.4.0 
 | Dipole centre-fed (1:1 zone) | ✅ Release-ready |
 | Dipole OCF / off-centre (4:1, 6:1 zones) | ⚠ Educational use — zone positions approximate; UI warnings added v2.3.0 |
 | Tuner matching — EFHW | ✅ Release-ready |
-| Tuner matching — Dipole (zone widening with tuner ON) | ⚠ More permissive than EFHW; `canTune` not called; no practical impact per analysis |
+| Tuner matching — Dipole | ✅ Release-ready (`canTune` added v2.6.0; matches EFHW gate ordering) |
 | Tuner matching — Custom preset | ✅ Release-ready (regression fixed v2.5.0) |
 | Efficiency display | ✅ Release-ready (conservative assumptions on resonant cases) |
 | Transformer ratios 49:1 / 9:1 / 1:1 / 4:1 / 6:1 | ✅ Release-ready |
