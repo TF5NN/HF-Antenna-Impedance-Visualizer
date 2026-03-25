@@ -1,7 +1,7 @@
 # Validation Master Summary
 
 **Tool:** `antenna_impedance.html`
-**Version:** v2.5.0 · **Date:** 2026-03-21
+**Version:** v2.6.0 · **Date:** 2026-03-24
 **Method:** Analytic (source-code trace + Node.js computation)
 **Reports covered:**
 - `endfed_validation.md` — End Fed mode

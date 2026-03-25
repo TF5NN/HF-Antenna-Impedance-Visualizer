@@ -98,7 +98,7 @@ The wire is modelled as a **lossy open-circuit transmission line**. For a wire o
 D  = cosh(2αL) − cos(2βL)    common denominator
 
 R  = Z₀ · sinh(2αL) / D      resistive part  (Ω)
-X  = Z₀ · sin(2βL)  / D      reactive part   (Ω)
+X  = −Z₀ · sin(2βL) / D      reactive part   (Ω)   (−: coth imaginary part is negative)
 
 Z₀ = 450 Ω  (effective characteristic impedance of a typical HF wire)
 ```
@@ -255,4 +255,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.5.0*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.6.0*
