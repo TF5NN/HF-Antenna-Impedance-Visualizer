@@ -11,7 +11,7 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 ### Both modes
 - **11 HF bands** — 160 m through 6 m, individually toggleable
 - **Wire velocity factor** — slider adjusts for insulated vs. bare wire (0.90 – 1.00)
-- **Antenna Tuner** — analytic L-network solver with three presets (internal 3:1, external 10:1, wide-range 20:1) plus custom
+- **Antenna Tuner** — analytic L-network solver with three presets (internal 3:1, external 10:1, wide-range 20:1) plus custom; Q-based feasibility gate prevents unrealistic matches; tooltip shows rejection hint when no match is found
 - **Log-scale Y-axis** — 10 – 5 000 Ω, HiDPI-aware canvas
 - **Hover tooltip** — real-time impedance and SWR for every active band under the cursor
 - **Mode switcher** — toggle between End-Fed and Dipole modes at the top of the control panel
@@ -21,7 +21,7 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 - **★ Sweet Spots overlay** — highlights wire lengths where multiple bands simultaneously fall inside matching zones; adjustable minimum-band threshold
 - **Sweet Spots results table** — lists every sweet-spot cluster with its centre length, usable range, and per-band zone/SWR
 - **Inspect pin** — draggable vertical line (or type a length) that shows the impedance and SWR for every active band at that exact wire length
-- **Counterpoise modelling** — shows the effect of an added counterpoise wire on effective feedpoint impedance
+- **Counterpoise modelling** — shows the effect of an added counterpoise wire on effective feedpoint impedance; guidance note shown on enable (λ/4 is most stable; short = capacitive, long = inductive)
 - **ITU Region 1 allocation width** — toggle that scales each band's curve thickness proportionally to its ITU R1 bandwidth
 
 ### Dipole mode
@@ -98,7 +98,7 @@ The wire is modelled as a **lossy open-circuit transmission line**. For a wire o
 D  = cosh(2αL) − cos(2βL)    common denominator
 
 R  = Z₀ · sinh(2αL) / D      resistive part  (Ω)
-X  = Z₀ · sin(2βL)  / D      reactive part   (Ω)
+X  = −Z₀ · sin(2βL) / D      reactive part   (Ω)   (−: coth imaginary part is negative)
 
 Z₀ = 450 Ω  (effective characteristic impedance of a typical HF wire)
 ```
@@ -209,6 +209,25 @@ Rs_eff = Rs × kI²
 η_total = η_mismatch × η_transformer × η_tuner
 ```
 
+**Q-based feasibility gate (`canTune`):**
+
+Before invoking the L-network solver, a feasibility check rejects degenerate or
+unrealistic inputs:
+
+```
+ratio       = max(R, 50) / min(R, 50)
+Q_transform = √(ratio − 1)
+Q_reactive  = |X| / R
+Q_total     = Q_transform + Q_reactive
+
+Hard rejects: R ≤ 1 Ω, R ≥ 10 000 Ω, |X| > 10·R, ratio > 100
+Soft reject:  Q_total > Qmax  (preset-dependent: 4 / 9 / 17)
+```
+
+In practice the primary gate is the SWR check (`rawSwr > maxSWR`); the Qmax
+formula is a conservative secondary safety net. When no match is found the
+tooltip shows *"Match unlikely — required tuner Q too high"* as a subtle hint.
+
 ---
 
 ### 6 — Counterpoise Model (End-Fed mode)
@@ -236,4 +255,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.0*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.6.0*
