@@ -8,24 +8,33 @@
 <meta property="og:title" content="HF Antenna Impedance Visualizer">
 <meta property="og:description" content="Interactive impedance visualiser for HF end-fed and dipole antennas. Explore 160–6 m bands, matching zones, feedpoint selection, and more. Educational tool for amateur radio.">
 <meta property="og:type" content="website">
+<meta name="theme-color" content="#214e3a">
 <title>HF Antenna Impedance Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:        #0d1117;
-  --surface:   #161b22;
-  --surface2:  #1c2128;
-  --border:    #30363d;
-  --text:      #c9d1d9;
-  --muted:     #8b949e;
-  --muted2:    #484f58;
-  --green:     #32c850;
-  --blue:      #4096ff;
+  /* Light "paper" palette shared with the sat-track (Northbound) project */
+  --bg:        #f7f8f3;
+  --surface:   #fcfdf8;
+  --surface2:  #f0f4ec;
+  --border:    #dfe5de;
+  --border2:   #d5dfd3;
+  --text:      #203b3d;
+  --muted:     #76847d;
+  --muted2:    #8a9684;
+  --green:     #267c62;
+  --blue:      #2f6fb7;
+  --mono:      'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+  --sans:      'DM Sans', 'Segoe UI', system-ui, Arial, sans-serif;
 }
 
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -47,7 +56,7 @@ header {
 header h1 {
   font-size: 1.15rem;
   font-weight: 600;
-  color: #f0f6fc;
+  color: var(--text);
   white-space: nowrap;
 }
 header p {
@@ -108,9 +117,9 @@ header p {
 .band-btn {
   padding: 3px 9px;
   border-radius: 20px;
-  border: 2px solid var(--c, #888);
+  border: 2px solid var(--c, #76847d);
   background: transparent;
-  color: var(--c, #888);
+  color: var(--c, #76847d);
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 700;
@@ -120,7 +129,7 @@ header p {
 }
 .band-btn.on {
   opacity: 1;
-  background: color-mix(in srgb, var(--c, #888) 15%, transparent);
+  background: color-mix(in srgb, var(--c, #76847d) 15%, transparent);
 }
 .band-btn:hover { opacity: 0.75; }
 .band-btn.on:hover { opacity: 1; }
@@ -137,9 +146,9 @@ header p {
   gap: 7px;
   padding: 4px 12px;
   border-radius: 6px;
-  border: 2px solid var(--zc, #888);
+  border: 2px solid var(--zc, #76847d);
   background: transparent;
-  color: var(--zc, #888);
+  color: var(--zc, #76847d);
   cursor: pointer;
   font-size: 0.78rem;
   font-weight: 600;
@@ -148,7 +157,7 @@ header p {
 }
 .zone-btn.on {
   opacity: 1;
-  background: color-mix(in srgb, var(--zc, #888) 12%, transparent);
+  background: color-mix(in srgb, var(--zc, #76847d) 12%, transparent);
 }
 .zone-btn:hover { opacity: 0.7; }
 .zone-btn.on:hover { opacity: 1; }
@@ -156,7 +165,7 @@ header p {
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: var(--zc, #888);
+  background: var(--zc, #76847d);
   opacity: 0.8;
   flex-shrink: 0;
 }
@@ -244,12 +253,12 @@ header p {
   display: none;
   z-index: 200;
   line-height: 1.7;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 12px 40px #0a251c24;
   max-width: 280px;
 }
 .tt-title {
   font-weight: 700;
-  color: #f0f6fc;
+  color: var(--text);
   margin-bottom: 4px;
   font-size: 0.8rem;
   border-bottom: 1px solid var(--border);
@@ -268,7 +277,7 @@ header p {
   flex-shrink: 0;
 }
 .tt-name { font-weight: 700; min-width: 32px; }
-.tt-z { font-family: monospace; min-width: 68px; }
+.tt-z { font-family: var(--mono); min-width: 68px; }
 .tt-frac { color: var(--muted); font-size: 0.68rem; }
 .tt-tag {
   font-size: 0.65rem;
@@ -278,8 +287,8 @@ header p {
   border: 1px solid currentColor;
   opacity: 0.85;
 }
-.tt-cp-note  { font-size: 0.65rem; color: var(--muted); font-family: monospace; }
-.tt-ocf-note { font-size: 0.65rem; color: #6e7681; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.4; }
+.tt-cp-note  { font-size: 0.65rem; color: var(--muted); font-family: var(--mono); }
+.tt-ocf-note { font-size: 0.65rem; color: #8a9684; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.4; }
 
 /* ─── COUNTERPOISE CONTROL ────────────────────── */
 #cpControl {
@@ -312,11 +321,11 @@ header p {
   border-radius: 5px;
   color: var(--text);
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: var(--mono);
 }
 .toggle-sub input:focus { outline: none; }
 #cpLengthInput { width: 72px; }   /* was 56px */
-#cpLengthInput:focus { border-color: #c070ff; }
+#cpLengthInput:focus { border-color: #8a56c2; }
 /* === LOADING COIL FEATURE DISABLED ===
    Reason: Model is not valid for electrically short antennas (see README)
 #coilSlider { width: 100px; vertical-align: middle; }
@@ -325,14 +334,14 @@ header p {
 .adv-section { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 === END LOADING COIL FEATURE DISABLED === */
 #ssMinInput { width: 56px; }   /* was 40px */
-#ssMinInput:focus { border-color: #ffd700; }
+#ssMinInput:focus { border-color: #b08d1e; }
 #ssSWRInput { width: 60px; }   /* was 44px */
-#ssSWRInput:focus { border-color: #ffd700; }
+#ssSWRInput:focus { border-color: #b08d1e; }
 
 /* ─── VELOCITY FACTOR CONTROL ─────────────────── */
 #vfControl { display: flex; align-items: center; gap: 8px; }
-#vfSlider  { width: 88px; accent-color: #5c9af5; cursor: pointer; }
-#vfDisplay { font-family: monospace; font-size: 0.8rem; color: var(--text); min-width: 36px; }
+#vfSlider  { width: 88px; accent-color: var(--green); cursor: pointer; }
+#vfDisplay { font-family: var(--mono); font-size: 0.8rem; color: var(--text); min-width: 36px; }
 
 /* ─── PIN / INSPECT-LENGTH CONTROL ───────────── */
 #pinControl { display: flex; align-items: center; gap: 5px; }
@@ -344,9 +353,9 @@ header p {
   border-radius: 5px;
   color: var(--text);
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: var(--mono);
 }
-#pinInput:focus { outline: none; border-color: rgba(255,255,255,0.35); }
+#pinInput:focus { outline: none; border-color: var(--green); }
 .pin-clear-btn {
   background: none;
   border: none;
@@ -380,8 +389,8 @@ header p {
   margin-bottom: 1px;
 }
 .ss-row { display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
-.ss-star { color: #ffd700; font-size: 0.8rem; flex-shrink: 0; }
-.ss-range { font-family: monospace; color: var(--text); min-width: 60px; }
+.ss-star { color: #b08d1e; font-size: 0.8rem; flex-shrink: 0; }
+.ss-range { font-family: var(--mono); color: var(--text); min-width: 60px; }
 .ss-range-full { color: var(--muted2); font-size: 0.65rem; }
 .ss-band { font-weight: 700; }
 .ss-zone { font-size: 0.65rem; opacity: 0.8; }
@@ -407,11 +416,11 @@ header p {
 }
 #inspectPanel .ip-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 1px 0; }
 #inspectPanel .ip-band { font-weight: 700; min-width: 28px; }
-#inspectPanel .ip-z    { font-family: monospace; color: var(--text); }
-#inspectPanel .ip-rx   { color: #484f58; font-size: 0.68em; }
+#inspectPanel .ip-z    { font-family: var(--mono); color: var(--text); }
+#inspectPanel .ip-rx   { color: #8a9684; font-size: 0.68em; }
 #inspectPanel .ip-loss     { font-size: 0.65rem; color: var(--muted); margin-left: 8px; }
 #inspectPanel .ip-eff      { font-weight: 600; }
-#inspectPanel .ip-ocf-note { font-size: 0.64rem; color: #6e7681; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.5; }
+#inspectPanel .ip-ocf-note { font-size: 0.64rem; color: #8a9684; margin-top: 4px; border-top: 1px solid var(--border); padding-top: 3px; line-height: 1.5; }
 
 /* ─── NOTES PANEL ─────────────────────────────── */
 #notesPanel {
@@ -460,10 +469,10 @@ header p {
 }
 .notes-block p { color: var(--muted); }
 .notes-block code {
-  font-family: monospace;
+  font-family: var(--mono);
   font-size: 0.85em;
-  color: #c9d1d9;
-  background: #0d1117;
+  color: #3d5547;
+  background: #edf2e9;
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -491,7 +500,7 @@ header p {
 .mode-btn.on {
   border-color: var(--text);
   color: var(--text);
-  background: rgba(201,209,217,0.08);
+  background: rgba(32,59,61,0.05);
 }
 .mode-btn:hover { color: var(--text); }
 
@@ -504,7 +513,7 @@ header p {
 #dipCustomRatioInp { width: 52px; }
 #dipPosSlider {
   width: 110px;
-  accent-color: #5c9af5;
+  accent-color: var(--green);
   cursor: pointer;
   vertical-align: middle;
 }
@@ -522,13 +531,123 @@ header p {
   color: var(--muted);
   cursor: pointer;
   font-size: 0.69rem;
-  font-family: monospace;
+  font-family: var(--mono);
 }
 .fp-preset-btn:hover { color: var(--text); border-color: var(--muted); }
 #dipZoneBtns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* In dipole mode: hide EF-specific x-range selectors */
 body.dipole-mode #xRangeControls .xr-side { display: none; }
+
+/* ═══════════════════════════════════════════════════
+   v3.0.0 THEME — matches the sat-track (Northbound) look.
+   Visual only: colours, type, borders, radii. No layout
+   or behaviour is defined here.
+   ═══════════════════════════════════════════════════ */
+button, input, select { font-family: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+  outline: 2px solid #287c64;
+  outline-offset: 2px;
+}
+input[type=range] { accent-color: var(--green); }
+
+/* Header: ink title, mono "callsign" chip for the version */
+header h1 { font-weight: 650; letter-spacing: -0.3px; }
+#versionLabel {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.7rem;
+  color: #3d5547;
+  padding: 5px 9px;
+  border: 1px solid #cdd9ce;
+  border-radius: 4px;
+}
+
+/* Small-caps eyebrow labels */
+.ctrl-label,
+#sweetSpotsTable .ss-header,
+#dipSweetSpotsTable .ss-header,
+#inspectPanel .ip-title {
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  color: #758375;
+}
+
+/* Mode switcher as underlined tabs sitting on the divider line */
+#modeBar { gap: 22px; padding-bottom: 0; }
+.mode-btn {
+  padding: 3px 1px 11px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  color: #839085;
+  font-weight: 500;
+}
+.mode-btn.on {
+  background: none;
+  border-bottom-color: var(--text);
+  color: var(--text);
+  font-weight: 650;
+}
+
+/* Toggle chips */
+.band-btn { border-width: 1.5px; font-weight: 600; opacity: 0.6; }
+.band-btn.on { background: color-mix(in srgb, var(--c, #76847d) 11%, #fff); }
+.zone-btn { border-width: 1.5px; border-radius: 5px; opacity: 0.6; }
+.zone-btn.on { background: color-mix(in srgb, var(--zc, #76847d) 10%, #fff); }
+.zone-btn:hover { opacity: 0.85; }
+.band-btn:hover { opacity: 0.85; }
+.band-btn.on:hover, .zone-btn.on:hover { opacity: 1; }
+.band-sel-btn { color: #768a76; text-underline-offset: 3px; }
+.band-sel-btn:hover { color: var(--text); }
+.fp-preset-btn { border-color: var(--border2); border-radius: 5px; background: #fff; color: #3d5547; }
+.fp-preset-btn:hover { background: #eaf1e5; border-color: var(--border2); color: var(--text); }
+
+/* Fields */
+.toggle-sub input,
+#pinInput,
+#dipWireLenInput,
+#dipPosInput,
+.cp-inp,
+.tuner-select {
+  background: #fafbf6;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: #3d5547;
+}
+#dipWireLenInput, #dipPosInput, .cp-inp {
+  padding: 3px 7px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+.tuner-select { padding: 3px 6px; font-size: 0.76rem; }
+.toggle-sub input:focus, #pinInput:focus, #dipWireLenInput:focus,
+#dipPosInput:focus, .cp-inp:focus, .tuner-select:focus { outline: none; border-color: var(--green); }
+.tuner-hint { font-size: 0.68rem; line-height: 1.5; color: var(--muted2); }
+#vfDisplay { font-weight: 500; color: #416a4c; }
+
+/* Graph card + floating tooltip */
+#graph { border-radius: 8px; border-color: #d9e1d4; background: var(--surface); }
+#tooltip {
+  background: var(--surface);
+  border-color: #d9e1d4;
+  color: var(--text);
+}
+
+/* Notes */
+#notesPanel { background: var(--bg); }
+.notes-block h4, .notes-section h4 {
+  font-size: 0.72rem;
+  font-weight: 650;
+  color: var(--text);
+  margin-bottom: 4px;
+  border-left: 3px solid #adc5a4;
+  padding-left: 7px;
+}
+.notes-section p { color: var(--muted); }
+.ss-star { color: #b08d1e; }
+#dipSweetSpotsTable .ss-header { font-size: 0.65rem; text-transform: uppercase; margin-bottom: 1px; }
 </style>
 </head>
 <body>
@@ -536,7 +655,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 <header>
   <h1>HF Antenna Impedance Visualizer</h1>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
-  <span id="versionLabel">v2.6.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <span id="versionLabel">v3.0.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -555,15 +674,18 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
   <div class="ctrl-group ef-only">
     <div class="ctrl-label">Matching Zones (toggle)</div>
     <div id="zoneBtns">
-      <button class="zone-btn on" id="z0Btn" style="--zc: #32c850">
+      <button class="zone-btn on" id="z0Btn" style="--zc: #267c62">
         <span class="zone-swatch"></span>49:1 Unun
       </button>
-      <button class="zone-btn" id="z1Btn" style="--zc: #4096ff">
+      <button class="zone-btn" id="z1Btn" style="--zc: #2f6fb7">
         <span class="zone-swatch"></span>9:1 Unun
+      </button>
+      <button class="zone-btn" id="z2Btn" style="--zc: #b9720e">
+        <span class="zone-swatch"></span>1:1 Balun
       </button>
     </div>
     <div id="sweetSpotsControl">
-      <button class="zone-btn" id="sweetSpotsBtn" style="--zc: #ffd700">
+      <button class="zone-btn" id="sweetSpotsBtn" style="--zc: #b08d1e">
         <span class="zone-swatch"></span>Sweet Spots
       </button>
       <div class="toggle-sub" id="ssMinWrap">
@@ -577,7 +699,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
   <div class="ctrl-group" id="tunerGroup">
     <div class="ctrl-label">Antenna Tuner</div>
     <div id="tunerControl">
-      <button class="zone-btn" id="tunerToggleBtn" style="--zc: #2bd6c8">
+      <button class="zone-btn" id="tunerToggleBtn" style="--zc: #1b8f88">
         <span class="zone-swatch"></span>Tuner ON
       </button>
       <select id="tunerPresetSel" class="tuner-select"
@@ -601,7 +723,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
   <div class="ctrl-group ef-only">
     <div class="ctrl-label">Counterpoise</div>
     <div id="cpControl">
-      <button class="zone-btn" id="cpToggleBtn" style="--zc: #c070ff">
+      <button class="zone-btn" id="cpToggleBtn" style="--zc: #8a56c2">
         <span class="zone-swatch"></span>Show effect
       </button>
       <div class="toggle-sub" id="cpLenWrap">
@@ -609,26 +731,21 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
         <span class="cp-unit">m</span>
       </div>
-      <div id="cpGuidance" style="display:none;font-size:0.68rem;color:#8b949e;line-height:1.5;padding:4px 2px 0">
-        λ/4 length is most stable — short CP acts capacitive, long acts inductive.
-        CP can improve or worsen matching depending on length.
+      <div id="cpGuidance" style="display:none;font-size:0.68rem;color:#76847d;line-height:1.5;padding:4px 2px 0">
+At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
+        At low-impedance lengths the counterpoise is half the antenna, so its length moves the match a lot.
       </div>
     </div>
   </div>
   <div class="ctrl-group ef-only" id="advancedGroup">
     <div class="ctrl-label">Advanced / Experimental</div>
     <div id="advancedControl">
-      <button class="zone-btn" id="advancedToggleBtn" style="--zc: #888">
+      <button class="zone-btn" id="advancedToggleBtn" style="--zc: #76847d">
         <span class="zone-swatch"></span>Advanced / Experimental
       </button>
       <div class="toggle-sub" id="advancedWrap">
         <div class="adv-section">
-          <button class="zone-btn" id="z2Btn" style="--zc: #ffa000">
-            <span class="zone-swatch"></span>1:1 Balun
-          </button>
-        </div>
-        <div class="adv-section">
-          <button class="zone-btn" id="bwModeBtn" style="--zc: #888888">
+          <button class="zone-btn" id="bwModeBtn" style="--zc: #76847d">
             <span class="zone-swatch"></span>ITU R1 alloc. width
           </button>
         </div>
@@ -687,7 +804,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
       <button class="fp-preset-btn" id="dipPreset50">50% centre</button>
       <button class="fp-preset-btn" id="dipPreset33">33% OCF</button>
       <button class="fp-preset-btn" id="dipPreset25">25% OCF</button>
-      <button class="zone-btn" id="dipHalfViewBtn" style="--zc:#888;font-size:0.70rem;padding:3px 9px">
+      <button class="zone-btn" id="dipHalfViewBtn" style="--zc:#76847d;font-size:0.70rem;padding:3px 9px">
         <span class="zone-swatch"></span>0–50% view
       </button>
     </div>
@@ -695,16 +812,16 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
   <div class="ctrl-group dip-only" style="display:none">
     <div class="ctrl-label">Matching (toggle)</div>
     <div id="dipZoneBtns">
-      <button class="zone-btn on" id="dz0Btn" style="--zc: #ffa000">
+      <button class="zone-btn on" id="dz0Btn" style="--zc: #b9720e">
         <span class="zone-swatch"></span>1:1
       </button>
-      <button class="zone-btn on" id="dz1Btn" style="--zc: #4096ff">
+      <button class="zone-btn on" id="dz1Btn" style="--zc: #2f6fb7">
         <span class="zone-swatch"></span>4:1
       </button>
-      <button class="zone-btn" id="dz2Btn" style="--zc: #32c850">
+      <button class="zone-btn" id="dz2Btn" style="--zc: #267c62">
         <span class="zone-swatch"></span>6:1
       </button>
-      <button class="zone-btn" id="dz3Btn" style="--zc: #c070ff">
+      <button class="zone-btn" id="dz3Btn" style="--zc: #8a56c2">
         <span class="zone-swatch"></span>Custom
       </button>
     </div>
@@ -714,7 +831,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
       <span class="cp-unit">:1</span>
     </div>
     <div id="dipSweetSpotsControl">
-      <button class="zone-btn" id="dipSweetSpotsBtn" style="--zc: #ffd700">
+      <button class="zone-btn" id="dipSweetSpotsBtn" style="--zc: #b08d1e">
         <span class="zone-swatch"></span>Sweet Spots
       </button>
       <div class="toggle-sub" id="dipSsMinWrap">
@@ -756,7 +873,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
     <span class="cp-unit" id="xEndDistUnit" style="display:none">m</span>
     <span class="cp-unit">:End</span>
   </div>
-  <button id="rxModeBtn" class="zone-btn" style="--zc:#a0a0ff;margin-left:auto">
+  <button id="rxModeBtn" class="zone-btn" style="--zc:#6670c4;margin-left:auto">
     <span class="zone-swatch"></span>R/X view
   </button>
 </div>
@@ -765,15 +882,15 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 
 <div id="infoBar">
   <div class="info-item ef-only">
-    <span class="info-swatch" style="background: rgba(50,200,80,0.55)"></span>
+    <span class="info-swatch" style="background: rgba(38,124,98,0.55)"></span>
     <strong>49:1 Unun:</strong>&nbsp;shaded band 1225–4900 Ω; strip = SWR ≤ 2:1 at radio (tuner widens window when on).
   </div>
   <div class="info-item ef-only">
-    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
+    <span class="info-swatch" style="background: rgba(47,111,183,0.5)"></span>
     <strong>9:1 Unun:</strong>&nbsp;shaded band 225–900 Ω; strip = SWR ≤ 2:1 at radio (tuner adds L-network match when on).
   </div>
   <div class="info-item ef-only">
-    <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
+    <span class="info-swatch" style="background: rgba(201,128,20,0.55)"></span>
     <strong>1:1 Balun:</strong>&nbsp;shaded band 25–100 Ω; strip = SWR ≤ 2:1 direct to 50 Ω (tuner extends range when on).
   </div>
   <div class="info-item ef-only" style="color:var(--muted2);font-size:0.75rem">
@@ -781,15 +898,15 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
     Preset sets the rated matching range (Internal 3:1 · External 10:1 · Wide-range 20:1).
   </div>
   <div class="info-item dip-only" style="display:none">
-    <span class="info-swatch" style="background: rgba(255,160,0,0.55)"></span>
+    <span class="info-swatch" style="background: rgba(201,128,20,0.55)"></span>
     <strong>1:1 (direct):</strong>&nbsp;shaded band near 50 Ω; strip shows where Zfeed ≤ 2:1 direct.
   </div>
   <div class="info-item dip-only" style="display:none">
-    <span class="info-swatch" style="background: rgba(64,150,255,0.5)"></span>
+    <span class="info-swatch" style="background: rgba(47,111,183,0.5)"></span>
     <strong>4:1 Balun:</strong>&nbsp;shaded band near 200 Ω; classic choice for off-centre-fed dipoles.
   </div>
   <div class="info-item dip-only" style="display:none">
-    <span class="info-swatch" style="background: rgba(50,200,80,0.5)"></span>
+    <span class="info-swatch" style="background: rgba(38,124,98,0.5)"></span>
     <strong>6:1 Balun:</strong>&nbsp;shaded band near 300 Ω; suits asymmetric or higher-impedance feedpoints.
   </div>
   <div class="info-item dip-only" style="color:var(--muted2);font-size:0.75rem;display:none">
@@ -815,7 +932,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         half-wave resonance peak (the main 49:1 Unun target) roughly three-quarters of the
         way across the X axis, leaving a comfortable tail to the right.
       </p>
-      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
         Wires shorter than ⅛ λ are not useful in practice: radiation resistance falls
         as <code>(L/λ)²</code>, capacitive reactance becomes very large, and the
         transmission-line model used here is least accurate in this region. Start the
@@ -825,105 +942,122 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
     </div>
 
     <div class="notes-block">
-      <h4>Characteristic impedance Z₀ = 450 Ω</h4>
+      <h4>Wire impedance Z₀</h4>
       <p>
-        The transmission-line model requires a characteristic impedance for the wire.
-        For a single wire above ground, Z₀ depends on wire diameter and height:
-        <code>Z₀ ≈ 138 · log₁₀(4h / d)</code>
-        where <em>h</em> is height above ground and <em>d</em> is wire diameter.
-        For a typical 20 AWG (~0.8 mm) wire at 6–10 m height this gives roughly
-        500–600 Ω; the model uses <strong>450 Ω</strong> as a conservative midpoint
-        that also accounts for the effective impedance averaging that occurs in sloped
-        or bent installations. The attenuation constant α is then calibrated so that
-        the λ/2 resonance peak is approximately 3 000 Ω — consistent with published
-        EFHW measurements.
+        The wire is treated as a transmission line whose average characteristic
+        impedance depends on how thin it is compared with the wavelength:
+        <code>Z₀ = 60 · ln(0.22 · λ / a) · VF</code>, with <em>a</em> the wire radius.
+        The tool assumes 1 mm diameter antenna wire, which gives about
+        <strong>590 Ω on 40 m</strong> and <strong>510 Ω on 10 m</strong> for bare wire.
+        Z₀ sets how quickly reactance grows away from resonance, and together with
+        the radiation resistance it sets the height of the half-wave peaks.
       </p>
     </div>
 
     <div class="notes-block">
-      <h4>Physics model — lossy open-circuit transmission line</h4>
+      <h4>Physics model — line loss equals radiated power</h4>
       <p>
-        The antenna wire is modelled as an open-ended lossy transmission line with
-        complex propagation constant γ = α + jβ. The feedpoint impedance is:
+        Each conductor is an open-ended transmission line with feedpoint impedance
       </p>
       <p style="margin:6px 0 6px 12px">
-        <code>Z = Z₀ · coth(γL) = Z₀ · [sinh(2αL) + j·sin(2βL)] / [cosh(2αL) − cos(2βL)]</code>
+        <code>Z = Z₀ · coth(a + jθ)</code>
       </p>
       <p>
-        This gives a <strong>complex result {R, X}</strong> at every wire length.
-        At λ/2 resonance both sin(2βL) and the denominator are small, so
-        R ≈ Z₀/(αL) ≈ 3 000 Ω and X ≈ 0 — the antenna is nearly purely resistive and
-        a 49:1 unun gives SWR ≈ 1.2:1.
-        At λ/4 anti-resonance sin(2βL) = 0 again, so X = 0 and R ≈ Z₀·αL ≈ 34 Ω —
-        matching directly with a 1:1 choke.
-        Between resonances the large reactive component X drives SWR well above 2:1
-        through any practical transformer, so matching zones are naturally narrow
-        (~±1.5 m around each resonance for 80m).
+        where θ is the electrical length. The loss term <em>a</em> is not a fitted
+        number: it is chosen so the line dissipates exactly the power the wire
+        radiates, <code>tanh(a) = R_rad / Z₀</code>. R_rad is the classic induced-EMF
+        radiation resistance of a sinusoidal standing-wave current, referred to the
+        current maximum.
       </p>
       <p style="margin-top:6px">
-        <strong>Harmonic-order correction:</strong> a wire operating at its <em>n</em>th
-        harmonic resonance radiates more efficiently than a flat-α model predicts. The
-        effective attenuation is reduced by:
-        <code>α_eff = α / √n_eff</code> where <code>n_eff = max(1, 2L / λ_eff)</code>.
-        At the fundamental (n_eff = 1) α is unchanged.
-        At the 2λ resonance (n_eff = 4, e.g. 10 m on a 40 m wire) α is halved, roughly
-        doubling R_peak from ~750 Ω to ~1 500 Ω — consistent with real EFHW measurements
-        at higher harmonics.
+        At current-fed lengths (λ/4, 3λ/4, 5λ/4 …) this gives <strong>R ≈ R_rad</strong>:
+        about 36 Ω, 53 Ω, 60 Ω. At voltage-fed lengths (λ/2, λ …) it gives
+        <strong>R ≈ Z₀² / R_rad</strong>: about 3.4 kΩ for a 40 m half-wave, falling
+        slowly on higher harmonics. In between, the standing wave supplies the
+        reactance — capacitive below λ/4, inductive from λ/4 to λ/2 — which is what
+        keeps the matching zones narrow.
       </p>
-      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
-        <strong style="color:#6a7280">Parameters:</strong>
-        Z₀ = 450 Ω (characteristic impedance, typical for HF wire near ground).
-        α₀ = calibrated per-band so R_peak ≈ 3 000 Ω at each band's fundamental λ/2.
-        R_min clamped to 25 Ω; R_max clamped to 5 000 Ω — practical limits for real wires.
+      <p style="margin-top:6px">
+        <strong>Harmonics are not exact multiples.</strong> An open wire end adds a
+        fixed electrical length (about 1.5 % of a half-wave), not a percentage of
+        the whole wire. The n-th half-wave point is therefore at
+        <code>(n − 0.015) · VF · λ/2</code>, so a wire cut for 40 m is slightly long
+        on 20, 15 and 10 m — the familiar end-fed half-wave behaviour.
+      </p>
+      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
+        <strong style="color:#7f8c80">Display limits:</strong>
+        R is clamped at 5 000 Ω and the plotted |Z| at 25 Ω.
       </p>
     </div>
 
     <div class="notes-block">
-      <h4>Why the impedance floor is 25 Ω</h4>
+      <h4>Why the plotted floor is 25 Ω</h4>
       <p>
-        At anti-resonance (λ/4 wire lengths), current is maximum at the feed point,
-        giving low impedance. A theoretically lossless wire would approach 0 Ω, but
-        real wires at typical HF heights give roughly 20–60 Ω due to radiation
-        resistance and conductor/ground losses. 25 Ω is a conservative educational
-        floor that reflects real-world measurement data.
+        At quarter-wave lengths current is maximum at the feedpoint and the
+        impedance is low. A single wire against an ideal ground bottoms out at
+        about 36 Ω in this model; a wire with a counterpoise can go lower or
+        higher. 25 Ω is only the bottom of the plotted range (SWR 2:1 on a direct
+        50 Ω feed) — real installations add ground and conductor loss on top.
       </p>
     </div>
 
     <div class="notes-block">
       <h4>Velocity factor</h4>
       <p>
-        Real wire is electrically shorter than its physical length — the RF wave
-        travels at <em>VF × c</em> along the conductor, so resonant peaks shift left to
-        <code>VF × λ/2</code> physical length. Typical values: bare copper ~0.98,
-        insulated antenna wire ~0.95–0.97. At VF = 0.975 the 40m EFHW resonance
-        moves from 20.97 m (free-space) to ~20.4 m — matching real-world experience.
-        The velocity factor slider applies equally to the main wire and any counterpoise.
+        The slider is the slowing caused by the wire's <em>insulation</em> only:
+        bare wire 1.00, thin PVC about 0.97–0.99, thick insulation 0.94–0.97.
+        The shortening caused by the open wire end is handled separately (see the
+        physics note). At the default 0.975 a 40 m end-fed half-wave comes out at
+        about 20.1 m. The velocity factor applies equally to the main wire and any
+        counterpoise.
       </p>
     </div>
 
     <div class="notes-block">
       <h4>Counterpoise effect</h4>
       <p>
-        A counterpoise wire connects to the "cold" terminal of the transformer, providing
-        an RF return path. In the model both wires are open-ended lossy TLs whose complex
-        impedances <em>add in series</em> at the feedpoint:
-        <code>Z_feed = Z_wire(L_wire) + Z_cp(L_cp)</code>.
-        A counterpoise at λ/4 contributes mainly resistive impedance (low, ~34 Ω) — little
-        effect on a 49:1 match. One near λ/2 contributes high resistive + near-zero reactive
-        impedance and raises the total feedpoint Z, which can pull it out of the matching zone.
-        When enabled, dashed ghost curves show the wire-alone impedance for comparison.
+        A counterpoise connects to the "cold" terminal of the transformer. Wire and
+        counterpoise are then the two arms of one antenna, in series across the
+        feed: <code>Z_feed = Z_wire + Z_cp</code>, including the coupling between
+        the two (the same model as the dipole mode fed off-centre). Without a
+        counterpoise the wire is modelled against an ideal ground. When enabled,
+        dashed ghost curves show that wire-alone impedance for comparison.
       </p>
-      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
-        <strong style="color:#6a7280">Model limitations:</strong>
-        This is a qualitative guide, not a precise predictor. Key simplifications:
-        (1) <em>No mutual coupling</em> — the wire and counterpoise radiate into each other's
-        near field; omitting this can produce ±50% errors in the combined value.
-        (2) <em>No ground interaction</em> — a real counterpoise near or on the ground has
-        capacitive coupling to soil that shifts its resonant length and lowers its effective
-        characteristic impedance. (3) <em>Same Z₀ and α for both conductors</em> — the
-        counterpoise may differ significantly if it is shorter, thicker, or near ground.
-        Treat the counterpoise display as a qualitative guide; for quantitative results
-        use a NEC2/4 simulator.
+      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
+        <strong style="color:#7f8c80">Model limitations:</strong>
+        the counterpoise is assumed straight, in line with the wire and in free
+        space. A counterpoise lying on the ground, or a coax shield acting as one,
+        is detuned and lossier than this. Treat the display as a guide.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>Dipole and off-centre feed</h4>
+      <p>
+        The generator sits between the two arms, so their impedances add:
+        <code>Z_feed = Z_A + Z_B</code>. A centre-fed half-wave comes out at about
+        <strong>73 Ω</strong> (free space). A resonant wire stays resonant wherever
+        it is fed, and the resistance rises as
+        <code>R(p) ≈ R_centre / sin²(π·p)</code>: about 100 Ω at 33 %, 140 Ω at 25 %
+        on the fundamental. On harmonics the pattern repeats along the wire, which
+        is why an off-centre feed can find 200–300 Ω on several bands at once.
+      </p>
+    </div>
+
+    <div class="notes-block">
+      <h4>How accurate is it?</h4>
+      <p>
+        The model was compared with NEC-2 for 1 mm bare wire on 40, 20, 15 and
+        10 m. Typical (RMS) error in |Z|: about <strong>4 %</strong> for an end-fed
+        wire against ideal ground, <strong>12 %</strong> for off-centre-fed wires and
+        <strong>10 %</strong> for an end-fed wire with a counterpoise. Method and
+        numbers are in <code>validation/nec_comparison_v3.md</code>.
+      </p>
+      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
+        <strong style="color:#7f8c80">Not modelled:</strong>
+        real ground and height, sloping or bent wires, nearby objects, feedline
+        common-mode current and the transformer's own stray capacitance. Those
+        need a full simulator such as NEC, or measurement.
       </p>
     </div>
 
@@ -934,7 +1068,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         <code>η_total = η_mismatch × η_transformer × η_tuner</code>
       </p>
       <p style="margin-top:6px">
-        <strong>Mismatch efficiency:</strong> <code>η_mismatch = 1 − |Γ|²</code> where
+        <strong>Mismatch efficiency</strong> (no tuner, or no tuner match): <code>η_mismatch = 1 − |Γ|²</code> where
         <code>Γ = (Za − 50) / (Za + 50)</code> and Za is the impedance presented to the
         radio side of the transformer. Full complex arithmetic is used — reactance increases
         |Γ| even when |Z| looks numerically close to the reference.
@@ -948,15 +1082,15 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         Real losses vary with power level, frequency, and core material.
       </p>
       <p style="margin-top:6px">
-        <strong>Tuner efficiency</strong> (when an ATU is enabled) uses a stress-aware
-        inductor-Q model. Base inductor ESR: <code>Rs₀ = 2πf · L / Q</code> with Q = 120.
-        An L-network circulates extra reactive current when the impedance ratio is large;
-        the circulating current stress factor is <code>kI² = max(R_load, 50) / min(R_load, 50)</code>
-        (the mismatch ratio). Effective loss resistance: <code>Rs_eff = Rs₀ × kI²</code>.
-        Final efficiency: <code>η_tuner = R_load / (R_load + Rs_eff)</code>, clamped to [30%, 98%].
-        The tooltip shows "tuner eff xx% Q≈Y.Y" — a low Q means an easy match with little
-        circulating current; a high Q (e.g. 5–8) means a hard match and noticeably more heat.
-        Capacitor ESR is not modelled. When no ATU is active, η_tuner = 100%.
+        <strong>Tuner efficiency</strong> (when an ATU is enabled) is computed on the
+        solved circuit: each inductor gets a loss resistance <code>X_L / Q</code>
+        with Q = 120, capacitors are treated as lossless, and the efficiency is the
+        power reaching the load divided by the power entering the network. Hard
+        matches (large impedance ratio or a lot of reactance to cancel) need more
+        inductance and lose more. When the tuner finds a match the radio sees
+        50 Ω, so no mismatch loss remains: the figure is then
+        <code>η_transformer × η_tuner</code>. The tooltip's "Q≈" is the loaded Q of
+        the match. When no ATU is active, η_tuner = 100%.
       </p>
       <p style="margin-top:6px">
         <strong>Radiation efficiency is not modelled.</strong> The percentage shown
@@ -980,7 +1114,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         If neither topology can reach a match within the preset's Lmax/Cmax limits,
         "No match within tuner limits" is shown and the zone does not light up.
       </p>
-      <p style="margin-top:6px;color:#6a7280;font-size:0.93em">
+      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
         ATU presets — <strong>Internal (3:1)</strong>: Lmax 4 µH, Cmax 500 pF;
         <strong>External (10:1)</strong>: Lmax 24 µH, Cmax 1 200 pF;
         <strong>Wide-range (20:1)</strong>: Lmax 60 µH, Cmax 3 500 pF.
@@ -1049,7 +1183,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         on tuner state and selected ATU preset:
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#ffa000">1:1 Unun (25–100 Ω):</strong>
+        <strong style="color:#b9720e">1:1 Unun (25–100 Ω):</strong>
         A 1:1 unun (UNbalanced–UNbalanced) presents the same impedance on both ports —
         it does not transform the ratio, only suppresses common-mode RF current flowing
         back down the coax shield. In practice this is a <em>current choke</em>: a coil
@@ -1061,7 +1195,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         spanning <code>50 / 2 = 25 Ω</code> to <code>50 × 2 = 100 Ω</code>.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#4096ff">9:1 Unun (225–900 Ω without tuner):</strong>
+        <strong style="color:#2f6fb7">9:1 Unun (225–900 Ω without tuner):</strong>
         A 9:1 unun transforms 50 Ω to ~450 Ω at the antenna (zRef = 450 Ω).
         Without a tuner the overlay shows the natural SWR ≤ 2:1 window:
         <code>450 / 2 = 225 Ω</code> to <code>450 × 2 = 900 Ω</code>.
@@ -1074,7 +1208,7 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
         effectively part of the matching system.
       </p>
       <p style="margin-top:6px">
-        <strong style="color:#32c850">49:1 Unun (1 225–4 900 Ω, shown as ~1 225–5 000 Ω):</strong>
+        <strong style="color:#267c62">49:1 Unun (1 225–4 900 Ω, shown as ~1 225–5 000 Ω):</strong>
         A 49:1 unun transforms 50 Ω to <code>50 × 49 = 2 450 Ω</code> ideal (zRef).
         SWR ≤ 2:1 spans <code>2 450 / 2 = 1 225 Ω</code> to <code>2 450 × 2 = 4 900 Ω</code>.
         The overlay extends to the 5 000 Ω model ceiling, which is within measurement
@@ -1097,10 +1231,10 @@ body.dipole-mode #xRangeControls .xr-side { display: none; }
 const C = 299792458; // m/s
 
 // Impedance model parameters
-const Z0     = 450;   // characteristic impedance of a typical HF wire (Ω) — realistic for wire near ground
-const ALPHA      = 0.00375; // attenuation constant (Np/m) at reference frequency ALPHA_FREF.
-const ALPHA_FREF = 3.65e6;  // α scales linearly with freq inside calcZwireComplex so that
-                             // R_peak = Z0/(α×L_res) ≈ 3000 Ω at resonance for every band.
+// v3 wire model (see "PHYSICS MODEL" below and validation/nec_comparison_v3.md)
+const WIRE_RADIUS_M = 0.0005; // conductor radius (m) — 1 mm diameter antenna wire
+const Z0_K  = 0.22;   // Z0 = 60·ln(Z0_K·λ/a): average characteristic impedance of a thin wire
+const END_K = 0.015;  // open-end effect, in half-waves per open end (fixed, not a % of length)
 const Z_PEAK = 5000;  // clamp on displayed/computed R — real EFHW peaks 2000–5000 Ω
 const Z_MIN  = 25;    // floor for |Z| display — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
@@ -1108,33 +1242,33 @@ const Y_AXIS_MIN = 10;   // bottom of Y axis (Ω)
 
 // bwKhz: ITU Region 1 amateur allocation bandwidth (kHz)
 const BANDS = [
-  { name: '160m', freq: 1.900e6,  color: '#c47a50', on: false, bwKhz:   200 },
-  { name:  '80m', freq: 3.650e6,  color: '#e05c5c', on: false, bwKhz:   300 },
-  { name:  '60m', freq: 5.3625e6, color: '#d4872b', on: false, bwKhz:    15 },
-  { name:  '40m', freq: 7.150e6,  color: '#4caf50', on: true,  bwKhz:   200 },
-  { name:  '30m', freq: 10.125e6, color: '#26c6da', on: false, bwKhz:    50 },
-  { name:  '20m', freq: 14.175e6, color: '#5c9af5', on: true,  bwKhz:   350 },
-  { name:  '17m', freq: 18.118e6, color: '#ab7ae0', on: false, bwKhz:   100 },
-  { name:  '15m', freq: 21.225e6, color: '#f06292', on: true,  bwKhz:   450 },
-  { name:  '12m', freq: 24.940e6, color: '#4dd0e1', on: false, bwKhz:   100 },
-  { name:  '10m', freq: 28.850e6, color: '#ff7043', on: true,  bwKhz:  1700 },
-  { name:   '6m', freq: 51.000e6, color: '#c6f135', on: false, bwKhz:  2000 },
+  { name: '160m', freq: 1.900e6,  color: '#813a0c', on: false, bwKhz:   200 },
+  { name:  '80m', freq: 3.650e6,  color: '#eb4969', on: false, bwKhz:   300 },
+  { name:  '60m', freq: 5.3625e6, color: '#946b0b', on: false, bwKhz:    15 },
+  { name:  '40m', freq: 7.150e6,  color: '#01a938', on: true,  bwKhz:   200 },
+  { name:  '30m', freq: 10.125e6, color: '#167ba3', on: false, bwKhz:    50 },
+  { name:  '20m', freq: 14.175e6, color: '#0d3fc3', on: true,  bwKhz:   350 },
+  { name:  '17m', freq: 18.118e6, color: '#b96fbf', on: false, bwKhz:   100 },
+  { name:  '15m', freq: 21.225e6, color: '#b00d62', on: true,  bwKhz:   450 },
+  { name:  '12m', freq: 24.940e6, color: '#0b94f8', on: false, bwKhz:   100 },
+  { name:  '10m', freq: 28.850e6, color: '#db7923', on: true,  bwKhz:  1700 },
+  { name:   '6m', freq: 51.000e6, color: '#307023', on: false, bwKhz:  2000 },
 ];
 
 const ZONES = [
   {
     // rawSwrLimit 2.0: strict threshold used when NO tuner is active (only clean λ/2
     //   resonances with SWR ≤ 2:1 at radio are shown).
-    // swrLimit 3.0: looser threshold used WITH a tuner — higher-order resonances
-    //   (3/2λ → SWR ≈ 2.45; 2λ → SWR ≈ 3.3) are reachable when a tuner is present.
+    // swrLimit 3.0: looser threshold used WITH a tuner — lengths a little off the
+    //   half-wave points are reachable when a tuner is present.
     //   This split makes the tuner toggle visibly widen the z0 strip.
     id: 'z0', label: '49:1 Unun',
     ratio: 49, rawSwrLimit: 2.0, swrLimit: 3.0,
     zRef: 2450,      // ideal impedance at transformer input: 49 × 50 Ω
     xfrmrEff: 0.90,  // typical 49:1 ferrite toroid insertion efficiency
-    fill:   'rgba(50, 200, 80, 0.13)',
-    stroke: 'rgba(50, 200, 80, 0.65)',
-    text:   '#32c850',
+    fill:   'rgba(38,124,98, 0.13)',
+    stroke: 'rgba(38,124,98, 0.65)',
+    text:   '#267c62',
     on: true,
   },
   {
@@ -1142,9 +1276,9 @@ const ZONES = [
     ratio: 9, swrLimit: 2.0,
     zRef: 450,       // ideal impedance at transformer input: 9 × 50 Ω
     xfrmrEff: 0.90,  // 9:1 transformer — tuner adds ~92% efficiency when active
-    fill:   'rgba(64, 150, 255, 0.10)',
-    stroke: 'rgba(64, 150, 255, 0.65)',
-    text:   '#4096ff',
+    fill:   'rgba(47,111,183, 0.10)',
+    stroke: 'rgba(47,111,183, 0.65)',
+    text:   '#2f6fb7',
     on: false,
   },
   {
@@ -1152,9 +1286,9 @@ const ZONES = [
     ratio: 1, swrLimit: 2.0,
     zRef: 50,        // 1:1 choke balun — no impedance transformation
     xfrmrEff: 1.00,  // negligible loss
-    fill:   'rgba(255, 160, 0, 0.15)',
-    stroke: 'rgba(255, 160, 0, 0.75)',
-    text:   '#ffa000',
+    fill:   'rgba(201,128,20, 0.15)',
+    stroke: 'rgba(201,128,20, 0.75)',
+    text:   '#b9720e',
     on: false,
   },
 ];
@@ -1167,22 +1301,22 @@ const DIPOLE_ZONES = [
   {
     id: 'dz0', label: '1:1', ratio: 1, swrLimit: 2.0,
     zRef: 50, xfrmrEff: 1.00,
-    fill:   'rgba(255,160,0,0.13)',  stroke: 'rgba(255,160,0,0.65)',  text: '#ffa000', on: true,
+    fill:   'rgba(201,128,20,0.13)',  stroke: 'rgba(201,128,20,0.65)',  text: '#b9720e', on: true,
   },
   {
     id: 'dz1', label: '4:1', ratio: 4, swrLimit: 2.0,
     zRef: 200, xfrmrEff: 0.94,
-    fill:   'rgba(64,150,255,0.10)', stroke: 'rgba(64,150,255,0.65)', text: '#4096ff', on: true,
+    fill:   'rgba(47,111,183,0.10)', stroke: 'rgba(47,111,183,0.65)', text: '#2f6fb7', on: true,
   },
   {
     id: 'dz2', label: '6:1', ratio: 6, swrLimit: 2.0,
     zRef: 300, xfrmrEff: 0.92,
-    fill:   'rgba(50,200,80,0.13)',  stroke: 'rgba(50,200,80,0.65)',  text: '#32c850', on: false,
+    fill:   'rgba(38,124,98,0.13)',  stroke: 'rgba(38,124,98,0.65)',  text: '#267c62', on: false,
   },
   {
     id: 'dz3', label: 'Custom', ratio: null, swrLimit: 2.0,
     zRef: null, xfrmrEff: 0.90,
-    fill:   'rgba(192,112,255,0.10)', stroke: 'rgba(192,112,255,0.65)', text: '#c070ff', on: false,
+    fill:   'rgba(138,86,194,0.10)', stroke: 'rgba(138,86,194,0.65)', text: '#8a56c2', on: false,
   },
 ];
 
@@ -1266,20 +1400,33 @@ function getTunerParams() {
        : (TUNER_PRESETS[tunerPreset] || TUNER_PRESETS.external);
 }
 
-// Estimates tuner efficiency using inductor-Q loss scaled by L-match circulating
-// current stress.  For an L-network matching Rload to 50 Ω the loaded Q is:
-//   Q_match = √(max(Rload,50)/min(Rload,50) − 1)
-// Circulating current stress factor kI = √(1+Q²), so loss resistance scales by
-//   kI² = max(Rload,50)/min(Rload,50)  (the impedance mismatch ratio).
-// Rs_eff = (ωL/Q_L) × kI² — higher ratio → more circulating current → more heat.
-// Capacitor ESR is ignored; Q_L = 120 is typical for a small toroidal ATU coil.
-function estimateTunerEff(freq, L_uH, Rload) {
-  if (L_uH <= 0) return 0.98;                            // no inductor — negligible loss
-  const Rl    = Math.max(1e-6, Rload);
-  const Rs0   = 2 * Math.PI * freq * L_uH * 1e-6 / TUNER_L_Q;  // base ESR (Ω)
-  const kI2   = Math.max(Rl, 50) / Math.min(Rl, 50);    // circulating-current stress ≥ 1
-  const Rs_eff = Rs0 * kI2;                              // effective loss resistance
-  return Math.max(0.30, Math.min(0.98, Rl / (Rl + Rs_eff)));
+// Tuner efficiency = power into the load ÷ power into the network, computed on the
+// actual solved circuit.  Each inductor gets a series loss resistance ESR = X_L / Q
+// (Q = TUNER_L_Q); capacitors are treated as lossless.
+//   series→shunt: load + series element form one branch, shunt element across the radio.
+//   shunt→series: shunt element across the load, series element towards the radio.
+function tunerEfficiency(sol, Za) {
+  const Q  = TUNER_L_Q;
+  const xs = sol.seriesEl.type === 'none' ? 0 : sol.seriesEl.X;   // series reactance (Ω)
+  const bp = sol.shuntEl.type  === 'none' ? 0 : sol.shuntEl.B;    // shunt susceptance (S)
+  const rs = xs > 0 ? xs / Q : 0;                                 // series-inductor ESR
+  // Real part of the shunt branch admittance (non-zero only for a lossy shunt inductor)
+  let gp = 0, bpEff = bp;
+  if (bp < 0) {
+    const xp = 1 / Math.abs(bp), rp = xp / Q, d = rp * rp + xp * xp;
+    gp = rp / d; bpEff = -xp / d;
+  }
+  let eff;
+  if (sol.topology === 'series→shunt') {
+    const r1 = Za.R + rs, x1 = Za.X + xs, m1 = r1 * r1 + x1 * x1;   // |Z1|²
+    eff = (Za.R / m1) / (r1 / m1 + gp);
+  } else {
+    const ma = Za.R * Za.R + Za.X * Za.X;
+    const ga = Za.R / ma, ba = -Za.X / ma;                           // load admittance
+    const gt = ga + gp, bt = ba + bpEff;
+    eff = ga / (gt + (gt * gt + bt * bt) * rs);
+  }
+  return Math.max(0, Math.min(1, eff));
 }
 
 // ════════════════════════════════════════════════
@@ -1342,14 +1489,14 @@ function solveL(Zin, freq, Lmax_uH, Cmax_pF) {
   // Works when R ≤ 50.  Required shunt Y₁ has Re = 1/50.
   //   Xs_total² = 50·R − R²  →  Xs_total = ±√(50R − R²)
   //   Xs_series = Xs_total − X_ant
-  //   B_shunt   = −Xs_total / (50·R)
+  //   B_shunt   = +Xs_total / (50·R)   (cancels Im of 1/(R + j·Xs_total) = −Xs_total/(50·R))
   if (R <= 50 + 1e-6) {
     const disc = 50 * R - R * R;
     if (disc >= 0) {
       const sq = Math.sqrt(disc);
       for (const Xs_t of [sq, -sq]) {
         const Xs = Xs_t - X;
-        const Bp = -Xs_t / (50 * R);
+        const Bp = Xs_t / (50 * R);
         if (_reactFeasible(Xs, XLmax, XCmin) && _susceptFeasible(Bp, BLmin, BCmax)) {
           return {
             matched: true, swr: 1.0,
@@ -1411,21 +1558,37 @@ function canTune(Za, p) {
   return (Q_transform + Q_reactive) <= p.Qmax;
 }
 
-// SWR at the radio after transformer + optional tuner.
-// When tunerEnabled the L-network solver is tried for every active zone.
-// The tuner only helps when rawSwr ≤ preset.maxSWR (the rated matching range);
-// beyond that it returns the raw SWR so the zone correctly shows no match.
-function swrAtRadio(Zc, zone, freq) {
-  const Za     = { R: Zc.R / zone.ratio, X: Zc.X / zone.ratio };
+// One calculation for everything downstream of the feedpoint:
+//   antenna Zc → transformer (÷ratio) → optional tuner → radio.
+// Every display (strips, sweet spots, tooltip, inspect panel) reads from here so
+// the numbers always agree.
+// The tuner only helps when rawSwr ≤ preset.maxSWR (its rated range) and the Q gate
+// passes; when it finds a match the radio sees 50 Ω, so no mismatch loss remains —
+// only the tuner's own component loss.
+function matchChain(Zc, ratio, xfrmrEff, freq) {
+  const Za     = { R: Zc.R / ratio, X: Zc.X / ratio };
   const rawSwr = swr50(Za);
-  if (!tunerEnabled) return rawSwr;
+  const out = {
+    Za, rawSwr, swr: rawSwr, sol: null, tunerEff: 1.0,
+    mmEff: mismatchEffComplex(Zc, 50 * ratio),
+  };
+  if (tunerEnabled) {
+    const p = getTunerParams();
+    if (rawSwr <= p.maxSWR && canTune(Za, p)) {
+      const sol = solveL(Za, freq, p.Lmax, p.Cmax);
+      if (sol.matched) {
+        out.sol = sol; out.swr = 1.0; out.mmEff = 1.0;
+        out.tunerEff = tunerEfficiency(sol, Za);
+      }
+    }
+  }
+  out.total = out.mmEff * xfrmrEff * out.tunerEff;
+  return out;
+}
 
-  const p = getTunerParams();
-  if (rawSwr > p.maxSWR) return rawSwr;   // outside tuner's rated range
-  if (!canTune(Za, p)) return rawSwr;     // Q check: reject high-Q matches
-
-  const r = solveL(Za, freq, p.Lmax, p.Cmax);
-  return r.matched ? 1.0 : rawSwr;
+// SWR at the radio after transformer + optional tuner.
+function swrAtRadio(Zc, zone, freq) {
+  return matchChain(Zc, zone.ratio, zone.xfrmrEff, freq).swr;
 }
 
 // True when this zone gives acceptable SWR at the radio for band at freq.
@@ -1479,6 +1642,12 @@ let dipSweetSpotsMin   = 1;
 let dipSweetSpotsSWR   = 2.0;  // SWR threshold for dipole sweet-spot scan
 let dipSweetSpotsCache = null; // null = stale; [[p1,p2], ...] feedpoint-position segments
 
+// Drop every cached scan (x-range selectors use this)
+function invalidateCaches() {
+  invalidateSweetSpots();
+  dipSwrStripCache = null;
+}
+
 function invalidateSweetSpots() {
   sweetSpotsCache    = null;
   swrStripCache      = null;
@@ -1522,77 +1691,178 @@ const coil_uH     = 0;    // safe default — coil permanently disabled
 let VF = 0.975;
 
 // ════════════════════════════════════════════════
-//  PHYSICS MODEL  — lossy open-circuit TL
+//  PHYSICS MODEL (v3) — lossy open-ended line whose loss IS the radiation
 //
-//  Z_in = Z0 · coth(γL),  γ = ALPHA + jβ,  β = 2π/λ_eff
+//  Each conductor is an open-ended transmission line:
+//      Z_arm = Z0 · coth(a + jθ)
+//    θ  electrical length:  θ = 2πL/(λ·VF) + END_K·π
+//       VF     = slowing by the insulation (bare wire = 1.00)
+//       END_K  = open-end (capacitive) effect — a fixed extra length per open
+//                end, so harmonics are NOT exact multiples of the fundamental
+//    Z0 average characteristic impedance of the wire, 60·ln(Z0_K·λ/a)·VF
+//    a  line loss, chosen so the line dissipates exactly what the wire radiates:
+//       tanh(a) = R_rad / Z0, with R_rad the radiation resistance of the
+//       sinusoidal standing-wave current (induced-EMF method), referred to
+//       the current maximum.
 //
-//  Exact real/imag decomposition:
-//    R =  Z0 · sinh(2αL) / D
-//    X = −Z0 · sin(2βL)  / D     D = cosh(2αL) − cos(2βL)
+//  With that choice the model gives, with no fitted peak values:
+//    • current-fed points (λ/4, 3λ/4 …):  R ≈ R_rad             (36 Ω, 53 Ω, 60 Ω …)
+//    • voltage-fed points (λ/2, λ …):     R ≈ Z0² / R_rad       (≈3.4 kΩ on 40 m)
+//    • the reactance in between from the standing wave, sign as before:
+//        L < λ/4 capacitive, λ/4 < L < λ/2 inductive.
 //
-//  Sign derivation: coth(a+jb) = [sinh(2a) − j·sin(2b)] / [cosh(2a)−cos(2b)]
-//  → imaginary part is NEGATIVE.  Consequences:
-//    • L < λ/4  → sin(2βL) > 0  → X < 0  (capacitive)   ✓ open stub theory
-//    • L = λ/4  → sin(π) = 0    → X = 0  (transition)    ✓
-//    • λ/4<L<λ/2→ sin(2βL) < 0  → X > 0  (inductive)    ✓
-//    • L = λ/2  → sin(2π) = 0   → X = 0  (series res.)   ✓
-//
-//  This produces complex impedance {R, X} where:
-//  • At λ/2 resonance: X → 0,  R ≈ Z0/(αL) ≈ 3000 Ω (80m)
-//  • At λ/4 anti-resonance: X → 0,  R ≈ Z0·αL ≈ 34 Ω (80m)
-//  • Between resonances: large |X|, large SWR through any transformer
-//    → matching zones naturally narrow to ~±1.5 m around each resonance
-//
-//  With counterpoise: both open-ended TL impedances add in series.
+//  End-fed, no counterpoise: the wire works against an ideal ground, i.e. it is
+//  a monopole — R_rad has a closed form (sine/cosine integrals).
+//  Two conductors (dipole / OCF / wire + counterpoise): the arms are in SERIES
+//  across the feed gap and R_rad includes the coupling between the two arms.
 // ════════════════════════════════════════════════
 
-// Complex impedance of one open-ended wire (no counterpoise)
-function calcZwireComplex(L, freq) {
-  if (L <= 0) return { R: Z_PEAK, X: 0 };
-  const lambda_eff = (C / freq) * VF;
-  const betaL = (2 * Math.PI * L) / lambda_eff;
-  // Scale α with frequency so R_peak = Z0/(α·L_res) ≈ 3000 Ω for every band:
-  //   α(f) = ALPHA × (f / ALPHA_FREF)  →  R_peak = Z0·ALPHA_FREF·2/(ALPHA·C·VF) = const
-  const alpha = ALPHA * (freq / ALPHA_FREF);
-  // Harmonic-order correction: higher-order resonances on the same physical wire
-  // radiate more efficiently than the flat-α model predicts.  Reduce α by n_eff^0.5
-  // where n_eff = number of half-wavelengths in the wire (≥1, clamped so sub-λ/2
-  // lengths are never penalised).
-  //   n_eff = 1 (λ/2 fundamental): α unchanged → cross-band λ/2 calibration preserved.
-  //   n_eff = 4 (2λ, e.g. 10m on 40m wire): α halved → R_peak ≈ doubles (~750→1500 Ω).
-  const n_eff    = Math.max(1, (2 * L) / lambda_eff);
-  const alphaEff = alpha / Math.pow(n_eff, 0.5);
-  const a2 = 2 * alphaEff * L;
-  const b2 = 2 * betaL;
-  const D  = Math.cosh(a2) - Math.cos(b2);
-  if (D < 1e-12) return { R: Z_PEAK, X: 0 };
-  const R = Math.min(Z_PEAK, Math.max(0, Z0 * Math.sinh(a2) / D));
-  const X = -Z0 * Math.sin(b2) / D;  // −: open-stub coth decomposition gives negative imag part
-  return { R, X };
+const EULER_G = 0.5772156649015329;
+
+// Sine and cosine integrals Si(x), Ci(x) for x > 0.
+// Power series below x = 4; Abramowitz & Stegun 5.2.38/5.2.39 auxiliary
+// functions above (|error| < 1e-6).
+function sinCosInt(x) {
+  if (x <= 4) {
+    let si = 0, ci = EULER_G + Math.log(x), term = x;      // term = x^n / n!
+    for (let n = 1; n <= 40; n++) {
+      if (n > 1) term *= x / n;
+      if (n % 2 === 1) si += (((n - 1) / 2) % 2 === 0 ? 1 : -1) * term / n;
+      else             ci += ((n / 2) % 2 === 0 ? 1 : -1) * term / n;
+    }
+    return [si, ci];
+  }
+  const x2 = x * x;
+  const f = (1 / x) *
+    ((((x2 + 38.027264) * x2 + 265.187033) * x2 + 335.677320) * x2 + 38.102495) /
+    ((((x2 + 40.021433) * x2 + 322.624911) * x2 + 570.236280) * x2 + 157.105423);
+  const g = (1 / x2) *
+    ((((x2 + 42.242855) * x2 + 302.757865) * x2 + 352.018498) * x2 + 21.821899) /
+    ((((x2 + 48.196927) * x2 + 482.485984) * x2 + 1114.978885) * x2 + 449.690326);
+  const sn = Math.sin(x), cs = Math.cos(x);
+  return [Math.PI / 2 - f * cs - g * sn, f * sn - g * cs];
 }
 
-// Complex impedance at feedpoint; adds counterpoise and optional loading coil in series
-function calcZcomplex(L, freq) {
-  const Zw = calcZwireComplex(L, freq);
-  let result = { R: Zw.R, X: Zw.X };
-  if (cpEnabled && cpLengthM > 0) {
-    const Zcp = calcZwireComplex(cpLengthM, freq);
-    result.R += Zcp.R;
-    result.X += Zcp.X;
+// Radiation resistance (Ω, referred to the current maximum) of a wire of
+// electrical length theta (rad) working against an ideal ground.
+// = half the classic induced-EMF result for a centre-fed dipole of twice the length.
+function radResMonopole(theta) {
+  const kl = 2 * theta;
+  const [s1, c1] = sinCosInt(kl);
+  const [s2, c2] = sinCosInt(2 * kl);
+  return 30 * (EULER_G + Math.log(kl) - c1 +
+               0.5 * Math.sin(kl) * (s2 - 2 * s1) +
+               0.5 * Math.cos(kl) * (EULER_G + Math.log(kl / 2) + c2 - 2 * c1));
+}
+
+// Gauss–Legendre nodes/weights on [−1, 1] (cached per order).
+const _glCache = new Map();
+function gaussLegendre(n) {
+  let c = _glCache.get(n);
+  if (c) return c;
+  const x = new Float64Array(n), w = new Float64Array(n);
+  const m = (n + 1) >> 1;
+  for (let i = 0; i < m; i++) {
+    let z = Math.cos(Math.PI * (i + 0.75) / (n + 0.5)), pp = 1;
+    for (let it = 0; it < 60; it++) {
+      let p1 = 1, p2 = 0;
+      for (let j = 0; j < n; j++) { const p3 = p2; p2 = p1; p1 = ((2 * j + 1) * z * p2 - j * p3) / (j + 1); }
+      pp = n * (z * p1 - p2) / (z * z - 1);
+      const z1 = z; z = z1 - p1 / pp;
+      if (Math.abs(z - z1) < 1e-14) break;
+    }
+    x[i] = -z; x[n - 1 - i] = z;
+    w[i] = w[n - 1 - i] = 2 / ((1 - z * z) * pp * pp);
   }
-  // === LOADING COIL FEATURE DISABLED ===
-  // Reason: Model is not valid for electrically short antennas (see README)
-  // if (coilEnabled && coil_uH > 0) {
-  //   // Series loading coil: adds reactance XL and loss resistance Rs = XL/Q
-  //   const omega = 2 * Math.PI * freq;
-  //   const Lc    = coil_uH * 1e-6;
-  //   const XL    = omega * Lc;
-  //   const Rs    = XL / COIL_Q;
-  //   result.R   += Rs;
-  //   result.X   += XL;
-  // }
-  // === END LOADING COIL FEATURE DISABLED ===
-  return result;
+  c = { x, w };
+  _glCache.set(n, c);
+  return c;
+}
+
+// Radiation resistances of a straight wire fed part-way along, for sinusoidal
+// standing-wave currents on arm A (electrical length ta) and arm B (tb):
+//   Raa, Rbb — each arm on its own;  Rab — coupling between the two.
+// Far-field power integral over u = cos(polar angle); the pattern factor of an
+// arm is F(u) = e^{±jθu} − cos θ ∓ j·u·sin θ.  Results depend only on (ta, tb)
+// and are memoised, so redraws on mouse-move cost nothing.
+const _radCache = new Map();
+let _radCacheSize = 0;
+function radResTwoArm(ta, tb) {
+  let inner = _radCache.get(ta);
+  if (inner) { const hit = inner.get(tb); if (hit) return hit; }
+  const n = 16 * Math.ceil((24 + 3 * (ta + tb)) / 16);
+  const { x, w } = gaussLegendre(n);
+  const ca = Math.cos(ta), sa = Math.sin(ta), cb = Math.cos(tb), sb = Math.sin(tb);
+  let Raa = 0, Rbb = 0, Rab = 0;
+  for (let i = 0; i < n; i++) {
+    const u = x[i], k = 15 * w[i] / (1 - u * u);
+    const far = Math.cos(ta * u) - ca, fai = u * sa - Math.sin(ta * u);
+    const fbr = Math.cos(tb * u) - cb, fbi = Math.sin(tb * u) - u * sb;
+    Raa += k * (far * far + fai * fai);
+    Rbb += k * (fbr * fbr + fbi * fbi);
+    Rab += k * (far * fbr + fai * fbi);
+  }
+  const res = { Raa, Rbb, Rab };
+  if (_radCacheSize > 400000) { _radCache.clear(); _radCacheSize = 0; inner = null; }
+  if (!inner) { inner = new Map(); _radCache.set(ta, inner); }
+  inner.set(tb, res); _radCacheSize++;
+  return res;
+}
+
+// Average characteristic impedance of the wire at this frequency (Ω)
+function wireZ0(freq) {
+  return 60 * Math.log(Z0_K * (C / freq) / WIRE_RADIUS_M) * VF;
+}
+
+// Electrical length (rad) of an open-ended conductor of physical length L
+function elecLen(L, freq) {
+  return (2 * Math.PI * L) / ((C / freq) * VF) + END_K * Math.PI;
+}
+
+// Physical length at which a conductor is n electrical quarter-waves long
+// (inverse of elecLen): n = 1 → λ/4 point, n = 2 → λ/2 point …
+function lenForQuarterWaves(n, freq) {
+  return (n / 2 - END_K) * (C / freq) * VF / 2;
+}
+
+// Z0·coth(a + jθ) with tanh(a) = rNorm (= R_rad / Z0)
+function lossyStub(z0, rNorm, theta) {
+  const a  = Math.atanh(Math.min(0.99, Math.max(1e-4, rNorm)));
+  const a2 = 2 * a, b2 = 2 * theta;
+  const D  = Math.cosh(a2) - Math.cos(b2);
+  return { R: z0 * Math.sinh(a2) / D, X: -z0 * Math.sin(b2) / D };
+}
+
+// Two conductors in series across the feed gap (dipole, OCF, wire + counterpoise).
+// The coupling term Rab is shared between the arms with weight
+//   T = 2·sinθa·sinθb / (sin²θa + sin²θb)
+// which reproduces R_feed = Raa/sin²θa + Rbb/sin²θb + 2·Rab/(sinθa·sinθb) exactly
+// for low loss and stays finite where one arm is a multiple of λ/2.
+function calcTwoArmZ(La, Lb, freq) {
+  const z0 = wireZ0(freq);
+  const ta = elecLen(La, freq), tb = elecLen(Lb, freq);
+  const { Raa, Rbb, Rab } = radResTwoArm(ta, tb);
+  const sa = Math.sin(ta), sb = Math.sin(tb);
+  const T  = (2 * sa * sb) / Math.max(1e-12, sa * sa + sb * sb);
+  const A  = lossyStub(z0, (Raa + Rab * T) / z0, ta);
+  const B  = lossyStub(z0, (Rbb + Rab * T) / z0, tb);
+  return { R: Math.min(Z_PEAK, A.R + B.R), X: A.X + B.X };
+}
+
+// Complex impedance of one open-ended wire against an ideal ground (no counterpoise)
+function calcZwireComplex(L, freq) {
+  if (L <= 0) return { R: Z_PEAK, X: 0 };
+  const z0    = wireZ0(freq);
+  const theta = elecLen(L, freq);
+  const Z     = lossyStub(z0, radResMonopole(theta) / z0, theta);
+  return { R: Math.min(Z_PEAK, Z.R), X: Z.X };
+}
+
+// Complex impedance at the feedpoint.  With a counterpoise the wire and the
+// counterpoise are the two arms of one antenna (in series, with their coupling).
+function calcZcomplex(L, freq) {
+  if (cpEnabled && cpLengthM > 0 && L > 0) return calcTwoArmZ(cpLengthM, L, freq);
+  return calcZwireComplex(L, freq);
 }
 
 // |Z| magnitude — used for Y-axis position; same visual as before
@@ -1607,73 +1877,23 @@ function calcZ(L, freq) {
 }
 
 // ════════════════════════════════════════════════
-//  DIPOLE PHYSICS MODEL — parallel open-ended stubs
+//  DIPOLE MODEL — two arms in series (same physics as above)
 //
-//  A dipole of length L fed at position p (0.0–1.0):
-//    left arm  = p × L     → open-ended TL stub
-//    right arm = (1−p) × L → open-ended TL stub
-//  Z_feed = Z_left ∥ Z_right  (complex parallel)
-//
-//  Exact real/imag decomposition (same coth identity as EFHW):
-//    R =  Z0_DIP · sinh(2αL) / D
-//    X = −Z0_DIP · sin(2βL)  / D     D = cosh(2αL) − cos(2βL)
-//
-//  Sign derivation: coth(a+jb) = [sinh(2a) − j·sin(2b)] / [cosh(2a)−cos(2b)]
-//  → imaginary part is NEGATIVE.  Consequences (per arm):
-//    • armLen < λ/4  → sin(2βL) > 0  → X < 0  (capacitive)   ✓ open stub theory
-//    • armLen = λ/4  → sin(π) = 0    → X = 0  (transition)    ✓ (resonance)
-//    • λ/4 < L < λ/2 → sin(2βL) < 0  → X > 0  (inductive)    ✓
-//
-//  Normalisation: alpha = ALPHA_DIP_K / lambda_eff  (Np/m)
-//  This makes α × L_arm = K/4 = constant for any resonant λ/4 arm,
-//  so a centre-fed λ/2 dipole lands at R ≈ 65 Ω, X ≈ 0
-//  at every HF band and velocity factor.
-//
-//  K = 4 × arctanh(2 × Z_target / Z0_DIP)
-//    = 4 × arctanh(130/600) ≈ 0.8806
+//  A wire of length L fed at position p (0.0–1.0):
+//    arm A = p × L,  arm B = (1−p) × L,  Z_feed = Z_A + Z_B
+//  The generator sits between the arms, so their impedances add.
+//  Consequences, all without calibration constants:
+//    • centre-fed λ/2 → ≈ 73 Ω, X ≈ 0 (free space)
+//    • a resonant wire stays resonant wherever it is fed, and
+//      R(p) ≈ R_centre / sin²(π·p)  (≈ 100 Ω at 33 %, ≈ 150 Ω at 25 %)
+//    • centre-fed full-wave → several kΩ
 // ════════════════════════════════════════════════
-
-const Z0_DIP      = 600;      // Ω  — characteristic impedance of the dipole wire model
-const ALPHA_DIP_K = 0.8806;   // dimensionless; alpha = K / lambda_eff  (Np/m)
-                               // Calibration: centre-fed λ/2 → R ≈ 65 Ω, X ≈ 0 at all bands
-
-// Complex impedance of one dipole arm as an open-ended TL stub
-function calcDipoleArm(armLen, freq) {
-  if (armLen <= 0.01) return { R: Z_PEAK, X: 0 };
-  const lambda_eff = (C / freq) * VF;
-  const betaL      = (2 * Math.PI * armLen) / lambda_eff;
-  const alpha      = ALPHA_DIP_K / lambda_eff;          // Np/m; scales as f/VF → αL_arm constant at resonance
-  const n_eff      = Math.max(1, (2 * armLen) / lambda_eff);
-  const alphaEff   = alpha / Math.sqrt(n_eff);
-  const a2 = 2 * alphaEff * armLen;
-  const b2 = 2 * betaL;
-  const D  = Math.cosh(a2) - Math.cos(b2);
-  if (D < 1e-12) return { R: Z_PEAK, X: 0 };
-  return {
-    R: Math.min(Z_PEAK, Math.max(0, Z0_DIP * Math.sinh(a2) / D)),
-    X: -Z0_DIP * Math.sin(b2) / D,  // −: open-stub coth decomposition gives negative imag part
-  };
-}
-
-// Complex parallel combination of two impedances
-function complexParallel(Za, Zb) {
-  const numR = Za.R * Zb.R - Za.X * Zb.X;
-  const numX = Za.R * Zb.X + Za.X * Zb.R;
-  const denR = Za.R + Zb.R;
-  const denX = Za.X + Zb.X;
-  const den2 = denR * denR + denX * denX;
-  if (den2 < 1e-20) return { R: Z_PEAK, X: 0 };
-  return {
-    R: (numR * denR + numX * denX) / den2,
-    X: (numX * denR - numR * denX) / den2,
-  };
-}
 
 // Feedpoint impedance at position pos (0.0–1.0) on a wire of totalLen metres
 function calcDipoleZ(pos, totalLen, freq) {
   const La = Math.max(0.01, pos * totalLen);
   const Lb = Math.max(0.01, (1 - pos) * totalLen);
-  return complexParallel(calcDipoleArm(La, freq), calcDipoleArm(Lb, freq));
+  return calcTwoArmZ(La, Lb, freq);
 }
 
 // Resolved wire length: manual override or auto λ/2 of lowest active band
@@ -1682,7 +1902,7 @@ function getDipoleLen() {
   const ab = getActiveBands();
   if (!ab.length) return 10;
   const lowestFreq = Math.min(...ab.map(b => b.freq));
-  return (C / lowestFreq / 2) * VF;
+  return 2 * lenForQuarterWaves(1, lowestFreq);   // resonant λ/2: two λ/4 arms, each with its end effect
 }
 
 // Effective ratio/zRef for a dipole zone (handles Custom zone)
@@ -1692,20 +1912,9 @@ function getDipoleZoneParams(dz) {
   return { ratio, zRef };
 }
 
-// SWR at radio after dipole zone transformer (+ tuner if on).
-// Mirrors swrAtRadio(): SWR gate first, then Q gate (canTune), then L-network solver.
+// SWR at radio after dipole zone transformer (+ tuner if on) — same chain as End-Fed.
 function swrAfterDipoleZone(Zc, dz, freq) {
-  const { ratio } = getDipoleZoneParams(dz);
-  const Za = { R: Zc.R / ratio, X: Zc.X / ratio };
-  const rawSwr = swr50(Za);
-  if (tunerEnabled) {
-    const p = getTunerParams();
-    if (rawSwr <= p.maxSWR && canTune(Za, p)) {
-      const sol = solveL(Za, freq, p.Lmax, p.Cmax);
-      if (sol.matched) return 1.0;
-    }
-  }
-  return rawSwr;
+  return matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, freq).swr;
 }
 
 function inDipoleZone(Zc, dz, freq) {
@@ -1798,7 +2007,7 @@ function draw() {
   ctx.clearRect(0, 0, W, H);
 
   // Plot area background
-  ctx.fillStyle = '#090d13';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(M.left, M.top, W - M.left - M.right, H - M.top - M.bottom);
 
   const plotW = W - M.left - M.right;
@@ -1835,10 +2044,10 @@ function draw() {
     // Right-side labels
     const midY = (y1 + y2) / 2;
     ctx.fillStyle = zone.text;
-    ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.font = 'bold 10px "DM Sans", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(zone.label, M.left + plotW + 8, midY - 4);
-    ctx.font = '9px system-ui, sans-serif';
+    ctx.font = '9px "DM Sans", system-ui, sans-serif';
     ctx.fillStyle = zone.text + 'bb';
     ctx.fillText(formatZ(dynZMin) + '–' + formatZ(dynZMax),
                  M.left + plotW + 8, midY + 9);
@@ -1875,7 +2084,7 @@ function draw() {
       if (!zone.on) return;
       const y = stripBaseY + row * (STRIP_H + STRIP_GAP);
       // Background track
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillStyle = 'rgba(32,59,61,0.06)';
       ctx.fillRect(M.left, y, plotW, STRIP_H);
       // Matching segments
       ctx.fillStyle = zone.stroke.replace(/[\d.]+\)$/, '0.85)');
@@ -1887,7 +2096,7 @@ function draw() {
       // Zone label on right
       const dispLimit = (!tunerEnabled && zone.rawSwrLimit) ? zone.rawSwrLimit : (zone.swrLimit || 2.0);
       ctx.fillStyle = zone.text;
-      ctx.font = '8px system-ui, sans-serif';
+      ctx.font = '8px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`SWR<${dispLimit}`, M.left + plotW + 8, y + STRIP_H - 1);
       row++;
@@ -1917,12 +2126,12 @@ function draw() {
     sweetSpotsCache.forEach(([L1, L2]) => {
       const x1 = xPx(L1, xRange, W), x2 = xPx(L2, xRange, W);
       const w = x2 - x1, mid = (x1 + x2) / 2;
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
+      ctx.fillStyle = 'rgba(214, 170, 30, 0.18)';
       ctx.fillRect(x1, M.top, w, plotH);
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
+      ctx.fillStyle = 'rgba(176, 141, 30, 0.75)';
       ctx.fillRect(x1, M.top, w, 2);
-      ctx.fillStyle = '#ffd700cc';
-      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.fillStyle = '#9a7a12';
+      ctx.font = 'bold 9px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('★', mid, M.top + 13);
     });
@@ -1934,15 +2143,15 @@ function draw() {
     const y = yPx(val, H);
     const major = Y_MAJOR.has(val);
 
-    ctx.strokeStyle = major ? '#1e2630' : '#141820';
+    ctx.strokeStyle = major ? '#dfe5de' : '#edf0e7';
     ctx.lineWidth = major ? 1 : 0.5;
     ctx.beginPath();
     ctx.moveTo(M.left, y);
     ctx.lineTo(M.left + plotW, y);
     ctx.stroke();
 
-    ctx.fillStyle = major ? '#8b949e' : '#50585e';
-    ctx.font = major ? '11px monospace' : '9px monospace';
+    ctx.fillStyle = major ? '#76847d' : '#a0ad97';
+    ctx.font = major ? '11px "IBM Plex Mono", monospace' : '9px "IBM Plex Mono", monospace';
     ctx.textAlign = 'right';
     ctx.fillText(formatZ(val), M.left - 5, y + 4);
   });
@@ -1954,25 +2163,25 @@ function draw() {
 
   for (let x = xStart; x <= xRange.xMax + 0.001; x += xStep) {
     const cx = xPx(x, xRange, W);
-    ctx.strokeStyle = '#1e2630';
+    ctx.strokeStyle = '#dfe5de';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(cx, M.top);
     ctx.lineTo(cx, M.top + plotH);
     ctx.stroke();
 
-    ctx.fillStyle = '#8b949e';
-    ctx.font = '11px monospace';
+    ctx.fillStyle = '#76847d';
+    ctx.font = '11px "IBM Plex Mono", monospace';
     ctx.textAlign = 'center';
     const lbl = x >= 10 ? Math.round(x) + 'm' : x.toFixed(1) + 'm';
     ctx.fillText(lbl, cx, M.top + plotH + 17);
   }
 
-  // ── Resonant-length markers (VF-adjusted λ/2 multiples) ──
+  // ── Resonant-length markers (λ/2 multiples, shortened by VF and the end effect) ──
   ab.forEach(band => {
     const lambda = C / band.freq;
     for (let n = 1; ; n++) {
-      const resL = n * lambda * VF / 2;  // physical resonant length = VF × λ/2
+      const resL = lenForQuarterWaves(2 * n, band.freq);  // physical length of the n-th λ/2 point
       if (resL > xRange.xMax + 0.1) break;
       if (resL < xRange.xMin) continue;
       const cx = xPx(resL, xRange, W);
@@ -1990,7 +2199,7 @@ function draw() {
       ctx.translate(cx, M.top + plotH - 6);
       ctx.rotate(-Math.PI / 2);
       ctx.fillStyle = band.color + 'b0';
-      ctx.font = 'bold 8px system-ui, sans-serif';
+      ctx.font = 'bold 8px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'left';
       const nLabel = n === 1 ? 'λ/2' : `${n}×λ/2`;
       ctx.fillText(`${band.name}  ${nLabel}  ${formatLength(resL)}`, 5, 0);
@@ -2029,7 +2238,7 @@ function draw() {
     // Vertical marker at counterpoise length (if within X range)
     if (cpLengthM >= xRange.xMin && cpLengthM <= xRange.xMax) {
       const cpCx = xPx(cpLengthM, xRange, W);
-      ctx.strokeStyle = 'rgba(192, 112, 255, 0.55)';
+      ctx.strokeStyle = 'rgba(138,86,194, 0.55)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -2037,8 +2246,8 @@ function draw() {
       ctx.lineTo(cpCx, M.top + plotH);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#c070ff';
-      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.fillStyle = '#8a56c2';
+      ctx.font = 'bold 9px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('CP ' + cpLengthM + 'm', cpCx, M.top + 12);
     }
@@ -2082,7 +2291,7 @@ function draw() {
     const L = pxToL(hoverCx, xRange, W);
     if (L >= xRange.xMin && L <= xRange.xMax) {
       // Vertical cursor line
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.strokeStyle = 'rgba(32,59,61,0.30)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(hoverCx, M.top);
@@ -2098,7 +2307,7 @@ function draw() {
           ctx.beginPath();
           ctx.arc(hoverCx, cy, 4, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#0d1117';
+          ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -2111,7 +2320,7 @@ function draw() {
     const pinCx = xPx(pinL, xRange, W);
     if (pinCx >= M.left && pinCx <= M.left + plotW) {
       // Line
-      ctx.strokeStyle = 'rgba(255,255,255,0.50)';
+      ctx.strokeStyle = 'rgba(32,59,61,0.62)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([]);
       ctx.beginPath();
@@ -2120,7 +2329,7 @@ function draw() {
       ctx.stroke();
 
       // Drag-handle tab at top
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fillStyle = 'rgba(32,59,61,0.72)';
       ctx.beginPath();
       ctx.moveTo(pinCx - 5, M.top);
       ctx.lineTo(pinCx + 5, M.top);
@@ -2131,8 +2340,8 @@ function draw() {
       ctx.fill();
 
       // Length label in tab
-      ctx.fillStyle = '#0d1117';
-      ctx.font = 'bold 7px system-ui, sans-serif';
+      ctx.fillStyle = '#fcfdf8';
+      ctx.font = 'bold 7px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(formatLength(pinL), pinCx, M.top - 4);
 
@@ -2147,7 +2356,7 @@ function draw() {
           ctx.beginPath();
           ctx.arc(pinCx, cy, 5, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+          ctx.strokeStyle = 'rgba(255,255,255,0.95)';
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -2156,13 +2365,13 @@ function draw() {
   }
 
   // ── Axis border ──
-  ctx.strokeStyle = '#30363d';
+  ctx.strokeStyle = '#c3cfc2';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(M.left, M.top, plotW, plotH);
 
   // ── Axis titles ──
-  ctx.fillStyle = '#8b949e';
-  ctx.font = '12px system-ui, sans-serif';
+  ctx.fillStyle = '#76847d';
+  ctx.font = '12px "DM Sans", system-ui, sans-serif';
 
   // Y title
   ctx.save();
@@ -2174,8 +2383,8 @@ function draw() {
 
   // R/X legend (top-left of plot area)
   if (rxMode) {
-    ctx.fillStyle = 'rgba(200,200,255,0.60)';
-    ctx.font = '9px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(74,84,150,0.85)';
+    ctx.font = '9px "DM Sans", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('— R   ╌╌ |X|', M.left + 6, M.top + 14);
   }
@@ -2193,8 +2402,8 @@ function draw() {
     const lam = (C / activeLowest.freq).toFixed(1);
     const txt = `x: λ/4 – λ/1.75 of ${activeLowest.name}  (λ = ${lam} m)`;
     document.getElementById('scaleInfo').textContent = txt;
-    ctx.fillStyle = '#3a4252';
-    ctx.font = '9px system-ui, sans-serif';
+    ctx.fillStyle = '#94a08f';
+    ctx.font = '9px "DM Sans", system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(txt, M.left + plotW - 4, M.top + 13);
   }
@@ -2232,7 +2441,7 @@ function drawDipole() {
   function posToX(pos) { return M.left + (pos / xEnd) * plotW; }
 
   // ── Background ──
-  ctx.fillStyle = '#090d13';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(M.left, M.top, plotW, plotH);
 
   // ── Matching zone overlays (horizontal bands on Y-axis) ──
@@ -2258,7 +2467,7 @@ function drawDipole() {
     // Right-side label
     const midY = (y1 + y2) / 2;
     ctx.fillStyle = dz.text;
-    ctx.font = 'bold 10px system-ui, sans-serif';
+    ctx.font = 'bold 10px "DM Sans", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`${dz.label}  ${Math.round(zRef)} Ω`, M.left + plotW + 5, midY + 4);
   });
@@ -2285,13 +2494,13 @@ function drawDipole() {
     dipSweetSpotsCache.forEach(([p1, p2]) => {
       const x1 = posToX(p1), x2 = posToX(p2);
       const w  = x2 - x1, mid = (x1 + x2) / 2;
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.10)';
+      ctx.fillStyle = 'rgba(214, 170, 30, 0.18)';
       ctx.fillRect(x1, M.top, w, plotH);
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.55)';
+      ctx.fillStyle = 'rgba(176, 141, 30, 0.75)';
       ctx.fillRect(x1, M.top, 2, plotH);
       ctx.fillRect(x2 - 2, M.top, 2, plotH);
-      ctx.fillStyle = '#ffd700cc';
-      ctx.font = 'bold 9px system-ui, sans-serif';
+      ctx.fillStyle = '#9a7a12';
+      ctx.font = 'bold 9px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('★', mid, M.top + 13);
     });
@@ -2306,11 +2515,11 @@ function drawDipole() {
     if (val < Y_AXIS_MIN || val > Y_AXIS_MAX) return;
     const y     = yPx(val, H);
     const major = Y_MAJOR.has(val);
-    ctx.strokeStyle = major ? '#1e2630' : '#141820';
+    ctx.strokeStyle = major ? '#dfe5de' : '#edf0e7';
     ctx.lineWidth   = major ? 1 : 0.5;
     ctx.beginPath(); ctx.moveTo(M.left, y); ctx.lineTo(M.left + plotW, y); ctx.stroke();
-    ctx.fillStyle  = major ? '#8b949e' : '#50585e';
-    ctx.font       = major ? '11px monospace' : '9px monospace';
+    ctx.fillStyle  = major ? '#76847d' : '#a0ad97';
+    ctx.font       = major ? '11px "IBM Plex Mono", monospace' : '9px "IBM Plex Mono", monospace';
     ctx.textAlign  = 'right';
     ctx.fillText(formatZ(val), M.left - 5, y + 4);
   });
@@ -2321,11 +2530,11 @@ function drawDipole() {
     : [0, 0.25, 0.5, 0.75, 1.0];
   xTicks.forEach(p => {
     const cx = posToX(p);
-    ctx.strokeStyle = p === 0.5 ? '#2e3a4a' : '#1e2630';
+    ctx.strokeStyle = p === 0.5 ? '#bccabb' : '#dfe5de';
     ctx.lineWidth   = p === 0.5 ? 1 : 0.5;
     ctx.beginPath(); ctx.moveTo(cx, M.top); ctx.lineTo(cx, M.top + plotH); ctx.stroke();
-    ctx.fillStyle  = '#8b949e';
-    ctx.font       = '11px monospace';
+    ctx.fillStyle  = '#76847d';
+    ctx.font       = '11px "IBM Plex Mono", monospace';
     ctx.textAlign  = 'center';
     const lbl = p === 0.5 ? '50% (centre)' : `${Math.round(p * 100)}%`;
     ctx.fillText(lbl, cx, M.top + plotH + 17);
@@ -2339,16 +2548,16 @@ function drawDipole() {
     // Mirror: position 0.75 is same risk as 0.25 (use distance from 0.5)
     const dist = Math.abs(posF - 0.5);
     let color;
-    if (dist > 0.25) color = 'rgba(220,60,60,0.75)';
-    else if (dist > 0.10) color = 'rgba(240,150,0,0.75)';
-    else color = 'rgba(50,200,80,0.75)';
+    if (dist > 0.25) color = 'rgba(196,72,60,0.8)';
+    else if (dist > 0.10) color = 'rgba(214,150,30,0.85)';
+    else color = 'rgba(38,124,98,0.75)';
     const x1 = posToX(pos);
     const x2 = posToX((i + 1) / DSTEPS * xEnd);
     ctx.fillStyle = color;
     ctx.fillRect(x1, M.top + plotH - CMR_H, x2 - x1 + 1, CMR_H);
   }
-  ctx.fillStyle = 'rgba(200,200,200,0.35)';
-  ctx.font = '8px system-ui, sans-serif';
+  ctx.fillStyle = 'rgba(32,59,61,0.55)';
+  ctx.font = '8px "DM Sans", system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText('← common-mode risk →', M.left + 3, M.top + plotH - 1);
 
@@ -2422,7 +2631,7 @@ function drawDipole() {
     DIPOLE_ZONES.forEach((dz, zi) => {
       if (!dz.on) return;
       const y = stripBaseY + row * (STRIP_H + STRIP_GAP);
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      ctx.fillStyle = 'rgba(32,59,61,0.06)';
       ctx.fillRect(M.left, y, plotW, STRIP_H);
       ctx.fillStyle = dz.stroke.replace(/[\d.]+\)$/, '0.85)');
       (dipSwrStripCache[zi] || []).forEach(([p1, p2]) => {
@@ -2431,7 +2640,7 @@ function drawDipole() {
         ctx.fillRect(x1, y, Math.max(1, x2 - x1), STRIP_H);
       });
       ctx.fillStyle = dz.text;
-      ctx.font = '8px system-ui, sans-serif';
+      ctx.font = '8px "DM Sans", system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`SWR<${dz.swrLimit}`, M.left + plotW + 8, y + STRIP_H - 1);
       row++;
@@ -2441,21 +2650,15 @@ function drawDipole() {
   // ── Feedpoint indicator ──
   if (dipolePos >= 0 && dipolePos <= xEnd) {
     const fpX = posToX(dipolePos);
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.strokeStyle = 'rgba(32,59,61,0.72)';
     ctx.lineWidth   = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.beginPath(); ctx.moveTo(fpX, M.top); ctx.lineTo(fpX, M.top + plotH); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle  = 'rgba(255,255,255,0.65)';
-    ctx.font       = 'bold 10px system-ui, sans-serif';
+    ctx.fillStyle  = 'rgba(32,59,61,0.88)';
+    ctx.font       = 'bold 10px "DM Sans", system-ui, sans-serif';
     ctx.textAlign  = 'center';
     ctx.fillText(`${Math.round(dipolePos * 100)}%`, fpX, M.top - 5);
-    // OCF note alongside feedpoint marker — model overestimates Z outside ±10 pp of centre
-    if (Math.abs(dipolePos - 0.5) > 0.10) {
-      ctx.fillStyle = '#6e7681';
-      ctx.font      = '8px system-ui, sans-serif';
-      ctx.fillText('Z approx.', fpX, M.top - 14);
-    }
 
     // Dots on curves at feedpoint
     ab.forEach(band => {
@@ -2473,15 +2676,15 @@ function drawDipole() {
 
   // ── Hover cursor line ──
   if (hoverCx !== null && hoverCx >= M.left && hoverCx <= M.left + plotW) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(32,59,61,0.30)';
     ctx.lineWidth   = 1;
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(hoverCx, M.top); ctx.lineTo(hoverCx, M.top + plotH); ctx.stroke();
   }
 
   // ── Axis titles ──
-  ctx.fillStyle = '#8b949e';
-  ctx.font      = '12px system-ui, sans-serif';
+  ctx.fillStyle = '#76847d';
+  ctx.font      = '12px "DM Sans", system-ui, sans-serif';
   ctx.save();
   ctx.translate(14, M.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
@@ -2490,8 +2693,8 @@ function drawDipole() {
   ctx.restore();
 
   if (rxMode) {
-    ctx.fillStyle = 'rgba(200,200,255,0.60)';
-    ctx.font      = '9px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(74,84,150,0.85)';
+    ctx.font      = '9px "DM Sans", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('— R   ╌╌ |X|', M.left + 6, M.top + 14);
   }
@@ -2501,8 +2704,8 @@ function drawDipole() {
 
   // Wire length annotation (top-right)
   const lenStr = `Wire: ${totalLen.toFixed(1)} m${dipoleLen === null ? ' (auto λ/2)' : ''}`;
-  ctx.fillStyle = '#3a4252';
-  ctx.font      = '9px system-ui, sans-serif';
+  ctx.fillStyle = '#94a08f';
+  ctx.font      = '9px "DM Sans", system-ui, sans-serif';
   ctx.textAlign = 'right';
   ctx.fillText(lenStr, M.left + plotW - 4, M.top + 13);
 
@@ -2538,23 +2741,10 @@ function updateDipoleInspectPanel() {
     let zoneHtml = '';
 
     zoneMatches.forEach(dz => {
-      const { ratio, zRef } = getDipoleZoneParams(dz);
-      const Za     = { R: Zc.R / ratio, X: Zc.X / ratio };
-      const mmEff  = mismatchEffComplex(Zc, zRef);
-      let tunerEff = 1.0, tunerDesc = '';
-      if (tunerEnabled) {
-        const p   = getTunerParams();
-        const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
-        if (sol.matched) {
-          let L_uH = 0;
-          if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
-          if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
-          tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
-          tunerDesc = ` tuner ${Math.round(tunerEff * 100)}%`;
-        } else {
-          tunerDesc = ' no tuner match';
-        }
-      }
+      const { ratio } = getDipoleZoneParams(dz);
+      const ch        = matchChain(Zc, ratio, dz.xfrmrEff, band.freq);
+      const mmEff     = ch.mmEff, tunerEff = ch.tunerEff;
+      const tunerDesc = !tunerEnabled ? '' : (ch.sol ? ` tuner ${Math.round(tunerEff * 100)}%` : ' no tuner match');
       const total  = Math.round(mmEff * dz.xfrmrEff * tunerEff * 100);
       const losses = [`mismatch ${Math.round(mmEff * 100)}%`, `xfrmr ${Math.round(dz.xfrmrEff * 100)}%`];
       if (tunerEnabled) losses.push(tunerDesc.trim());
@@ -2574,13 +2764,6 @@ function updateDipoleInspectPanel() {
       `</div>`;
   });
 
-  // OCF warning — model overestimates feedpoint Z by ~2–3× outside the centre region.
-  if (Math.abs(pos - 0.5) > 0.10) {
-    html += `<div class="ip-ocf-note">` +
-      `⚠ Off-centre feed — model overestimates Z (parallel-stub approx., no mutual coupling).<br>` +
-      `Real Windom at 33%: ~120–200 Ω · Zone boundaries are approximate guides only.` +
-      `</div>`;
-  }
   panel.innerHTML = html;
   panel.classList.add('show');
 }
@@ -2600,7 +2783,7 @@ function updateSweetSpotsTable() {
       const Zc   = calcZcomplex(centre, band.freq);
       const zone = ZONES.find(z => inZone(Zc, z, band.freq));
       if (!zone) return '';
-      const eff = Math.round(mismatchEffComplex(Zc, zone.zRef) * zone.xfrmrEff * 100);
+      const eff = Math.round(matchChain(Zc, zone.ratio, zone.xfrmrEff, band.freq).total * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
              `<span class="ss-zone" style="color:${zone.text}">${zone.label}&nbsp;~${eff}%</span>`;
     }).filter(Boolean).join(' &nbsp;');
@@ -2641,8 +2824,7 @@ function updateDipSweetSpotsTable() {
       const Zc  = calcDipoleZ(centre, totalLen, band.freq);
       const dz  = DIPOLE_ZONES.find(z => z.on && inDipoleZone(Zc, z, band.freq));
       if (!dz) return '';
-      const { zRef } = getDipoleZoneParams(dz);
-      const eff = Math.round(mismatchEffComplex(Zc, zRef) * dz.xfrmrEff * 100);
+      const eff = Math.round(matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, band.freq).total * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
              `<span class="ss-zone" style="color:${dz.text}">${dz.label}&nbsp;~${eff}%</span>`;
     }).filter(Boolean).join(' &nbsp;');
@@ -2695,23 +2877,9 @@ function updateInspectPanel() {
     const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
     let zoneHtml = '';
     zoneMatches.forEach(z => {
-      const Za      = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
-      const mmEff   = mismatchEffComplex(Zc, z.zRef);
-      let tunerEff  = 1.0;
-      let tunerDesc = '';
-      if (tunerEnabled) {
-        const p   = getTunerParams();
-        const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
-        if (sol.matched) {
-          let L_uH = 0;
-          if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
-          if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
-          tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
-          tunerDesc = ` tuner ${Math.round(tunerEff * 100)}%`;
-        } else {
-          tunerDesc = ' no tuner match';
-        }
-      }
+      const ch        = matchChain(Zc, z.ratio, z.xfrmrEff, band.freq);
+      const mmEff     = ch.mmEff, tunerEff = ch.tunerEff;
+      const tunerDesc = !tunerEnabled ? '' : (ch.sol ? ` tuner ${Math.round(tunerEff * 100)}%` : ' no tuner match');
       const total  = Math.round(mmEff * z.xfrmrEff * tunerEff * coilEff * 100);
       const losses = [
         `mismatch ${Math.round(mmEff * 100)}%`,
@@ -2993,8 +3161,7 @@ function setupHover() {
         const activeDZ = DIPOLE_ZONES.filter(dz => dz.on);
         const tags = activeDZ.filter(dz => inDipoleZone(Zc, dz, band.freq))
           .map(dz => {
-            const { zRef } = getDipoleZoneParams(dz);
-            const eff = Math.round(mismatchEffComplex(Zc, zRef) * dz.xfrmrEff * 100);
+            const eff = Math.round(matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, band.freq).total * 100);
             return `<span class="tt-tag" style="color:${dz.text}">${dz.label} ~${eff}%</span>`;
           }).join(' ');
         html +=
@@ -3006,14 +3173,6 @@ function setupHover() {
           (tags || '') +
           `</div>`;
       });
-      // OCF warning: model overestimates feedpoint Z by ~2–3× outside the centre region.
-      // Threshold: > 10 pp from centre (i.e. pos < 40% or pos > 60%).
-      if (Math.abs(pos - 0.5) > 0.10) {
-        html += `<div class="tt-ocf-note">` +
-          `⚠ OCF position — model overestimates Z (parallel-stub approx. ignores mutual coupling).<br>` +
-          `Real Windom at 33%: ~120–200 Ω &nbsp;·&nbsp; zone boundaries are approximate.` +
-          `</div>`;
-      }
       tooltip.innerHTML  = html;
       tooltip.style.display = 'block';
       const tx = e.clientX + 14, ty = e.clientY - 10;
@@ -3027,7 +3186,7 @@ function setupHover() {
     const L = pxToL(cx, xRange, W);
 
     const cpHeader = cpEnabled
-      ? ` <span style="color:#c070ff;font-size:0.68rem">+ CP ${cpLengthM}m</span>`
+      ? ` <span style="color:#8a56c2;font-size:0.68rem">+ CP ${cpLengthM}m</span>`
       : '';
     let html = `<div class="tt-title">Wire length: ${formatLength(L)}${cpHeader}</div>`;
 
@@ -3068,45 +3227,44 @@ function setupHover() {
       // but none matched. Covers both SWR-gate and Q-gate rejection.
       let tunerRejectNote = '';
       if (tunerEnabled && zoneMatches.length === 0 && ZONES.some(z => z.on)) {
-        tunerRejectNote = `<span style="color:#6e7681;font-size:0.62rem;display:block;margin-left:14px">` +
+        tunerRejectNote = `<span style="color:#8a9684;font-size:0.62rem;display:block;margin-left:14px">` +
           `Match unlikely — required tuner Q too high</span>`;
       }
 
       const zoneTags = zoneMatches
         .map(z => {
-          const Za = { R: Zc.R / z.ratio, X: Zc.X / z.ratio };
+          const ch = matchChain(Zc, z.ratio, z.xfrmrEff, band.freq);
+          const Za = ch.Za;
 
           // When tuner is on, append solved L-network topology, components, and efficiency
-          let tunerEff  = 1.0;
-          let tunerNote = '';
+          const tunerEff = ch.tunerEff;
+          let tunerNote  = '';
           if (tunerEnabled) {
-            const p   = getTunerParams();
-            const sol = solveL(Za, band.freq, p.Lmax, p.Cmax);
-            if (sol.matched) {
+            const sol = ch.sol;
+            if (sol) {
               const fmt = el => el.type === 'none' ? '' : `${el.val} ${el.unit} ${el.type}`;
               const parts = [fmt(sol.seriesEl), fmt(sol.shuntEl)].filter(Boolean);
               // Inductor-Q loss: sum all inductors in the L-network
               let L_uH = 0;
               if (sol.seriesEl.type === 'L') L_uH += sol.seriesEl.val;
               if (sol.shuntEl.type  === 'L') L_uH += sol.shuntEl.val;
-              tunerEff  = estimateTunerEff(band.freq, L_uH, Za.R);
               // Match Q shown for transparency (explains why hard matches lose more)
               const Rl_    = Math.max(1e-6, Za.R);
               const ratio_ = Math.max(Rl_, 50) / Math.min(Rl_, 50);
               const Qstr   = L_uH > 0 ? ` &nbsp; Q≈${Math.sqrt(Math.max(0, ratio_ - 1)).toFixed(1)}` : '';
               tunerNote = parts.length
-                ? `<span style="color:#2bd6c8;font-size:0.63rem;display:block;margin-left:14px">` +
+                ? `<span style="color:#1b8f88;font-size:0.63rem;display:block;margin-left:14px">` +
                   `${sol.topology}: ${parts.join(' + ')}` +
                   ` &nbsp; tuner eff ${Math.round(tunerEff * 100)} %${Qstr}</span>`
                 : '';
             } else {
-              tunerNote = `<span style="color:#ff7043;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
+              tunerNote = `<span style="color:#b5532a;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
             }
           }
 
           // coilEff and tunerEff fold into the delivered-power estimate (tooltip display only)
-          const eff    = Math.round(mismatchEffComplex(Zc, z.zRef) * z.xfrmrEff * tunerEff * coilEff * 100);
-          const swrVal = swrAtRadio(Zc, z, band.freq).toFixed(1);
+          const eff    = Math.round(ch.total * coilEff * 100);
+          const swrVal = ch.swr.toFixed(1);
 
           return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
                  `<span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>` +
@@ -3117,7 +3275,7 @@ function setupHover() {
       // Show R + jX alongside |Z| so users can see the complex impedance
       const sign   = Zc.X >= 0 ? '+' : '−';
       const Xabs   = Math.abs(Zc.X);
-      const rxNote = `<span style="color:#484f58;font-size:0.75em">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>`;
+      const rxNote = `<span style="color:#8a9684;font-size:0.75em">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>`;
 
       const cpNote = Zwire !== null
         ? `<span class="tt-cp-note">wire: ${formatZ(Zwire)}</span>`
@@ -3139,8 +3297,8 @@ function setupHover() {
 
     // Footnote — only when at least one band lands in a matching zone
     if (anyZoneHit) {
-      html += `<div style="font-size:0.62rem;color:#484f58;margin-top:5px;` +
-              `border-top:1px solid #30363d;padding-top:3px">` +
+      html += `<div style="font-size:0.62rem;color:#8a9684;margin-top:5px;` +
+              `border-top:1px solid #dfe5de;padding-top:3px">` +
               `% = matching + transformer efficiency only — power <em>delivered to the feedpoint</em>, ` +
               `not power radiated. Radiation efficiency (how much actually leaves as RF) is separate: ` +
               `typically 70–90 % at EFHW resonance (49:1 zone), 30–60 % at λ/4 anti-resonance (1:1 zone), ` +
@@ -3570,6 +3728,11 @@ setupMode();
 setupDipole();
 window.addEventListener('resize', resizeAndDraw);
 resizeAndDraw();
+// Visual only: repaint the canvas labels once the web fonts have loaded.
+if (document.fonts && document.fonts.load) {
+  Promise.all(['400 11px "DM Sans"', '700 10px "DM Sans"', '400 11px "IBM Plex Mono"']
+    .map(f => document.fonts.load(f))).then(() => draw()).catch(() => {});
+}
 </script>
 </body>
 </html>

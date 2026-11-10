@@ -21,7 +21,7 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 - **★ Sweet Spots overlay** — highlights wire lengths where multiple bands simultaneously fall inside matching zones; adjustable minimum-band threshold
 - **Sweet Spots results table** — lists every sweet-spot cluster with its centre length, usable range, and per-band zone/SWR
 - **Inspect pin** — draggable vertical line (or type a length) that shows the impedance and SWR for every active band at that exact wire length
-- **Counterpoise modelling** — shows the effect of an added counterpoise wire on effective feedpoint impedance; guidance note shown on enable (λ/4 is most stable; short = capacitive, long = inductive)
+- **Counterpoise modelling** — wire and counterpoise are treated as the two arms of one antenna; ghost curves show the wire alone for comparison
 - **ITU Region 1 allocation width** — toggle that scales each band's curve thickness proportionally to its ITU R1 bandwidth
 
 ### Dipole mode
@@ -85,68 +85,69 @@ The loading coil code remains in the source for future reference and may form th
 
 The tool is intentionally educational rather than a full EM simulator. Real antenna impedance is also shaped by height above ground, nearby objects, soil conductivity, and wire geometry.
 
----
-
-### 1 — End-Fed Antenna Feedpoint Impedance
-
-The wire is modelled as a **lossy open-circuit transmission line**. For a wire of length *L* at frequency *f*:
-
-```
-β  = 2πf / (c · VF)          phase constant (rad/m)
-α  = α₀ · (f / f₀)           attenuation constant (Np/m), scales with frequency
-
-D  = cosh(2αL) − cos(2βL)    common denominator
-
-R  = Z₀ · sinh(2αL) / D      resistive part  (Ω)
-X  = −Z₀ · sin(2βL) / D      reactive part   (Ω)   (−: coth imaginary part is negative)
-
-Z₀ = 450 Ω  (effective characteristic impedance of a typical HF wire)
-```
-
-**Harmonic-order correction** — attenuation is reduced at higher harmonics:
-
-```
-α_eff  = α / √n_eff        n_eff = max(1,  2L / λ_eff)
-```
-
-Anti-resonance dips are clamped to Z_MIN = 25 Ω and peaks to Z_MAX = 5 000 Ω.
+Since v3.0.0 the wire model has no fitted peak values: its loss term is set equal to the wire's radiation resistance. Against NEC-2 (1 mm bare wire, 40/20/15/10 m) the typical (RMS) error in |Z| is about **4 %** for an end-fed wire against ideal ground, **12 %** for off-centre-fed wires and **10 %** for an end-fed wire with a counterpoise. See [validation/nec_comparison_v3.md](validation/nec_comparison_v3.md).
 
 ---
 
-### 2 — Dipole Feedpoint Impedance
+### 1 — Wire Model (End-Fed)
 
-A dipole of total length *L* with feedpoint at position *p* (0.0 = one end, 1.0 = other end) is modelled as two open-circuit stubs in parallel:
-
-- Left arm: `La = p × L`
-- Right arm: `Lb = (1 − p) × L`
-- Feedpoint impedance: `Z_feed = Za ∥ Zb` (complex parallel combination)
-
-Each arm uses the same coth formula with dipole-calibrated constants:
+Each conductor is an **open-ended transmission line whose loss is the radiation**. For a wire of length *L* at frequency *f*:
 
 ```
-Z0_DIP  = 600 Ω
-α       = K / λ_eff   (Np/m)     K = 0.8806 (dimensionless)
-α_eff   = α / √n_eff             n_eff = max(1, 2·L_arm / λ_eff)
+θ   = 2πL / (λ · VF) + 0.015·π      electrical length (rad)
+Z₀  = 60 · ln(0.22 · λ / a) · VF    average characteristic impedance, a = wire radius (0.5 mm)
+a   = atanh(R_rad(θ) / Z₀)          line loss chosen so the line dissipates what the wire radiates
+
+Z   = Z₀ · coth(a + jθ)
+R   =  Z₀ · sinh(2a) / D            D = cosh(2a) − cos(2θ)
+X   = −Z₀ · sin(2θ)  / D
 ```
 
-**Why `α = K / λ_eff`?** For a resonant quarter-wave arm, `L_arm = λ_eff / 4`, so:
+- **VF** is the slowing caused by the insulation only (bare wire = 1.00).
+- **0.015·π** is the open-end effect: a fixed extra electrical length per open end, not a percentage of the wire. Harmonic resonances are therefore *not* exact multiples of the fundamental length: the n-th half-wave point is at `(n − 0.015) · VF · λ/2`.
+- **R_rad(θ)** is the induced-EMF radiation resistance of a sinusoidal standing-wave current, referred to the current maximum. For a wire against an ideal ground it has a closed form in sine and cosine integrals (half the classic dipole result).
+
+What falls out, with no calibration constants:
+
+| Length | Model | Why |
+|--------|-------|-----|
+| λ/4 | ≈ 36 Ω | R ≈ R_rad |
+| 3λ/4, 5λ/4 | ≈ 53 Ω, 60 Ω | R_rad grows slowly with length |
+| λ/2 (40 m) | ≈ 3.4 kΩ | R ≈ Z₀² / R_rad |
+| λ, 3λ/2 … | falls slowly | R_rad of the longer wire is larger |
+
+R is clamped to 5 000 Ω and the plotted |Z| to 25 Ω.
+
+---
+
+### 2 — Dipole and Off-Centre Feed
+
+A wire of total length *L* fed at position *p* (0.0 = one end, 1.0 = other end) has two arms, `La = p × L` and `Lb = (1 − p) × L`. The generator sits between them, so the arms are **in series**:
 
 ```
-α · L_arm  =  (K / λ_eff) · (λ_eff / 4)  =  K / 4   — constant, independent of frequency or VF
+Z_feed = Z₀·coth(a_A + jθ_A) + Z₀·coth(a_B + jθ_B)
 ```
 
-This means the centre-fed λ/2 model gives the same impedance at every HF band and at any velocity factor setting. K is chosen so that the centre result lands at **R ≈ 65 Ω** (within the 1:1 direct-feed window):
+The loss terms come from the radiation resistance of the actual two-arm current, including the coupling between the arms:
 
 ```
-K  =  4 · arctanh(2 · Z_target / Z0_DIP)
-   =  4 · arctanh(130 / 600)  ≈  0.8806
+R_feed ≈ R_AA / sin²θ_A + R_BB / sin²θ_B + 2·R_AB / (sinθ_A · sinθ_B)
+
+tanh(a_A) = (R_AA + T·R_AB) / Z₀      T = 2·sinθ_A·sinθ_B / (sin²θ_A + sin²θ_B)
+tanh(a_B) = (R_BB + T·R_AB) / Z₀
 ```
 
-> **This is a simplified standing-wave / feedpoint-position model, not a full EM solver.** It is normalised to give a realistic centre-fed λ/2 baseline. OCF results are approximate and installation-dependent (height above ground, nearby conductors, and feed-line common-mode all affect real antenna impedance).
+R_AA, R_BB and R_AB are evaluated numerically from the far-field power integral of the two sinusoidal arm currents (cached, so redraws are instant). The weight *T* reproduces the R_feed expression above for low loss and stays finite where one arm is a multiple of λ/2.
 
-**Calibration:** centre-fed λ/2 dipole → R ≈ 65 Ω, X ≈ 0 at every HF band.
+Results:
 
-Edge case: feedpoint at 0% or 100% (end-fed) — one arm has zero length, feedpoint impedance equals the other arm alone (EFHW-like high impedance).
+- Centre-fed λ/2 → **≈ 73 Ω**, X ≈ 0 (free space).
+- A resonant wire stays resonant wherever it is fed; on the fundamental `R(p) ≈ R_centre / sin²(π·p)` — about 100 Ω at 33 %, 140 Ω at 25 %.
+- Centre-fed full-wave → several kΩ.
+
+**Auto wire length** is the resonant half-wave: two λ/4 arms, each with its end effect.
+
+> Versions before v3.0.0 combined the two arms in parallel, which overstated off-centre impedance by a factor of 2–3 (≈ 400 Ω at 33 % instead of ≈ 100 Ω).
 
 **Common-mode risk** (indicated by the colour strip at the bottom of the graph):
 
@@ -194,20 +195,23 @@ Dipole zones:
 
 ### 5 — ATU L-network Matching and Efficiency
 
-When the Antenna Tuner is on, an analytic L-network solver attempts to match the transformer output to 50 Ω. Two topologies are tried (series→shunt and shunt→series). Inductor-Q loss model:
+When the Antenna Tuner is on, an analytic L-network solver attempts to match the transformer output to 50 Ω. Two topologies are tried (series→shunt and shunt→series).
+
+Tuner efficiency is computed on the solved circuit: every inductor gets a series loss resistance and capacitors are treated as lossless.
 
 ```
-Rs = 2π · f · L / Q          Q = 120
-kI² = max(R_load, 50) / min(R_load, 50)
-Rs_eff = Rs × kI²
-η_tuner = R_load / (R_load + Rs_eff)    clamped [0.30, 0.98]
+ESR_L   = X_L / Q                       Q = 120
+η_tuner = P_load / P_in                 evaluated on the actual network
 ```
 
 **Total delivered-power efficiency:**
 
 ```
-η_total = η_mismatch × η_transformer × η_tuner
+tuner finds a match:   η_total = η_transformer × η_tuner        (radio sees 50 Ω — no mismatch loss)
+otherwise:             η_total = η_mismatch × η_transformer
 ```
+
+All displays (SWR strips, sweet spots, tooltip, inspect panel) read from the same calculation.
 
 **Q-based feasibility gate (`canTune`):**
 
@@ -232,13 +236,15 @@ tooltip shows *"Match unlikely — required tuner Q too high"* as a subtle hint.
 
 ### 6 — Counterpoise Model (End-Fed mode)
 
-When **Show effect** is enabled, a counterpoise is modelled as a series stub:
+When **Show effect** is enabled, the wire and the counterpoise are the two arms of one antenna — the same series model as the dipole mode fed off-centre, including the coupling between the arms:
 
 ```
-Z_feedpoint = Z_wire(L, f) + Z_counterpoise(L_cp, f)
+Z_feedpoint = Z_wire(L) + Z_counterpoise(L_cp)
 ```
 
-This approximation is least accurate near λ/4 counterpoise lengths where ground-plane physics dominate. The ghost curves shown are illustrative rather than definitive.
+Without a counterpoise the wire is modelled against an ideal ground. The counterpoise is assumed straight, in line with the wire and in free space; one lying on the ground, or a coax shield acting as counterpoise, will be detuned and lossier. The ghost curves (wire alone) are shown for comparison.
+
+At half-wave (49:1) lengths a short counterpoise of about 0.05 λ is enough. At low-impedance lengths the counterpoise is half of the antenna and its length moves the match a lot.
 
 ---
 
@@ -255,4 +261,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by Gunnar B. Guðlaugsson (TF5NN) · v2.6.0*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v3.0.0*

@@ -5,6 +5,103 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v3.0.0] — 2026-11-10
+
+A new antenna model, three tuner fixes and a new look. The numbers the tool
+shows change in this release. Full comparison with NEC-2:
+`validation/nec_comparison_v3.md`.
+
+### Changed — Antenna model rebuilt around radiation resistance
+
+- **Dipole / off-centre feed: arms now add in series.** They were combined in
+  parallel, which overstated off-centre impedance by a factor of 2–3
+  (≈ 400 Ω at 33 % on the fundamental; NEC and the new model give ≈ 100 Ω).
+  The "model overestimates Z" warnings are removed.
+- **Line loss equals radiated power.** The fitted attenuation constant, the
+  3 000 Ω peak calibration, the `1/√n` harmonic rule and the dipole constant
+  `K = 0.8806` are gone. The loss term is set from the induced-EMF radiation
+  resistance of the standing-wave current (closed form for a single wire,
+  numerical far-field integral with arm-to-arm coupling for two arms).
+- **End effect is a fixed length, not a percentage.** Each open end adds about
+  1.5 % of a half-wave. Harmonic half-wave points are now at
+  `(n − 0.015)·VF·λ/2` instead of exact multiples of the fundamental.
+  The velocity-factor slider now means insulation only (bare wire = 1.00); its
+  default stays at 0.975.
+- **Z₀ follows wire size and band:** `Z₀ = 60·ln(0.22·λ/a)·VF` for 1 mm wire
+  (about 590 Ω on 40 m, 510 Ω on 10 m) instead of a fixed 450 Ω / 600 Ω.
+- **Counterpoise** uses the same two-arm model as the dipole mode instead of
+  adding an independent stub. The on-screen guidance no longer recommends λ/4
+  as a general rule.
+- Resonance markers and the dipole "auto λ/2" length follow the new resonant
+  lengths.
+
+Typical (RMS) error in |Z| against NEC-2, v2.6.0 → v3.0.0: end-fed wire
+36 % → 4 %; off-centre-fed 144 % → 12 %; end-fed with counterpoise 22 % → 10 %.
+
+### Fixed — Tuner solver returned wrong circuits (series→shunt topology)
+
+`solveL()` gave the shunt element the wrong sign in its first topology, so the
+network reinforced the reactance it was meant to cancel while still reporting
+a 1:1 match. Example: 25 Ω at 7.15 MHz returned two inductors; that circuit
+actually presents 10 + j20 Ω (SWR 5.8:1). All 2 637 solutions in the new check
+now rebuild to 50 Ω and respect the L/C limits.
+
+### Fixed — Delivered power kept the mismatch loss after a successful match
+
+With the tuner on, the inspect panel and tooltip multiplied the *unmatched*
+mismatch factor by the tuner efficiency (a matched 200 Ω load showed 63 %).
+A matched load now shows transformer × tuner loss only (98.6 % in that case).
+The sweet-spot tables previously left tuner loss out; every display now reads
+from one function, `matchChain()`.
+
+### Fixed — Tuner loss overstated below 50 Ω
+
+The loss estimate scaled inductor loss by the impedance ratio in every case.
+Efficiency is now computed on the solved circuit with inductor Q = 120
+(12.5 Ω load at 7.15 MHz: 88 % → 98.6 %; part of the old figure came from the
+wrong circuit above). The fixed 30 %–98 % clamp is removed.
+
+### Fixed — X-range drop-downs threw an error
+
+The Start/End selectors under the graph called `invalidateCaches()`, which was
+never defined, so the graph did not redraw. The function now exists.
+
+### Changed — 1:1 option moved to the main Matching Zones row
+
+The End-Fed **1:1 Balun** toggle was hidden under *Advanced / Experimental*.
+It now sits beside 49:1 and 9:1 (off by default, as before).
+
+### Changed — New light theme matching the sat-track (Northbound) project
+
+- Paper background, ink text, sage-green accents, DM Sans for text and
+  IBM Plex Mono for numbers. Fonts load from Google Fonts; offline, the page
+  falls back to system fonts.
+- Mode switcher drawn as underlined tabs; version label as a mono chip.
+- Graph redrawn for a light surface. Band colours re-stepped for a light
+  background, keeping each band's hue family; all 11 clear 3:1 contrast against
+  the surface and the colour-blind separation check between neighbouring bands.
+- Previously unstyled elements now follow the theme (drop-downs, dipole
+  inputs, tuner hint line, one notes heading). The tuner hint is now small
+  muted text, so the control groups may wrap onto fewer rows.
+
+### Added — Reproducible validation
+
+- `validation/nec_reference.py` generates the NEC-2 reference data
+  (`validation/data/nec_reference.json`).
+- `validation/check_v3.mjs` runs the page's own functions against that data
+  and rebuilds every tuner solution from ideal parts.
+- `validation/nec_comparison_v3.md` reports the results and their limits.
+
+### Not changed
+
+- Sweet spots still count a band if *any* enabled transformer matches it, so a
+  listed length can need different transformers on different bands (the table
+  shows which).
+- Ground, height, bends and the transformer's own behaviour are still outside
+  the model.
+
+---
+
 ## [v2.6.0] — 2026-03-24
 
 ### Fixed — `inDipoleZone` used `<=` while `inZone` used `<`
