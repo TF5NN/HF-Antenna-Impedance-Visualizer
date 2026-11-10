@@ -693,6 +693,10 @@ header h1 { font-weight: 650; letter-spacing: -0.3px; }
         <input type="number" id="ssMinInput" value="2" min="1" max="11" step="1">
         <span class="cp-unit">bands &nbsp; SWR≤</span>
         <input type="number" id="ssSWRInput" value="2.0" min="1.0" max="10.0" step="0.1">
+        <button class="zone-btn" id="ssMixBtn" style="--zc:#b08d1e;font-size:0.70rem;padding:3px 9px"
+                title="Off: every counted band must match through one and the same transformer. On: each band may use any of the selected transformers.">
+          <span class="zone-swatch"></span>Mix transformers
+        </button>
       </div>
     </div>
   </div>
@@ -839,6 +843,10 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         <input type="number" id="dipSsMinInput" value="1" min="1" max="11" step="1">
         <span class="cp-unit">bands &nbsp; SWR≤</span>
         <input type="number" id="dipSsSWRInput" value="2.0" min="1.0" max="10.0" step="0.1">
+        <button class="zone-btn" id="dipSsMixBtn" style="--zc:#b08d1e;font-size:0.70rem;padding:3px 9px"
+                title="Off: every counted band must match through one and the same transformer. On: each band may use any of the selected transformers.">
+          <span class="zone-swatch"></span>Mix transformers
+        </button>
       </div>
     </div>
   </div>
@@ -1155,6 +1163,11 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
       <p style="margin-top:6px">
         This is particularly useful for identifying a single wire length that covers
         multiple bands without retuning — the classic goal of a multi-band EFHW.
+        By default every counted band must match through <strong>one and the same
+        transformer</strong>, so a listed length is something you can build without
+        swapping transformers; each transformer is searched separately and the table
+        says which one a row belongs to. Turn on <em>Mix transformers</em> to count a
+        band when any of the selected transformers matches it.
         Note that sweet spots depend on which zones are toggled on: enabling only
         the 49:1 Unun zone will show lengths where two or more bands are
         simultaneously near half-wave resonance, which is a strong multi-band
@@ -1634,13 +1647,45 @@ const SWEET_SPOT_SCAN_POINTS = 800; // resolution of sweet-spot X-axis sweep
 let sweetSpotsOn    = false;
 let sweetSpotsMin   = 1;
 let sweetSpotsSWR   = 2.0;  // uniform SWR threshold at radio for sweet-spot counting
-let sweetSpotsCache = null; // null = stale; [[L1,L2], ...] wire-length segments when valid
+let sweetSpotsMixed = false; // false: all counted bands through ONE transformer; true: any enabled transformer per band
+let sweetSpotsCache = null; // null = stale; [[L1,L2,zone], ...] wire-length segments when valid (zone = null when mixed)
 let swrStripCache   = null; // null = stale; [[[L1,L2], ...], ...] per-zone SWR<2 segments
 
 let dipSweetSpotsOn    = false;
 let dipSweetSpotsMin   = 1;
 let dipSweetSpotsSWR   = 2.0;  // SWR threshold for dipole sweet-spot scan
-let dipSweetSpotsCache = null; // null = stale; [[p1,p2], ...] feedpoint-position segments
+let dipSweetSpotsCache = null; // null = stale; [[p1,p2,zone], ...] feedpoint-position segments (zone = null when mixed)
+
+// Sweet-spot scan shared by both modes.
+//   n, xAt(i), xEnd     scan steps, position of step i, last position
+//   zAt(x, band)        feedpoint impedance there
+//   zones               the enabled transformers
+//   swrOf(Zc, zone, f)  SWR at the radio through that transformer
+// Default: every counted band must match through ONE AND THE SAME transformer, so a
+// result is something you can actually build.  Each transformer is scanned on its
+// own and a segment remembers which one it belongs to: [x1, x2, zone].
+// With sweetSpotsMixed on, a band counts if ANY enabled transformer matches it;
+// those segments carry zone = null.
+function scanSweetSpots(n, xAt, xEnd, bands, zAt, zones, swrOf, swrLimit, minBands) {
+  const groups = sweetSpotsMixed ? [zones] : zones.map(z => [z]);
+  const state  = groups.map(() => ({ open: false, start: 0 }));
+  const segs   = [];
+  for (let i = 0; i <= n; i++) {
+    const x  = xAt(i);
+    const Zs = bands.map(b => zAt(x, b));
+    groups.forEach((g, gi) => {
+      let hits = 0;
+      bands.forEach((b, bi) => { if (g.some(z => swrOf(Zs[bi], z, b.freq) < swrLimit)) hits++; });
+      const st = state[gi];
+      if (hits >= minBands && !st.open) { st.start = x; st.open = true; }
+      else if (hits < minBands && st.open) { segs.push([st.start, x, sweetSpotsMixed ? null : g[0]]); st.open = false; }
+    });
+  }
+  state.forEach((st, gi) => {
+    if (st.open) segs.push([st.start, xEnd, sweetSpotsMixed ? null : groups[gi][0]]);
+  });
+  return segs.sort((a, b) => a[0] - b[0]);
+}
 
 // Drop every cached scan (x-range selectors use this)
 function invalidateCaches() {
@@ -2108,19 +2153,10 @@ function draw() {
     // Compute once; reuse until state changes (bands, zones, VF, counterpoise)
     if (!sweetSpotsCache) {
       const dL = (xRange.xMax - xRange.xMin) / SWEET_SPOT_SCAN_POINTS;
-      const segs = [];
-      let inSpot = false, spotStartL = 0;
-      for (let i = 0; i <= SWEET_SPOT_SCAN_POINTS; i++) {
-        const L = xRange.xMin + i * dL;
-        const hits = ab.filter(band => {
-          const Zc = calcZcomplex(L, band.freq);
-          return ZONES.some(z => z.on && swrAtRadio(Zc, z, band.freq) < sweetSpotsSWR);
-        }).length;
-        if (hits >= sweetSpotsMin && !inSpot) { spotStartL = L; inSpot = true; }
-        else if (hits < sweetSpotsMin && inSpot) { segs.push([spotStartL, L]); inSpot = false; }
-      }
-      if (inSpot) segs.push([spotStartL, xRange.xMax]);
-      sweetSpotsCache = segs;
+      sweetSpotsCache = scanSweetSpots(
+        SWEET_SPOT_SCAN_POINTS, i => xRange.xMin + i * dL, xRange.xMax, ab,
+        (L, band) => calcZcomplex(L, band.freq),
+        ZONES.filter(z => z.on), swrAtRadio, sweetSpotsSWR, sweetSpotsMin);
     }
 
     sweetSpotsCache.forEach(([L1, L2]) => {
@@ -2476,19 +2512,10 @@ function drawDipole() {
   const DIP_SS_SCAN = 500;
   if (dipSweetSpotsOn && ab.length >= dipSweetSpotsMin) {
     if (!dipSweetSpotsCache) {
-      const segs = [];
-      let inSpot = false, spotStart = 0;
-      for (let i = 0; i <= DIP_SS_SCAN; i++) {
-        const pos  = 0.01 + (i / DIP_SS_SCAN) * (xEnd - 0.01);
-        const hits = ab.filter(band => {
-          const Zc = calcDipoleZ(pos, totalLen, band.freq);
-          return DIPOLE_ZONES.some(dz => dz.on && swrAfterDipoleZone(Zc, dz, band.freq) < dipSweetSpotsSWR);
-        }).length;
-        if (hits >= dipSweetSpotsMin && !inSpot) { spotStart = pos; inSpot = true; }
-        else if (hits < dipSweetSpotsMin && inSpot) { segs.push([spotStart, pos]); inSpot = false; }
-      }
-      if (inSpot) segs.push([spotStart, xEnd]);
-      dipSweetSpotsCache = segs;
+      dipSweetSpotsCache = scanSweetSpots(
+        DIP_SS_SCAN, i => 0.01 + (i / DIP_SS_SCAN) * (xEnd - 0.01), xEnd, ab,
+        (pos, band) => calcDipoleZ(pos, totalLen, band.freq),
+        DIPOLE_ZONES.filter(dz => dz.on), swrAfterDipoleZone, dipSweetSpotsSWR, dipSweetSpotsMin);
     }
 
     dipSweetSpotsCache.forEach(([p1, p2]) => {
@@ -2777,11 +2804,14 @@ function updateSweetSpotsTable() {
   }
   const ab = getActiveBands();
   let html = '<div class="ss-header">★ Sweet spot wire lengths</div>';
-  sweetSpotsCache.forEach(([L1, L2]) => {
+  sweetSpotsCache.forEach(([L1, L2, oneZone]) => {
     const centre = (L1 + L2) / 2;
     const bandTags = ab.map(band => {
       const Zc   = calcZcomplex(centre, band.freq);
-      const zone = ZONES.find(z => inZone(Zc, z, band.freq));
+      // One transformer: list the bands it matches.  Mixed: first transformer that matches.
+      const zone = oneZone
+        ? (swrAtRadio(Zc, oneZone, band.freq) < sweetSpotsSWR ? oneZone : null)
+        : ZONES.find(z => inZone(Zc, z, band.freq));
       if (!zone) return '';
       const eff = Math.round(matchChain(Zc, zone.ratio, zone.xfrmrEff, band.freq).total * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
@@ -2817,12 +2847,14 @@ function updateDipSweetSpotsTable() {
   const totalLen = getDipoleLen();
   let html = '<div class="ss-header">★ Sweet spot feedpoint positions</div>';
 
-  dipSweetSpotsCache.forEach(([p1, p2]) => {
+  dipSweetSpotsCache.forEach(([p1, p2, oneZone]) => {
     const centre = (p1 + p2) / 2;
     const pct    = v => `${Math.round(v * 100)}%`;
     const bandTags = ab.map(band => {
       const Zc  = calcDipoleZ(centre, totalLen, band.freq);
-      const dz  = DIPOLE_ZONES.find(z => z.on && inDipoleZone(Zc, z, band.freq));
+      const dz  = oneZone
+        ? (swrAfterDipoleZone(Zc, oneZone, band.freq) < dipSweetSpotsSWR ? oneZone : null)
+        : DIPOLE_ZONES.find(z => z.on && inDipoleZone(Zc, z, band.freq));
       if (!dz) return '';
       const eff = Math.round(matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, band.freq).total * 100);
       return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
@@ -3054,6 +3086,17 @@ function setupSweetSpots() {
   swrInp.addEventListener('input', () => {
     const v = parseFloat(swrInp.value);
     if (v >= 1.0) { sweetSpotsSWR = v; invalidateSweetSpots(); draw(); }
+  });
+
+  // "Mix transformers" — one setting shared by End-Fed and Dipole sweet spots
+  const mixBtns = ['ssMixBtn', 'dipSsMixBtn'].map(id => document.getElementById(id)).filter(Boolean);
+  mixBtns.forEach(btn => {
+    btn.onclick = () => {
+      sweetSpotsMixed = !sweetSpotsMixed;
+      mixBtns.forEach(b => b.classList.toggle('on', sweetSpotsMixed));
+      invalidateSweetSpots();
+      draw();
+    };
   });
 }
 

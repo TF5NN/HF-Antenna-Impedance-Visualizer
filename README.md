@@ -18,7 +18,7 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 
 ### End-Fed mode
 - **Three matching zones** — 49:1 Unun, 9:1 Unun + Tuner, 1:1 Balun; colour-shaded on the graph
-- **★ Sweet Spots overlay** — highlights wire lengths where multiple bands simultaneously fall inside matching zones; adjustable minimum-band threshold
+- **★ Sweet Spots overlay** — highlights wire lengths where multiple bands simultaneously fall inside matching zones; adjustable minimum-band threshold. By default every counted band must match through one and the same transformer; **Mix transformers** lets each band use any selected transformer
 - **Sweet Spots results table** — lists every sweet-spot cluster with its centre length, usable range, and per-band zone/SWR
 - **Inspect pin** — draggable vertical line (or type a length) that shows the impedance and SWR for every active band at that exact wire length
 - **Counterpoise modelling** — wire and counterpoise are treated as the two arms of one antenna; ghost curves show the wire alone for comparison

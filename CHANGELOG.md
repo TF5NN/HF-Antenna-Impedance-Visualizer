@@ -92,11 +92,17 @@ It now sits beside 49:1 and 9:1 (off by default, as before).
   and rebuilds every tuner solution from ideal parts.
 - `validation/nec_comparison_v3.md` reports the results and their limits.
 
+### Changed — Sweet spots need one and the same transformer by default
+
+A sweet spot used to count a band if *any* enabled transformer matched it, so
+a "three-band" length could need a 1:1 on one band and a 49:1 on the others.
+Each transformer is now searched on its own and every counted band must match
+through that one transformer. A new **Mix transformers** toggle (shown next to
+the sweet-spot settings in both modes) restores the old any-transformer
+counting.
+
 ### Not changed
 
-- Sweet spots still count a band if *any* enabled transformer matches it, so a
-  listed length can need different transformers on different bands (the table
-  shows which).
 - Ground, height, bends and the transformer's own behaviour are still outside
   the model.
 
