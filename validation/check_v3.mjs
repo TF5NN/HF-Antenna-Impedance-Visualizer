@@ -3,6 +3,10 @@
 //
 // Requires:  npm i playwright   (and a Chromium for it)
 // Run:       node validation/check_v3.mjs
+//
+// Exits non-zero (and so blocks publishing) when the page throws an error, a
+// tuner solution does not rebuild to 50 Ω, or the model drifts outside the
+// LIMITS below.  The "extra" block is informational only.
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -47,6 +51,34 @@ const out = await page.evaluate(ref => {
   o.endFedWithCounterpoise = compare(P, [49, 9, 1]);
   cpEnabled = false;
 
+  // Dipole height over ground, against NEC with average soil (20.2 m wire)
+  P = [];
+  for (const k in ref.height_real) {
+    const [b, h] = k.split('@');
+    dipHeightOn = true; dipHeightM = +h;
+    for (const [p, r, x] of ref.height_real[k]) P.push([calcDipoleZ(p, 20.2, F[b]), { R: r, X: x }]);
+  }
+  dipHeightOn = false;
+  o.dipoleOverGround = compare(P, [1, 4, 6]);
+
+  // Informational extras: other bands, other wire sizes, insulated wire
+  const FX = { ...F, ...ref.wide_hz }, x = {};
+  const mono = (rows, f) => compare(rows.map(([L, r, xx]) => [calcZwireComplex(L, f), { R: r, X: xx }]), [49, 1]);
+  for (const k in ref.wide) x['band ' + k] = mono(ref.wide[k], FX[k]);
+  for (const k in ref.diam) { const [b, r] = k.split('@'); x[`${b}, ${(+r * 2000).toFixed(1)} mm wire (tool assumes 1 mm)`] = mono(ref.diam[k], FX[b]); }
+  for (const b of ['40m', '10m']) {
+    let best = null;
+    for (let v = 0.94; v <= 1.0001; v += 0.0025) {
+      VF = v;
+      const c = mono(ref.ins[b], FX[b]);
+      if (!best || c.rmsErrorPct < best.rmsErrorPct) best = { ...c, bestVelocityFactor: +v.toFixed(4) };
+    }
+    VF = 1.0;
+    best.sheathFormulaVF = +(1 / Math.sqrt(1 + ref.ins.series_l_h_per_m * C / wireZ0(FX[b]))).toFixed(4);
+    x[`${b}, PVC-insulated`] = best;
+  }
+  o.extra = x;
+
   // Tuner: rebuild each returned L-network from ideal parts and see what the radio gets
   function rebuilt(Z, sol) {
     const inv = p => { const d = p.r * p.r + p.i * p.i; return { r: p.r / d, i: -p.i / d }; };
@@ -81,4 +113,21 @@ const out = await page.evaluate(ref => {
 console.log(JSON.stringify(out, null, 2));
 console.log('page errors:', errors.length ? errors : 'none');
 await browser.close();
-process.exit(errors.length || out.tuner.wrong || out.tuner.limitViolations ? 1 : 0);
+
+// Pass/fail limits: [max RMS error %, min zone agreement %]
+const LIMITS = {
+  endFedIdealGround:      [6, 85],
+  offCentreFed:           [16, 80],
+  endFedWithCounterpoise: [14, 65],
+  dipoleOverGround:       [16, 60],
+};
+const failures = [...errors.map(e => 'page error: ' + e)];
+for (const [k, [maxErr, minZone]] of Object.entries(LIMITS)) {
+  const r = out[k];
+  if (r.rmsErrorPct > maxErr)        failures.push(`${k}: RMS error ${r.rmsErrorPct}% > ${maxErr}%`);
+  if (r.zoneAgreementPct < minZone)  failures.push(`${k}: zone agreement ${r.zoneAgreementPct}% < ${minZone}%`);
+}
+if (out.tuner.wrong)           failures.push(`tuner: ${out.tuner.wrong} solutions do not rebuild to 50 Ω`);
+if (out.tuner.limitViolations) failures.push(`tuner: ${out.tuner.limitViolations} solutions exceed the L/C limits`);
+console.log(failures.length ? 'FAILED\n - ' + failures.join('\n - ') : 'ALL CHECKS PASSED');
+process.exit(failures.length ? 1 : 0);

@@ -137,12 +137,96 @@ Delivered power after a successful match, 200 Ω load on a direct feed:
 v2.6.0 reported 63 % (it kept the 64 % mismatch factor of the unmatched load);
 v3.0.0 reports 98.6 %, which is the tuner's own loss with inductor Q = 120.
 
+## Update for v3.1.0 (2026-11-11)
+
+Everything above describes v3.0.0. v3.1.0 changed one thing in the model (the
+end effect) and added dipole height. The comparison was also widened.
+
+### End effect
+
+Fitting the end effect separately for each band and wire size showed a clear
+trend: the thinner the wire is compared with the wavelength, the smaller the
+end effect.
+
+| Case | ln(λ/a) | Best-fit end effect | v3.0.0 (fixed) | v3.1.0 law |
+|------|--------:|--------------------:|---------------:|-----------:|
+| 160 m, 1 mm | 12.66 | 0.009 | 0.015 | 0.0084 |
+| 80 m, 1 mm | 12.01 | 0.010 | 0.015 | 0.0104 |
+| 40 m, 1 mm | 11.34 | 0.012 | 0.015 | 0.0124 |
+| 20 m, 1 mm | 10.65 | 0.014 | 0.015 | 0.0145 |
+| 10 m, 1 mm | 9.94 | 0.017 | 0.015 | 0.0166 |
+| 6 m, 1 mm | 9.37 | 0.018 | 0.015 | 0.0183 |
+
+v3.1.0 uses `end = 0.0464 − 0.0030·ln(λ/a)` (least-squares line through the
+best-fit values, including the 0.5 mm and 1.4 mm cases).
+
+### Results with v3.1.0
+
+| Case | Points | v3.0.0 error / zones | v3.1.0 error / zones |
+|------|-------:|---------------------:|---------------------:|
+| End-fed, ideal return (40–10 m) | 1 000 | 3.9 % / 95 % | 3.5 % / 95 % |
+| Off-centre-fed | 384 | 12.4 % / 85 % | 12.0 % / 95 % |
+| End-fed with counterpoise | 976 | 10.5 % / 75 % | 10.7 % / 75 % |
+| End-fed, 160 m | 180 | 8.2 % / 64 % | 4.6 % / 77 % |
+| End-fed, 80 m | 180 | 6.6 % / 76 % | 4.1 % / 88 % |
+| End-fed, 6 m | 180 | 4.6 % / 84 % | 3.4 % / 92 % |
+
+### Wire size and insulation (v3.1.0)
+
+The tool always assumes 1 mm wire. Against NEC with other diameters:
+
+| Case | Error / zones |
+|------|--------------:|
+| 40 m, 0.5 mm wire | 7.3 % / 91 % |
+| 10 m, 0.5 mm wire | 12.5 % / 86 % |
+| 40 m, 1.4 mm wire | 7.4 % / 85 % |
+| 10 m, 1.4 mm wire | 4.6 % / 85 % |
+
+NEC-2 has no insulation card, so PVC insulation (εr 3, 0.5 mm thick on 1 mm
+wire) was emulated with distributed series inductance. The velocity factor
+that best fits NEC is 0.980 on 40 m and 0.975 on 10 m; the sheath formula
+predicts 0.977 and 0.974. At the best-fit value the error is 4.5 % on 40 m and
+12.2 % on 10 m. The emulation raises Z₀ where a real sheath lowers it, so the
+position of the resonances is the trustworthy part of this test, not |Z|.
+
+### Dipole height above ground (v3.1.0)
+
+Reference: horizontal 20.2 m wire over average ground (εr 13, 5 mS/m, NEC-2
+reflection-coefficient method), fed at 4–50 %, on 40/20/15/10 m.
+
+| Height | Free-space model | With height correction |
+|-------:|-----------------:|-----------------------:|
+| 5 m | 26.6 % / 61 % | 16.4 % / 64 % |
+| 10 m | 12.5 % / 80 % | 11.2 % / 80 % |
+| 20 m | 10.9 % / 75 % | 11.0 % / 75 % |
+| all three | — | 13.1 % / 73 % |
+
+Centre-fed on 40 m, R + jX in Ω:
+
+| Height | NEC, perfect ground | NEC, average ground | Tool |
+|-------:|--------------------:|--------------------:|-----:|
+| 5 m (0.12 λ) | 29 + j7 | 49 + j1 | 44 − j22 |
+| 10 m (0.24 λ) | 80 + j10 | 80 − j3 | 76 − j22 |
+| 20 m (0.48 λ) | 70 − j38 | 68 − j32 | 71 − j22 |
+
+The correction helps where the wire is low and makes little difference from
+about a quarter-wave up. The tool's reactance does not move with height (the
+20.2 m wire is simply a little short at 7.15 MHz); NEC's does, by up to about
+30 Ω. NEC's reflection-coefficient ground is itself an approximation below
+roughly 0.1–0.2 λ.
+
+### Automatic check
+
+`check_v3.mjs` now exits with an error, which blocks publishing, if any of
+these limits is exceeded (RMS error / zone agreement): end-fed 6 % / 85 %,
+off-centre-fed 16 % / 80 %, counterpoise 14 % / 65 %, dipole over ground
+16 % / 60 %; or if any tuner solution fails to rebuild to 50 Ω.
+
 ## What this does not cover
 
-- Real ground, height above ground, sloping or bent wires, nearby objects.
-- Insulated wire (the velocity-factor slider is not checked against NEC here).
-- Wire diameters other than 1 mm.
-- Bands other than 40, 20, 15 and 10 m.
+- Nearby objects and poor or very good soil.
+- Sloping, inverted-V or bent wires over ground; ground under an end-fed wire.
+- Bands not listed above (60, 30, 17 and 12 m were not run).
 - The transformer itself (stray capacitance, leakage, core loss).
 - Measurements on a real antenna.
 

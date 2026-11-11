@@ -30,6 +30,7 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 - **Wire length control** — auto (λ/2 of lowest active band × VF) or manual override; "Reset to λ/2" clears override
 - **Feedpoint position controls** — slider + numeric input + preset buttons (50% centre, 33% OCF, 25% extreme OCF)
 - **Half-view toggle** — collapse X-axis to 0–50% (one arm) to zoom in on one side
+- **Height above ground** — optional: shows how a horizontal dipole's feedpoint resistance changes with height over average soil
 - **Common-mode risk strip** — colour bar at the bottom of the graph: green (near centre) → orange → red (extreme OCF)
 - **SWR strips** below the X-axis — one row per active dipole zone showing where each band is matched
 - **Click-to-set feedpoint** — click or drag on the canvas to move the feedpoint indicator
@@ -85,7 +86,7 @@ The loading coil code remains in the source for future reference and may form th
 
 The tool is intentionally educational rather than a full EM simulator. Real antenna impedance is also shaped by height above ground, nearby objects, soil conductivity, and wire geometry.
 
-Since v3.0.0 the wire model has no fitted peak values: its loss term is set equal to the wire's radiation resistance. Against NEC-2 (1 mm bare wire, 40/20/15/10 m) the typical (RMS) error in |Z| is about **4 %** for an end-fed wire against ideal ground, **12 %** for off-centre-fed wires and **10 %** for an end-fed wire with a counterpoise. See [validation/nec_comparison_v3.md](validation/nec_comparison_v3.md).
+Since v3.0.0 the wire model has no fitted peak values: its loss term is set equal to the wire's radiation resistance. Against NEC-2 (1 mm bare wire, 40/20/15/10 m) the typical (RMS) error in |Z| is about **4 %** for an end-fed wire against ideal ground, **12 %** for off-centre-fed wires, **11 %** for an end-fed wire with a counterpoise and **13 %** for a dipole 5–20 m above average ground. See [validation/nec_comparison_v3.md](validation/nec_comparison_v3.md).
 
 ---
 
@@ -94,7 +95,8 @@ Since v3.0.0 the wire model has no fitted peak values: its loss term is set equa
 Each conductor is an **open-ended transmission line whose loss is the radiation**. For a wire of length *L* at frequency *f*:
 
 ```
-θ   = 2πL / (λ · VF) + 0.015·π      electrical length (rad)
+θ   = 2πL / (λ · VF) + end·π        electrical length (rad)
+end = 0.0464 − 0.0030 · ln(λ / a)   open-end effect in half-waves (≈ 0.012 on 40 m)
 Z₀  = 60 · ln(0.22 · λ / a) · VF    average characteristic impedance, a = wire radius (0.5 mm)
 a   = atanh(R_rad(θ) / Z₀)          line loss chosen so the line dissipates what the wire radiates
 
@@ -104,7 +106,7 @@ X   = −Z₀ · sin(2θ)  / D
 ```
 
 - **VF** is the slowing caused by the insulation only (bare wire = 1.00).
-- **0.015·π** is the open-end effect: a fixed extra electrical length per open end, not a percentage of the wire. Harmonic resonances are therefore *not* exact multiples of the fundamental length: the n-th half-wave point is at `(n − 0.015) · VF · λ/2`.
+- **end·π** is the open-end effect: a fixed extra electrical length per open end, not a percentage of the wire. It grows as the wire gets thicker compared with the wavelength (0.8 % of a half-wave on 160 m, 1.7 % on 10 m for 1 mm wire). Harmonic resonances are therefore *not* exact multiples of the fundamental length: the n-th half-wave point is at `(n − end) · VF · λ/2`.
 - **R_rad(θ)** is the induced-EMF radiation resistance of a sinusoidal standing-wave current, referred to the current maximum. For a wire against an ideal ground it has a closed form in sine and cosine integrals (half the classic dipole result).
 
 What falls out, with no calibration constants:
@@ -146,6 +148,14 @@ Results:
 - Centre-fed full-wave → several kΩ.
 
 **Auto wire length** is the resonant half-wave: two λ/4 arms, each with its end effect.
+
+**Height above ground** (optional, off by default). The ground acts as a partial mirror: an image of the wire at depth *h* carries `−ρ` times its current, which multiplies the radiated-power integrand by
+
+```
+1 − ρ · J₀(2·k·h·sinψ)          ρ = −Re[(1 − n)/(1 + n)],  n² = εr − j·σ/(ω·ε₀)
+```
+
+with average soil assumed (εr = 13, σ = 5 mS/m; ρ ≈ 0.63 on 40 m). A half-wave dipole then reads about 45 Ω at 0.12 λ, about 80 Ω near λ/4 and tends to 73 Ω when high. Only the resistance is corrected; the small ground-induced shift in resonant length is not modelled, and the wire is assumed straight and horizontal.
 
 > Versions before v3.0.0 combined the two arms in parallel, which overstated off-centre impedance by a factor of 2–3 (≈ 400 Ω at 33 % instead of ≈ 100 Ω).
 
@@ -261,4 +271,4 @@ See [LICENSE](LICENSE) for the full terms.
 
 ---
 
-*Created by Gunnar B. Guðlaugsson (TF5NN) · v3.0.0*
+*Created by Gunnar B. Guðlaugsson (TF5NN) · v3.1.0*

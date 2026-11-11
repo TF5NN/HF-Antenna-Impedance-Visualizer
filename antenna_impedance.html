@@ -655,7 +655,7 @@ header h1 { font-weight: 650; letter-spacing: -0.3px; }
 <header>
   <h1>HF Antenna Impedance Visualizer</h1>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
-  <span id="versionLabel">v3.0.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+  <span id="versionLabel">v3.1.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
 </header>
 
 <div id="controls">
@@ -795,6 +795,24 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
       <input type="number" id="dipWireLenInput" min="0.5" max="9999" step="0.01" placeholder="m">
       <span class="cp-unit">m</span>
       <button class="pin-clear-btn" id="dipWireLenResetBtn" title="Reset to λ/2 of lowest band">↺</button>
+    </div>
+  </div>
+  <div class="ctrl-group dip-only" style="display:none">
+    <div class="ctrl-label">Height above ground</div>
+    <div id="dipHeightControl">
+      <button class="zone-btn" id="dipHeightBtn" style="--zc: #8a56c2"
+              title="Off: the wire is in free space. On: a horizontal wire at this height over average soil.">
+        <span class="zone-swatch"></span>Show effect
+      </button>
+      <div class="toggle-sub" id="dipHeightWrap">
+        <span class="cp-unit">Height</span>
+        <input type="number" id="dipHeightInput" class="cp-inp" value="10" min="0.5" max="100" step="0.5" style="width:64px">
+        <span class="cp-unit">m</span>
+      </div>
+      <div id="dipHeightHint" style="display:none;font-size:0.68rem;color:#76847d;line-height:1.5;padding:4px 2px 0;max-width:300px">
+        Horizontal wire over average soil. Shows how resistance changes with height;
+        sloping or inverted-V wires are not covered.
+      </div>
     </div>
   </div>
   <div class="ctrl-group dip-only" style="display:none">
@@ -987,10 +1005,12 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
       </p>
       <p style="margin-top:6px">
         <strong>Harmonics are not exact multiples.</strong> An open wire end adds a
-        fixed electrical length (about 1.5 % of a half-wave), not a percentage of
-        the whole wire. The n-th half-wave point is therefore at
-        <code>(n − 0.015) · VF · λ/2</code>, so a wire cut for 40 m is slightly long
-        on 20, 15 and 10 m — the familiar end-fed half-wave behaviour.
+        fixed electrical length, not a percentage of the whole wire: about 0.8 % of
+        a half-wave on 160 m, 1.2 % on 40 m and 1.7 % on 10 m for 1 mm wire (the
+        thicker the wire is compared with the wavelength, the larger it gets). The
+        n-th half-wave point is therefore at <code>(n − end) · VF · λ/2</code>, so a
+        wire cut for 40 m is slightly long on 20, 15 and 10 m — the familiar end-fed
+        half-wave behaviour.
       </p>
       <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
         <strong style="color:#7f8c80">Display limits:</strong>
@@ -1016,7 +1036,7 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         bare wire 1.00, thin PVC about 0.97–0.99, thick insulation 0.94–0.97.
         The shortening caused by the open wire end is handled separately (see the
         physics note). At the default 0.975 a 40 m end-fed half-wave comes out at
-        about 20.1 m. The velocity factor applies equally to the main wire and any
+        about 20.2 m. The velocity factor applies equally to the main wire and any
         counterpoise.
       </p>
     </div>
@@ -1050,6 +1070,16 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         on the fundamental. On harmonics the pattern repeats along the wire, which
         is why an off-centre feed can find 200–300 Ω on several bands at once.
       </p>
+      <p style="margin-top:6px">
+        <strong>Height above ground</strong> (optional, off by default): the ground
+        acts as a partial mirror, so a horizontal wire also "sees" an upside-down
+        copy of itself. That changes how much it radiates and therefore its
+        resistance: a half-wave dipole reads about 45 Ω at 0.12 λ, rises to about
+        80 Ω near a quarter-wave up and settles towards 73 Ω when high. The tool
+        assumes average soil (ε<sub>r</sub> 13, 5 mS/m) and a straight horizontal wire.
+        The height is in metres, so every band sees a different electrical height.
+        The small shift in resonant length that the ground also causes is not modelled.
+      </p>
     </div>
 
     <div class="notes-block">
@@ -1057,14 +1087,17 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
       <p>
         The model was compared with NEC-2 for 1 mm bare wire on 40, 20, 15 and
         10 m. Typical (RMS) error in |Z|: about <strong>4 %</strong> for an end-fed
-        wire against ideal ground, <strong>12 %</strong> for off-centre-fed wires and
-        <strong>10 %</strong> for an end-fed wire with a counterpoise. Method and
+        wire against ideal ground, <strong>12 %</strong> for off-centre-fed wires,
+        <strong>11 %</strong> for an end-fed wire with a counterpoise and
+        <strong>13 %</strong> for a dipole 5–20 m above average ground. Method and
         numbers are in <code>validation/nec_comparison_v3.md</code>.
       </p>
       <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
         <strong style="color:#7f8c80">Not modelled:</strong>
-        real ground and height, sloping or bent wires, nearby objects, feedline
-        common-mode current and the transformer's own stray capacitance. Those
+        ground under an end-fed wire, sloping or bent wires, nearby objects,
+        feedline common-mode current and the transformer itself. Real 49:1
+        transformers often work poorly on 10 m because of their own stray
+        capacitance and leakage; that is the transformer, not the wire. These
         need a full simulator such as NEC, or measurement.
       </p>
     </div>
@@ -1247,7 +1280,13 @@ const C = 299792458; // m/s
 // v3 wire model (see "PHYSICS MODEL" below and validation/nec_comparison_v3.md)
 const WIRE_RADIUS_M = 0.0005; // conductor radius (m) — 1 mm diameter antenna wire
 const Z0_K  = 0.22;   // Z0 = 60·ln(Z0_K·λ/a): average characteristic impedance of a thin wire
-const END_K = 0.015;  // open-end effect, in half-waves per open end (fixed, not a % of length)
+// Open-end effect, in half-waves per open end: a fixed extra length, not a % of the wire.
+// It is larger when the wire is thick compared with the wavelength:
+//   END = END_A − END_B·ln(λ/a)   → 0.008 on 160 m, 0.012 on 40 m, 0.017 on 10 m (1 mm wire)
+const END_A = 0.0464, END_B = 0.0030, END_MIN = 0.004;
+function endEffect(freq) {
+  return Math.max(END_MIN, END_A - END_B * Math.log((C / freq) / WIRE_RADIUS_M));
+}
 const Z_PEAK = 5000;  // clamp on displayed/computed R — real EFHW peaks 2000–5000 Ω
 const Z_MIN  = 25;    // floor for |Z| display — real wires ≈ 20–60 Ω at λ/4
 const Y_AXIS_MAX = 5000; // top of Y axis (Ω)
@@ -1711,6 +1750,8 @@ let pinL       = null;  // wire length in metres, null = no pin
 let isDragging = false;
 
 // Counterpoise state
+let dipHeightOn = false;   // dipole mode: include the effect of height above ground
+let dipHeightM  = 10;      // height of the horizontal wire (m)
 let cpEnabled = false;
 let cpLengthM = 5.0;  // metres
 
@@ -1740,9 +1781,9 @@ let VF = 0.975;
 //
 //  Each conductor is an open-ended transmission line:
 //      Z_arm = Z0 · coth(a + jθ)
-//    θ  electrical length:  θ = 2πL/(λ·VF) + END_K·π
+//    θ  electrical length:  θ = 2πL/(λ·VF) + END·π
 //       VF     = slowing by the insulation (bare wire = 1.00)
-//       END_K  = open-end (capacitive) effect — a fixed extra length per open
+//       END    = open-end (capacitive) effect — a fixed extra length per open
 //                end, so harmonics are NOT exact multiples of the fundamental
 //    Z0 average characteristic impedance of the wire, 60·ln(Z0_K·λ/a)·VF
 //    a  line loss, chosen so the line dissipates exactly what the wire radiates:
@@ -1824,23 +1865,43 @@ function gaussLegendre(n) {
   return c;
 }
 
+// Bessel function J0(x), x ≥ 0 (Abramowitz & Stegun 9.4.1 / 9.4.3, |error| < 5e-8)
+function besselJ0(x) {
+  if (x <= 3) {
+    const t = (x / 3) * (x / 3);
+    return 1 + t * (-2.2499997 + t * (1.2656208 + t * (-0.3163866 + t * (0.0444479 + t * (-0.0039444 + t * 0.0002100)))));
+  }
+  const y  = 3 / x;
+  const f0 = 0.79788456 + y * (-0.00000077 + y * (-0.00552740 + y * (-0.00009512 + y * (0.00137237 + y * (-0.00072805 + y * 0.00014476)))));
+  const t0 = x - 0.78539816 + y * (-0.04166397 + y * (-0.00003954 + y * (0.00262573 + y * (-0.00054125 + y * (-0.00029333 + y * 0.00013558)))));
+  return f0 * Math.cos(t0) / Math.sqrt(x);
+}
+
 // Radiation resistances of a straight wire fed part-way along, for sinusoidal
 // standing-wave currents on arm A (electrical length ta) and arm B (tb):
 //   Raa, Rbb — each arm on its own;  Rab — coupling between the two.
 // Far-field power integral over u = cos(polar angle); the pattern factor of an
-// arm is F(u) = e^{±jθu} − cos θ ∓ j·u·sin θ.  Results depend only on (ta, tb)
-// and are memoised, so redraws on mouse-move cost nothing.
-const _radCache = new Map();
+// arm is F(u) = e^{±jθu} − cos θ ∓ j·u·sin θ.
+// kh > 0 puts the wire horizontally at electrical height kh = 2πh/λ over ground:
+// the mirror-image wire carries −rho times the current (rho = 1 for a perfect
+// ground), and averaging the combined pattern around the wire multiplies the
+// integrand by 1 − rho·J0(2·kh·sinψ).
+// Results depend only on (ta, tb, kh, rho) and are memoised, so redraws cost nothing.
+const _radCaches = new Map();   // "kh|rho" → Map(ta → Map(tb → result))
 let _radCacheSize = 0;
-function radResTwoArm(ta, tb) {
+function radResTwoArm(ta, tb, kh = 0, rho = 1) {
+  const gKey = kh > 0 ? kh + '|' + rho : 0;
+  let _radCache = _radCaches.get(gKey);
+  if (!_radCache) { _radCache = new Map(); _radCaches.set(gKey, _radCache); }
   let inner = _radCache.get(ta);
   if (inner) { const hit = inner.get(tb); if (hit) return hit; }
-  const n = 16 * Math.ceil((24 + 3 * (ta + tb)) / 16);
+  const n = 16 * Math.ceil((24 + 3 * (ta + tb) + 4 * kh) / 16);
   const { x, w } = gaussLegendre(n);
   const ca = Math.cos(ta), sa = Math.sin(ta), cb = Math.cos(tb), sb = Math.sin(tb);
   let Raa = 0, Rbb = 0, Rab = 0;
   for (let i = 0; i < n; i++) {
-    const u = x[i], k = 15 * w[i] / (1 - u * u);
+    const u = x[i], d = 1 - u * u;
+    const k = 15 * w[i] / d * (kh > 0 ? 1 - rho * besselJ0(2 * kh * Math.sqrt(d)) : 1);
     const far = Math.cos(ta * u) - ca, fai = u * sa - Math.sin(ta * u);
     const fbr = Math.cos(tb * u) - cb, fbi = Math.sin(tb * u) - u * sb;
     Raa += k * (far * far + fai * fai);
@@ -1848,7 +1909,7 @@ function radResTwoArm(ta, tb) {
     Rab += k * (far * fbr + fai * fbi);
   }
   const res = { Raa, Rbb, Rab };
-  if (_radCacheSize > 400000) { _radCache.clear(); _radCacheSize = 0; inner = null; }
+  if (_radCacheSize > 400000) { _radCaches.clear(); _radCacheSize = 0; inner = null; _radCache = new Map(); _radCaches.set(gKey, _radCache); }
   if (!inner) { inner = new Map(); _radCache.set(ta, inner); }
   inner.set(tb, res); _radCacheSize++;
   return res;
@@ -1861,13 +1922,13 @@ function wireZ0(freq) {
 
 // Electrical length (rad) of an open-ended conductor of physical length L
 function elecLen(L, freq) {
-  return (2 * Math.PI * L) / ((C / freq) * VF) + END_K * Math.PI;
+  return (2 * Math.PI * L) / ((C / freq) * VF) + endEffect(freq) * Math.PI;
 }
 
 // Physical length at which a conductor is n electrical quarter-waves long
 // (inverse of elecLen): n = 1 → λ/4 point, n = 2 → λ/2 point …
 function lenForQuarterWaves(n, freq) {
-  return (n / 2 - END_K) * (C / freq) * VF / 2;
+  return (n / 2 - endEffect(freq)) * (C / freq) * VF / 2;
 }
 
 // Z0·coth(a + jθ) with tanh(a) = rNorm (= R_rad / Z0)
@@ -1883,10 +1944,25 @@ function lossyStub(z0, rNorm, theta) {
 //   T = 2·sinθa·sinθb / (sin²θa + sin²θb)
 // which reproduces R_feed = Raa/sin²θa + Rbb/sin²θb + 2·Rab/(sinθa·sinθb) exactly
 // for low loss and stays finite where one arm is a multiple of λ/2.
-function calcTwoArmZ(La, Lb, freq) {
+// Strength of the ground "mirror" for a horizontal wire over average soil
+// (GROUND_ER, GROUND_SIGMA): minus the real part of the reflection coefficient
+// straight down, Γ = (1 − n)/(1 + n) with n² = εr − j·σ/(ω·ε0).
+// About 0.63 on 40 m and 0.57 on 10 m; a perfect ground would be 1.
+const GROUND_ER = 13, GROUND_SIGMA = 0.005;
+function groundMirror(freq) {
+  const re = GROUND_ER, im = -GROUND_SIGMA / (2 * Math.PI * freq * 8.8541878128e-12);
+  const mag = Math.sqrt(Math.hypot(re, im)), ang = Math.atan2(im, re) / 2;
+  const nr = mag * Math.cos(ang), ni = mag * Math.sin(ang);            // n = √(n²)
+  const dr = 1 + nr, den = dr * dr + ni * ni;
+  return -(((1 - nr) * dr - ni * ni) / den);                            // −Re[(1 − n)/(1 + n)]
+}
+
+// heightM > 0: horizontal wire that high above average ground (dipole mode only).
+function calcTwoArmZ(La, Lb, freq, heightM = 0) {
   const z0 = wireZ0(freq);
   const ta = elecLen(La, freq), tb = elecLen(Lb, freq);
-  const { Raa, Rbb, Rab } = radResTwoArm(ta, tb);
+  const kh = heightM > 0 ? (2 * Math.PI * heightM) / (C / freq) : 0;
+  const { Raa, Rbb, Rab } = radResTwoArm(ta, tb, kh, kh > 0 ? groundMirror(freq) : 1);
   const sa = Math.sin(ta), sb = Math.sin(tb);
   const T  = (2 * sa * sb) / Math.max(1e-12, sa * sa + sb * sb);
   const A  = lossyStub(z0, (Raa + Rab * T) / z0, ta);
@@ -1938,7 +2014,7 @@ function calcZ(L, freq) {
 function calcDipoleZ(pos, totalLen, freq) {
   const La = Math.max(0.01, pos * totalLen);
   const Lb = Math.max(0.01, (1 - pos) * totalLen);
-  return calcTwoArmZ(La, Lb, freq);
+  return calcTwoArmZ(La, Lb, freq, dipHeightOn ? dipHeightM : 0);
 }
 
 // Resolved wire length: manual override or auto λ/2 of lowest active band
@@ -3606,6 +3682,26 @@ function buildDipoleZoneButtons() {
 }
 
 function setupDipole() {
+  // Height above ground (same pattern as the End-Fed counterpoise toggle)
+  const hBtn  = document.getElementById('dipHeightBtn');
+  const hWrap = document.getElementById('dipHeightWrap');
+  const hHint = document.getElementById('dipHeightHint');
+  const hInp  = document.getElementById('dipHeightInput');
+  if (hBtn) {
+    hBtn.onclick = () => {
+      dipHeightOn = !dipHeightOn;
+      hBtn.classList.toggle('on', dipHeightOn);
+      hWrap.classList.toggle('show', dipHeightOn);
+      if (hHint) hHint.style.display = dipHeightOn ? 'block' : 'none';
+      invalidateCaches();
+      draw();
+    };
+    hInp.addEventListener('input', () => {
+      const v = parseFloat(hInp.value);
+      if (v > 0) { dipHeightM = v; invalidateCaches(); draw(); }
+    });
+  }
+
   // Wire length input
   const wireLenInp   = document.getElementById('dipWireLenInput');
   const wireLenReset = document.getElementById('dipWireLenResetBtn');

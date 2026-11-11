@@ -1,21 +1,41 @@
-name: Publish to GitHub Pages
+name: Check and publish
 
-# The site is a single static page, so there is no build step:
-# the files below are uploaded as they are.
+# 1. check   — runs the page's own model code against the stored NEC-2 reference
+#              data and rebuilds every tuner solution (validation/check_v3.mjs).
+# 2. deploy  — publishes to GitHub Pages, only if the check passed.
+# The site is a single static page, so there is no build step.
 on:
   push:
     branches: ['claude/hf-antenna-impedance-tool-l5Cmd']
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pages-production
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
   cancel-in-progress: false
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install the browser used by the check
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Check the model and the tuner
+        run: node validation/check_v3.mjs
+
   deploy:
+    if: github.event_name != 'pull_request'
+    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

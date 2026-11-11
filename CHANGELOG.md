@@ -5,6 +5,61 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v3.1.0] — 2026-11-11
+
+### Added — Height above ground (Dipole mode)
+
+A new optional control, off by default: **Height above ground → Show effect**,
+with the height in metres. The ground is treated as a partial mirror (average
+soil, εr 13, 5 mS/m), which changes how much the wire radiates and so its
+feedpoint resistance: a half-wave dipole reads about 45 Ω at 0.12 λ, about 80 Ω
+near a quarter-wave up, and tends to 73 Ω when high. Only the resistance is
+corrected; the wire is assumed straight and horizontal. End-Fed mode is
+unchanged, because end-fed wires are rarely horizontal.
+
+Against NEC-2 over average ground (20.2 m wire, 5/10/20 m high, 40–10 m, all
+feed positions) the RMS error in |Z| is 13 %. For the lowest case (5 m) it
+drops from 27 % without the correction to 16 % with it; at 10 m and above the
+correction makes little difference.
+
+### Changed — End effect now follows wire thickness in wavelengths
+
+The fixed open-end correction of 1.5 % of a half-wave was fitted on 40–10 m
+and turned out too large on the low bands. It is now
+`0.0464 − 0.0030·ln(λ/a)`: 0.8 % on 160 m, 1.2 % on 40 m, 1.7 % on 10 m for the
+assumed 1 mm wire. Resonant lengths move slightly (a 40 m end-fed half-wave
+goes from 20.13 m to 20.19 m at the default velocity factor).
+
+RMS error in |Z| against NEC-2, v3.0.0 → v3.1.0: 160 m 8.2 % → 4.6 %; 80 m
+6.6 % → 4.1 %; 6 m 4.6 % → 3.4 %; 40–10 m 3.9 % → 3.5 %. Off-centre-fed zone
+agreement rises from 85 % to 95 %.
+
+### Added — Checks run automatically before every publish
+
+`.github/workflows/pages.yml` now runs `validation/check_v3.mjs` first and only
+publishes the site if it passes. The check fails on any page error, on any
+tuner solution that does not rebuild to 50 Ω, and when the model drifts
+outside set limits against the stored NEC-2 data.
+
+### Added — Wider one-off NEC comparison
+
+`validation/nec_reference.py` and the check script now also cover 160 m, 80 m
+and 6 m, 0.5 mm and 1.4 mm wire, PVC-insulated wire and a dipole over ground.
+Findings are in `validation/nec_comparison_v3.md`:
+
+- The tool always assumes 1 mm wire. With 0.5 mm or 1.4 mm wire the RMS error
+  is 5–13 % instead of about 4 %.
+- The velocity-factor slider behaves as intended: for 1 mm wire with 0.5 mm of
+  PVC, the best-fitting value (0.975–0.98) matches the textbook sheath formula
+  (0.974–0.977).
+
+### Changed — Notes
+
+Added a line that real 49:1 transformers often work poorly on 10 m because of
+their own stray capacitance and leakage, which the tool does not model.
+
+---
+
 ## [v3.0.0] — 2026-11-10
 
 A new antenna model, three tuner fixes and a new look. The numbers the tool
