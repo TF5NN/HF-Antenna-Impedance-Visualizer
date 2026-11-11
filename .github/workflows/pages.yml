@@ -1,0 +1,39 @@
+name: Publish to GitHub Pages
+
+# The site is a single static page, so there is no build step:
+# the files below are uploaded as they are.
+on:
+  push:
+    branches: ['claude/hf-antenna-impedance-tool-l5Cmd']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Collect the site files
+        run: |
+          mkdir _site
+          cp index.html antenna_impedance.html LICENSE _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
