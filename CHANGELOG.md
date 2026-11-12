@@ -15,7 +15,7 @@ short antennas; its commented-out code, markup and styles are now deleted
 The v2.6.0 validation reports, which describe the antenna model replaced in
 v3.0.0, moved to `validation/archive-v2.6.0/` with a note; the current
 comparison (`nec_comparison_v3.md`) and the Q-gate analysis stay in place.
-The publish workflow now also accepts a branch named `main`.
+The publishing branch was renamed to `main`.
 
 ### Added — Anonymous visit counting
 

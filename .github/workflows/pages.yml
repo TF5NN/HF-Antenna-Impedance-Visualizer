@@ -6,8 +6,7 @@ name: Check and publish
 # The site is a single static page, so there is no build step.
 on:
   push:
-    # 'main' is the publishing branch. The old name is kept until the branch has been renamed on GitHub.
-    branches: ['main', 'claude/hf-antenna-impedance-tool-l5Cmd']
+    branches: ['main']
   pull_request:
   workflow_dispatch:
 
