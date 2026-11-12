@@ -326,13 +326,6 @@ header p {
 .toggle-sub input:focus { outline: none; }
 #cpLengthInput { width: 72px; }   /* was 56px */
 #cpLengthInput:focus { border-color: #8a56c2; }
-/* === LOADING COIL FEATURE DISABLED ===
-   Reason: Model is not valid for electrically short antennas (see README)
-#coilSlider { width: 100px; vertical-align: middle; }
-#coilInp    { width: 48px; }
-#coilInp:focus { border-color: #f5a623; }
-.adv-section { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-=== END LOADING COIL FEATURE DISABLED === */
 #ssMinInput { width: 56px; }   /* was 40px */
 #ssMinInput:focus { border-color: #b08d1e; }
 #ssSWRInput { width: 60px; }   /* was 44px */
@@ -753,21 +746,6 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
             <span class="zone-swatch"></span>ITU R1 alloc. width
           </button>
         </div>
-        <!-- === LOADING COIL FEATURE DISABLED ===
-             Reason: Model is not valid for electrically short antennas (see README)
-        <div class="adv-section">
-          <span class="cp-unit" style="font-weight:600">Feedpoint Loading Coil</span>
-          <button class="zone-btn" id="coilToggleBtn" style="--zc: #f5a623">
-            <span class="zone-swatch"></span>Enable coil
-          </button>
-          <div class="toggle-sub" id="coilWrap">
-            <span class="cp-unit">L</span>
-            <input type="range" id="coilSlider" min="0" max="50" step="0.1" value="0">
-            <input type="number" id="coilInp" value="0" min="0" max="50" step="0.1">
-            <span class="cp-unit">µH</span>
-          </div>
-        </div>
-        === END LOADING COIL FEATURE DISABLED === -->
       </div>
     </div>
   </div>
@@ -1163,25 +1141,6 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
       </p>
     </div>
 
-    <!-- === LOADING COIL FEATURE DISABLED ===
-         Reason: Model is not valid for electrically short antennas (see README)
-    <div class="notes-block">
-      <h4>Feedpoint loading coil</h4>
-      <p>
-        A series inductor placed at the feedpoint (before the transformer) adds inductive
-        reactance <code>X_L = 2πfL</code> and a small series loss resistance
-        <code>Rs = X_L / Q</code> with Q = 150 (typical standalone wound coil --
-        slightly higher Q than a compact ATU toroid, which is wound for size not Q).
-        The modified feedpoint impedance <code>Z_eff = {R_ant + Rs, X_ant + X_L}</code>
-        propagates through the full matching chain -- resonances shift to longer lengths,
-        anti-resonances shift, and zone colour overlaps respond accordingly.
-        Coil efficiency: <code>eta_coil = R_ant / (R_ant + Rs)</code> where R_ant is the
-        wire-plus-counterpoise resistance before the coil. A short wire with low radiation
-        resistance paired with a large coil shows significant coil loss -- e.g. 30 ohm
-        antenna + 3 ohm coil loss gives ~91% coil efficiency.
-      </p>
-    </div>
-    === END LOADING COIL FEATURE DISABLED === -->
 
     <div class="notes-block">
       <h4>Sweet Spots overlay</h4>
@@ -1421,10 +1380,6 @@ function swr50({ R, X }) {
 // ════════════════════════════════════════════════
 
 const TUNER_L_Q = 120; // assumed inductor Q for ATU loss estimate (typical small toroid)
-// === LOADING COIL FEATURE DISABLED ===
-// Reason: Model is not valid for electrically short antennas (see README)
-// const COIL_Q    = 150; // feedpoint loading coil Q — standalone wound coil, higher than ATU toroid
-// === END LOADING COIL FEATURE DISABLED ===
 
 // Generic L/C ranges (no model names).  Labels in dropdown are already in HTML.
 const TUNER_PRESETS = {
@@ -1765,13 +1720,6 @@ let dipoleHalfView    = false;  // true = show only 0–50% of wire
 let dipoleCustomRatio = 4;      // ratio for Custom dipole zone
 let dipSwrStripCache  = null;   // null = stale; cached SWR strip segments for dipole
 
-// === LOADING COIL FEATURE DISABLED ===
-// Reason: Model is not valid for electrically short antennas (see README)
-// let coilEnabled = false;
-// let coil_uH     = 0;     // inductance in µH (0 = no coil)
-const coilEnabled = false; // safe default — coil permanently disabled
-const coil_uH     = 0;    // safe default — coil permanently disabled
-// === END LOADING COIL FEATURE DISABLED ===
 
 // Velocity factor (0.90–1.00) — shifts resonant peaks to match real wire
 let VF = 0.975;
@@ -2969,17 +2917,6 @@ function updateInspectPanel() {
     const sign      = Zc.X >= 0 ? '+' : '−';
     const Xabs      = Math.abs(Zc.X);
 
-    // === LOADING COIL FEATURE DISABLED ===
-    // Reason: Model is not valid for electrically short antennas (see README)
-    // let coilEff = 1.0;
-    const coilEff = 1.0; // safe default — coil disabled
-    // if (coilEnabled && coil_uH > 0) {
-    //   const omega = 2 * Math.PI * band.freq;
-    //   const Rs    = (omega * coil_uH * 1e-6) / COIL_Q;
-    //   const R_ant = Math.max(1e-6, Zc.R - Rs);
-    //   coilEff = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
-    // }
-    // === END LOADING COIL FEATURE DISABLED ===
 
     // Zone matches
     const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
@@ -2988,15 +2925,12 @@ function updateInspectPanel() {
       const ch        = matchChain(Zc, z.ratio, z.xfrmrEff, band.freq);
       const mmEff     = ch.mmEff, tunerEff = ch.tunerEff;
       const tunerDesc = !tunerEnabled ? '' : (ch.sol ? ` tuner ${Math.round(tunerEff * 100)}%` : ' no tuner match');
-      const total  = Math.round(mmEff * z.xfrmrEff * tunerEff * coilEff * 100);
+      const total  = Math.round(mmEff * z.xfrmrEff * tunerEff * 100);
       const losses = [
         `mismatch ${Math.round(mmEff * 100)}%`,
         `xfrmr ${Math.round(z.xfrmrEff * 100)}%`,
       ];
       if (tunerEnabled) losses.push(tunerDesc.trim());
-      // === LOADING COIL FEATURE DISABLED ===
-      // if (coilEnabled && coil_uH > 0) losses.push(`coil ${Math.round(coilEff * 100)}%`);
-      // === END LOADING COIL FEATURE DISABLED ===
 
       zoneHtml += `<span style="color:${z.text};font-weight:600">${z.label}</span>` +
         ` <span class="ip-eff">${total}% delivered</span>` +
@@ -3311,33 +3245,12 @@ function setupHover() {
 
     let anyZoneHit = false;
     ab.forEach(band => {
-      const Zc     = calcZcomplex(L, band.freq);  // wire + counterpoise + coil when enabled
+      const Zc     = calcZcomplex(L, band.freq);  // wire + counterpoise
       const Z      = calcZmag(Zc);   // |Z| for display
       const Zwire  = cpEnabled ? calcZwire(L, band.freq) : null;
       const lambda = C / band.freq;
       const halfwaves = L / (lambda / 2);
 
-      // === LOADING COIL FEATURE DISABLED ===
-      // Reason: Model is not valid for electrically short antennas (see README)
-      // let coilEff  = 1.0;
-      // let coilNote = '';
-      const coilEff  = 1.0;  // safe default — coil disabled
-      const coilNote = '';   // safe default — coil disabled
-      // if (coilEnabled && coil_uH > 0) {
-      //   const omega  = 2 * Math.PI * band.freq;
-      //   const Lc     = coil_uH * 1e-6;
-      //   const XL     = omega * Lc;
-      //   const Rs     = XL / COIL_Q;
-      //   // R_ant: antenna resistance before coil loss (back-calc from Zc which already includes Rs)
-      //   const R_ant  = Math.max(1e-6, Zc.R - Rs);
-      //   coilEff  = Math.max(0.30, Math.min(0.99, R_ant / Zc.R));
-      //   coilNote = `<span style="color:#f5a623;font-size:0.63rem;display:block;margin-left:14px">` +
-      //     `Loading coil: ${coil_uH.toFixed(1)} µH` +
-      //     ` &nbsp; X<sub>L</sub>=+j${XL.toFixed(0)} Ω` +
-      //     ` &nbsp; coil eff ≈ ${Math.round(coilEff * 100)} %` +
-      //     `</span>`;
-      // }
-      // === END LOADING COIL FEATURE DISABLED ===
 
       const zoneMatches = ZONES.filter(z => inZone(Zc, z, band.freq));
       if (zoneMatches.length > 0) anyZoneHit = true;
@@ -3381,8 +3294,8 @@ function setupHover() {
             }
           }
 
-          // coilEff and tunerEff fold into the delivered-power estimate (tooltip display only)
-          const eff    = Math.round(ch.total * coilEff * 100);
+          // tunerEff folds into the delivered-power estimate (tooltip display only)
+          const eff    = Math.round(ch.total * 100);
           const swrVal = ch.swr.toFixed(1);
 
           return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
@@ -3409,7 +3322,6 @@ function setupHover() {
         zoneTags +
         tunerRejectNote +
         cpNote +
-        coilNote +
         `<span class="tt-frac">${halfwaves.toFixed(2)}×λ/2</span>` +
         `</div>`;
     });
@@ -3486,36 +3398,6 @@ function setupCounterpoise() {
   });
 }
 
-// ════════════════════════════════════════════════
-//  LOADING COIL CONTROLS
-// ════════════════════════════════════════════════
-
-// === LOADING COIL FEATURE DISABLED ===
-// Reason: Model is not valid for electrically short antennas (see README)
-// function setupCoil() {
-//   const btn    = document.getElementById('coilToggleBtn');
-//   const wrap   = document.getElementById('coilWrap');
-//   const slider = document.getElementById('coilSlider');
-//   const inp    = document.getElementById('coilInp');
-//
-//   btn.onclick = () => {
-//     coilEnabled = !coilEnabled;
-//     btn.classList.toggle('on', coilEnabled);
-//     wrap.classList.toggle('show', coilEnabled);
-//     invalidateCaches(); draw();
-//   };
-//
-//   function applyVal(v) {
-//     coil_uH      = Math.max(0, Math.min(50, isNaN(v) ? 0 : v));
-//     slider.value = coil_uH;
-//     inp.value    = coil_uH.toFixed(1);
-//     if (coilEnabled) { invalidateCaches(); draw(); }
-//   }
-//
-//   slider.addEventListener('input', () => applyVal(parseFloat(slider.value)));
-//   inp.addEventListener('input',    () => applyVal(parseFloat(inp.value)));
-// }
-// === END LOADING COIL FEATURE DISABLED ===
 
 // ════════════════════════════════════════════════
 //  ADVANCED / EXPERIMENTAL TOGGLE
@@ -3853,9 +3735,6 @@ updateLegend();
 setupHover();
 setupVF();
 setupCounterpoise();
-// === LOADING COIL FEATURE DISABLED ===
-// setupCoil();
-// === END LOADING COIL FEATURE DISABLED ===
 setupAdvanced();
 setupRxMode();
 setupTuner();

@@ -4,8 +4,8 @@
 
 This report compares the tool's antenna model with NEC-2 and checks the tuner
 solver by rebuilding its circuits. It supersedes the antenna-model parts of the
-v2.6.0 reports in this folder (`endfed_validation.md`, `dipole_validation.md`,
-`counterpoise_validation.md`), which describe the old model.
+v2.6.0 reports, now in [`archive-v2.6.0/`](archive-v2.6.0/) (`endfed_validation.md`,
+`dipole_validation.md`, `counterpoise_validation.md`), which describe the old model.
 
 ## How to reproduce
 

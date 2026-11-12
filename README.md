@@ -80,7 +80,7 @@ Adding a "loading coil" inside this model does **not** represent a real loaded a
 
 > For accurate modelling of short loaded antennas, a separate tool using a lumped-element model is required.
 
-The loading coil code remains in the source for future reference and may form the basis of a dedicated loaded-antenna tool in a later release.
+The disabled loading-coil code was removed from the source in November 2026. It remains in the repository history (up to and including v3.1.0) should a dedicated loaded-antenna tool ever be built.
 
 ---
 

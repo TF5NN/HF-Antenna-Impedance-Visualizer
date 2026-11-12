@@ -3,7 +3,7 @@
 > **Note for v3.0.0 (2026-11-10):** this summary and the reports it lists describe
 > **v2.6.0**. The antenna model was replaced in v3.0.0 and the tuner solver had a
 > sign error these reports did not catch. See
-> [`nec_comparison_v3.md`](nec_comparison_v3.md) for the current model and its
+> [`nec_comparison_v3.md`](../nec_comparison_v3.md) for the current model and its
 > comparison with NEC-2. The SWR and reflection-coefficient maths and the Q-gate
 > analysis below are unchanged and still apply.
 
@@ -15,7 +15,7 @@
 - `dipole_validation.md` — Dipole mode — **arm X sign fix applied and re-validated**
 - `tuner_matching_validation.md` — Matching zones + ATU
 - `counterpoise_validation.md` — Counterpoise (CP) — **sign fix applied and re-validated**
-- `qgate_validation.md` — Q-gate (`canTune`) analytic validation — **new v2.5.0**
+- `../qgate_validation.md` — Q-gate (`canTune`) analytic validation — **new v2.5.0**
 
 ---
 

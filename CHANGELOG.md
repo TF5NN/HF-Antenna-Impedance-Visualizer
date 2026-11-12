@@ -7,6 +7,16 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ## Site — 2026-11-12
 
+### Removed — Disabled loading-coil code and superseded reports
+
+The loading-coil feature has been switched off since it was found invalid for
+short antennas; its commented-out code, markup and styles are now deleted
+(about 120 lines). Results are unchanged: the feature could not be enabled.
+The v2.6.0 validation reports, which describe the antenna model replaced in
+v3.0.0, moved to `validation/archive-v2.6.0/` with a note; the current
+comparison (`nec_comparison_v3.md`) and the Q-gate analysis stay in place.
+The publish workflow now also accepts a branch named `main`.
+
 ### Added — Anonymous visit counting
 
 The published page now loads GoatCounter's script to count page opens (country
