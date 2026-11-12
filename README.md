@@ -52,6 +52,8 @@ No installation, no build step — open `antenna_impedance.html` directly in any
 
 The tool can also be hosted as a static page on any web server or GitHub Pages — no server-side code is required.
 
+**Visit counting.** The published page counts page opens anonymously with [GoatCounter](https://www.goatcounter.com/) (site code `tf5nn`, private dashboard): country and referring site only, no cookies, and nothing you enter in the tool is sent. A copy opened from your own disk is not counted, and the tool works the same if the counter is blocked or you are offline.
+
 ---
 
 ## ⚠️ Why Loading Coils Are Not Included

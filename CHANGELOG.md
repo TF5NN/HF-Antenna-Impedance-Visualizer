@@ -5,6 +5,17 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## Site — 2026-11-12
+
+### Added — Anonymous visit counting
+
+The published page now loads GoatCounter's script to count page opens (country
+and referring site, no cookies). Nothing entered in the tool is sent, a copy
+opened from disk is not counted, and the tool itself is unchanged, so the
+version stays v3.1.0.
+
+---
+
 ## [v3.1.0] — 2026-11-11
 
 ### Added — Height above ground (Dipole mode)
