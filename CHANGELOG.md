@@ -1,7 +1,30 @@
 # Changelog
 
-All notable changes to **HF Antenna Impedance Visualizer**.
+All notable changes to **Feedpoint** (HF Antenna Impedance Visualizer).
 Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
+
+---
+
+## [v3.2.0] — 2026-11-14
+
+### Changed — The tool is now called Feedpoint
+
+**Feedpoint** is the name; "HF Antenna Impedance Visualizer" stays as the
+description under it and in the page title, so searches still find it. The
+repository name and the web address are unchanged.
+
+### Added — Logo, header and links
+
+- A logo (a wire carrying a wave, with a dot at the feedpoint), used in the
+  header and as the browser-tab icon. It is drawn inside the page, so the single
+  file still works when opened from disk.
+- The header now matches Northbound: logo, spaced name and small description on
+  the left; version, a **TF5NN ↗** link to the main site and a **GitHub ↗** link
+  on the right.
+- Clicks on those two links are counted anonymously (GoatCounter events
+  `main-site-from-feedpoint` and `github-from-feedpoint`).
+
+The antenna model, the tuner solver and every result are unchanged from v3.1.0.
 
 ---
 
