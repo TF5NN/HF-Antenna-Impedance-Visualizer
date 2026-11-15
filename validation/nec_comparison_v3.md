@@ -222,11 +222,101 @@ these limits is exceeded (RMS error / zone agreement): end-fed 6 % / 85 %,
 off-centre-fed 16 % / 80 %, counterpoise 14 % / 65 %, dipole over ground
 16 % / 60 %; or if any tuner solution fails to rebuild to 50 Ω.
 
+## Low bands: 160 m and 80 m (2026-11-15)
+
+The main tables above stop at 40 m. Only the end-fed wire on an ideal ground
+had been run on 160 m and 80 m (in the v3.1.0 table). This section runs the
+other cases there too, at 1.9 MHz and 3.65 MHz. The tool is v3.2.0, whose model
+is the same as v3.1.0.
+
+### Free-space and ideal-ground cases
+
+| Case | Points | 160 m error / zones | 80 m error / zones |
+|------|-------:|--------------------:|-------------------:|
+| End-fed, ideal return (10–100 m / 5–52 m of wire) | 180 | 4.6 % / 77 % | 4.1 % / 88 % |
+| Off-centre-fed, 40.9 m wire | 48 | 8.2 % / none | 8.7 % / 78 % |
+| Off-centre-fed, 81.8 m wire | 48 | 11.2 % / none | 7.3 % / 95 % |
+| End-fed + 2.1 m counterpoise | 120 | 7.3 % / none | 8.5 % / 80 % |
+| End-fed + 5 m counterpoise | 120 | 10.1 % / 67 % | 10.7 % / 83 % |
+| End-fed + 10 m counterpoise | 120 | 12.4 % / 67 % | 10.5 % / 0 % |
+| End-fed + 20 m counterpoise | 120 | 11.5 % / none | 9.6 % / 100 % |
+
+The |Z| errors, 4–12 %, are the same size as on 40–10 m (3.5 %, 12 % and 10.7 %
+for the three cases). The model holds on the low bands for these geometries.
+
+"None" means neither NEC nor the model found any SWR < 2 point in the sweep, so
+there is nothing to compare. Several other zone figures rest on very few points
+(the 0 % is 3 points, the 100 % is 4), because a 120-point sweep over 50–100 m
+of wire rarely lands inside a narrow matching window. Treat the zone column
+here as indicative only.
+
+The model also returned a finite impedance with positive resistance at every
+one of these points. `check_v3.mjs` now fails if that ever stops being true.
+
+### Dipole height on the low bands, and a correction to the v3.1.0 finding
+
+A low-band dipole is usually low in wavelengths: 10 m up is 0.12 λ on 80 m and
+0.06 λ on 160 m. NEC-2's reflection-coefficient ground, used for the v3.1.0
+height table, is not reliable that close to the ground, so these cases were run
+with NEC's Sommerfeld-Norton ground instead, and the 40–10 m cases were re-run
+the same way.
+
+Centre-fed resistance in Ω, ordered by height in wavelengths:
+
+| Height | Case | NEC (Sommerfeld) | Tool, height on | Tool, height off |
+|-------:|------|-----------------:|----------------:|-----------------:|
+| 0.03 λ | 160 m, 81.8 m wire at 5 m | 50 | 21 (−59 %) | 86 (+71 %) |
+| 0.06 λ | 80 m, 40.9 m wire at 5 m | 48 | 29 (−41 %) | 77 (+58 %) |
+| 0.06 λ | 160 m, 81.8 m wire at 10 m | 44 | 27 (−38 %) | 86 (+96 %) |
+| 0.12 λ | 40 m, 20.2 m wire at 5 m | 54 | 44 (−18 %) | 71 (+31 %) |
+| 0.12 λ | 80 m, 40.9 m wire at 10 m | 57 | 45 (−20 %) | 77 (+36 %) |
+| 0.13 λ | 160 m, 81.8 m wire at 20 m | 60 | 49 (−19 %) | 86 (+42 %) |
+| 0.24 λ | 40 m, 20.2 m wire at 10 m | 79 | 76 (−4 %) | 71 (−11 %) |
+| 0.24 λ | 80 m, 40.9 m wire at 20 m | 90 | 85 (−6 %) | 77 (−15 %) |
+| 0.35 λ | 15 m, 20.2 m wire at 5 m | 105 | 105 (0 %) | 93 (−11 %) |
+| 0.48 λ | 40 m, 20.2 m wire at 20 m | 67 | 71 (+6 %) | 71 (+5 %) |
+
+What this shows:
+
+- **From about 0.2 λ up, the height correction is good**: within 6 % of NEC,
+  and better than the free-space model.
+- **Below about 0.15 λ it reads too low**, by about 20 % at 0.12 λ, 40 % at
+  0.06 λ and 60 % at 0.03 λ. The tool's ground is a partial mirror, which is
+  the same approximation as NEC's reflection-coefficient method. It leaves out
+  the power lost in the soil under a very low wire, and that loss is what
+  brings the real resistance back up.
+- **It is still closer than leaving the correction off** for a centre-fed
+  wire at every height tested, because the free-space figure errs high by more.
+- **The v3.1.0 table overstated the agreement at 5 m on 40 m.** It compared the
+  tool with a NEC run that shared the same approximation (49 Ω). Against the
+  Sommerfeld ground the reference is 54 Ω and the tool's 44 Ω is 18 % low.
+
+Over all feed positions (4–50 %), not just the centre, the picture is less
+favourable. RMS error in resistance, height on / height off: 0.24 λ on 80 m
+20 % / 29 %; 0.12 λ on 80 m 46 % / 33 %; 0.06 λ on 80 m 87 % / 48 %; 0.03 λ on
+160 m 171 % / 56 %. Away from the centre, on a low wire, the correction is
+worse than no correction. The tool's reactance also does not move with height,
+while NEC's shifts by 20–55 Ω on these cases.
+
+Practical reading: on 160 m and 80 m, treat "Height above ground" as a rough
+guide for a centre-fed dipole and do not rely on it for off-centre feeds or
+for wires lower than about 0.15 λ (12 m on 80 m, 24 m on 160 m).
+
+### Reproducing
+
+`python3 validation/nec_reference.py --low-only` adds these sets (`low_ocf`,
+`low_cp`, `low_height`, `height_sommerfeld`) to the reference file without
+touching the others. PyNEC 2.4.0 reproduced the existing reference values
+exactly before the new ones were added. `check_v3.mjs` prints the low-band
+figures under `lowBands` and `heightAgainstSommerfeld`; they are informational
+and do not block publishing, apart from the finite-and-positive rule.
+
 ## What this does not cover
 
 - Nearby objects and poor or very good soil.
 - Sloping, inverted-V or bent wires over ground; ground under an end-fed wire.
 - Bands not listed above (60, 30, 17 and 12 m were not run).
+- The power lost in the soil under a very low horizontal wire (see the low-band section).
 - The transformer itself (stray capacitance, leakage, core loss).
 - Measurements on a real antenna.
 

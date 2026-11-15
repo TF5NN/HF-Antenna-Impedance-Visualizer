@@ -38,7 +38,7 @@ const out = await page.evaluate(ref => {
       }
     }
     return { points: n, rmsErrorPct: +(100 * (10 ** Math.sqrt(se / n) - 1)).toFixed(1),
-             zoneAgreementPct: Math.round(100 * both / either) };
+             zoneAgreementPct: either ? Math.round(100 * both / either) : null, zonePoints: either };
   }
   let P = [];
   for (const b in ref.mono) for (const [L, r, x] of ref.mono[b]) P.push([calcZwireComplex(L, F[b]), { R: r, X: x }]);
@@ -78,6 +78,54 @@ const out = await page.evaluate(ref => {
     x[`${b}, PVC-insulated`] = best;
   }
   o.extra = x;
+
+  // Low bands (160 m and 80 m). Informational figures, plus one hard rule: the model must
+  // return a finite impedance with positive resistance at every point.
+  const FL = ref.low_hz, low = {};
+  let bad = 0;
+  const sane = z => Number.isFinite(z.R) && Number.isFinite(z.X) && z.R > 0;
+  // RMS error of the resistance alone (the height correction only changes resistance)
+  const rErr = ps => +(100 * (10 ** Math.sqrt(ps.reduce((s, [m, r]) => s + Math.log10(m.R / r.R) ** 2, 0) / ps.length) - 1)).toFixed(1);
+  const pairs = (rows, fn) => rows.map(([x0, r, xx]) => { const z = fn(x0); if (!sane(z)) bad++; return [z, { R: r, X: xx }]; });
+  for (const b in FL) {
+    low[`${b} end-fed, ideal return`] = compare(pairs(ref.wide[b], L => calcZwireComplex(L, FL[b])), [49, 1]);
+    for (const k in ref.low_ocf) {
+      const [kb, Lw] = k.split('@'); if (kb !== b) continue;
+      low[`${b} off-centre-fed, ${Lw} m wire`] = compare(pairs(ref.low_ocf[k], p => calcDipoleZ(p, +Lw, FL[b])), [1, 4, 6]);
+    }
+    cpEnabled = true;
+    for (const k in ref.low_cp) {
+      const [kb, cp] = k.split('@'); if (kb !== b) continue;
+      cpLengthM = +cp;
+      low[`${b} end-fed, ${cp} m counterpoise`] = compare(pairs(ref.low_cp[k], L => calcZcomplex(L, FL[b])), [49, 9, 1]);
+    }
+    cpEnabled = false;
+    for (const k in ref.low_height) {
+      const [kb, Lw, h] = k.split('@'); if (kb !== b) continue;
+      dipHeightOn = false;
+      const freeP = pairs(ref.low_height[k], p => calcDipoleZ(p, +Lw, FL[b])), free = compare(freeP, [1, 4, 6]);
+      dipHeightOn = true; dipHeightM = +h;
+      const corrP = pairs(ref.low_height[k], p => calcDipoleZ(p, +Lw, FL[b])), corrected = compare(corrP, [1, 4, 6]);
+      dipHeightOn = false;
+      low[`${b} dipole ${Lw} m at ${h} m over ground`] = { ...corrected, resistanceErrorPct: rErr(corrP),
+        freeSpaceModelErrorPct: free.rmsErrorPct, freeSpaceResistanceErrorPct: rErr(freeP) };
+    }
+  }
+  // The 40-10 m height cases against NEC's Sommerfeld ground, by height in wavelengths
+  const hs = {};
+  for (const k in ref.height_sommerfeld) {
+    const [b, h] = k.split('@'), wl = (+h / (C / F[b])).toFixed(2);
+    dipHeightOn = false;
+    const freeP = pairs(ref.height_sommerfeld[k], p => calcDipoleZ(p, 20.2, F[b]));
+    dipHeightOn = true; dipHeightM = +h;
+    const corrP = pairs(ref.height_sommerfeld[k], p => calcDipoleZ(p, 20.2, F[b]));
+    dipHeightOn = false;
+    hs[`${b} at ${h} m (${wl} wavelengths)`] = { resistanceErrorPct: rErr(corrP), freeSpaceResistanceErrorPct: rErr(freeP),
+      rmsErrorPct: compare(corrP, [1]).rmsErrorPct, freeSpaceModelErrorPct: compare(freeP, [1]).rmsErrorPct };
+  }
+  o.heightAgainstSommerfeld = hs;
+  o.lowBands = low;
+  o.lowBandPointsNotSane = bad;
 
   // Tuner: rebuild each returned L-network from ideal parts and see what the radio gets
   function rebuilt(Z, sol) {
@@ -127,6 +175,7 @@ for (const [k, [maxErr, minZone]] of Object.entries(LIMITS)) {
   if (r.rmsErrorPct > maxErr)        failures.push(`${k}: RMS error ${r.rmsErrorPct}% > ${maxErr}%`);
   if (r.zoneAgreementPct < minZone)  failures.push(`${k}: zone agreement ${r.zoneAgreementPct}% < ${minZone}%`);
 }
+if (out.lowBandPointsNotSane)  failures.push(`low bands: ${out.lowBandPointsNotSane} points where the model is not finite or has R <= 0`);
 if (out.tuner.wrong)           failures.push(`tuner: ${out.tuner.wrong} solutions do not rebuild to 50 Ω`);
 if (out.tuner.limitViolations) failures.push(`tuner: ${out.tuner.limitViolations} solutions exceed the L/C limits`);
 console.log(failures.length ? 'FAILED\n - ' + failures.join('\n - ') : 'ALL CHECKS PASSED');

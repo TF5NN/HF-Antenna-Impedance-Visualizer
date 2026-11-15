@@ -5,6 +5,28 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## Validation — 2026-11-15
+
+### Added — 160 m and 80 m comparison with NEC-2
+
+The off-centre-fed, counterpoise and height cases are now run on 160 m and
+80 m as well (the end-fed case already was). Results are in
+`validation/nec_comparison_v3.md`.
+
+- Free-space and ideal-ground cases: 4–12 % error in |Z|, the same as on
+  40–10 m. No point returned a non-finite or negative resistance, and the
+  publish check now fails if one ever does.
+- **Height above ground reads too low on a low wire.** Against NEC's
+  Sommerfeld ground the centre-fed resistance is within 6 % from about 0.2 λ
+  up, but about 20 % low at 0.12 λ, 40 % low at 0.06 λ and 60 % low at 0.03 λ,
+  because the model leaves out the power lost in the soil. The v3.1.0 height
+  table compared against a NEC run with the same approximation and so
+  overstated the agreement at 5 m on 40 m.
+
+The tool itself is unchanged (v3.2.0).
+
+---
+
 ## [v3.2.0] — 2026-11-14
 
 ### Changed — The tool is now called Feedpoint
