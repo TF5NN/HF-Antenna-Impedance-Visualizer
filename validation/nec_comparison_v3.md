@@ -298,6 +298,9 @@ favourable. RMS error in resistance, height on / height off: 0.24 λ on 80 m
 worse than no correction. The tool's reactance also does not move with height,
 while NEC's shifts by 20–55 Ω on these cases.
 
+Since v3.2.1 the tool shows a warning, naming the bands, whenever the height
+is under 0.15 λ on an active band.
+
 Practical reading: on 160 m and 80 m, treat "Height above ground" as a rough
 guide for a centre-fed dipole and do not rely on it for off-centre feeds or
 for wires lower than about 0.15 λ (12 m on 80 m, 24 m on 160 m).

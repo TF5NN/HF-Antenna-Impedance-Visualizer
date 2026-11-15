@@ -679,7 +679,7 @@ header h1 small {
   </div>
   <p>Educational model · End-Fed and Dipole antenna impedance · Hover graph for details</p>
   <div class="header-right">
-    <span id="versionLabel">v3.2.0 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
+    <span id="versionLabel">v3.2.1 &nbsp;·&nbsp; Gunnar B. Guðlaugsson, TF5NN &copy;</span>
     <a class="callsign" href="https://tf5nn.github.io/" target="_blank" rel="noopener"
        data-goatcounter-click="main-site-from-feedpoint" data-goatcounter-title="Feedpoint: TF5NN main site link"
        title="More projects from TF5NN">TF5NN ↗</a>
@@ -829,6 +829,7 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         Horizontal wire over average soil. Shows how resistance changes with height;
         sloping or inverted-V wires are not covered.
       </div>
+      <div id="dipHeightWarn" role="status" style="display:none;font-size:0.68rem;color:#9a6b1f;line-height:1.5;padding:4px 2px 0;max-width:300px"></div>
     </div>
   </div>
   <div class="ctrl-group dip-only" style="display:none">
@@ -1095,6 +1096,8 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         assumes average soil (ε<sub>r</sub> 13, 5 mS/m) and a straight horizontal wire.
         The height is in metres, so every band sees a different electrical height.
         The small shift in resonant length that the ground also causes is not modelled.
+        Nor is the power lost in the soil under a very low wire, so below about 0.15 λ
+        (12 m on 80 m, 24 m on 160 m) the resistance shown is too low and the tool says so.
       </p>
     </div>
 
@@ -1943,6 +1946,28 @@ function groundMirror(freq) {
   return -(((1 - nr) * dr - ni * ni) / den);                            // −Re[(1 − n)/(1 + n)]
 }
 
+// Below this height (in wavelengths) the height correction reads too low, because the model
+// leaves out the power lost in the soil under a low wire. Checked against NEC-2 with the
+// Sommerfeld ground: about 20 % low at 0.12 λ, 40 % at 0.06 λ, 60 % at 0.03 λ; within 6 %
+// from about 0.2 λ up. See validation/nec_comparison_v3.md.
+const HEIGHT_RELIABLE_WL = 0.15;
+
+// Warning text for the height control: names the active bands on which the wire is too low
+// for the correction to be trusted. Empty when the correction is off or every band is fine.
+function heightWarningText() {
+  if (!dipHeightOn) return '';
+  const low = getActiveBands().filter(b => dipHeightM < HEIGHT_RELIABLE_WL * (C / b.freq)).map(b => b.name);
+  if (!low.length) return '';
+  return `⚠ Low for ${low.join(', ')} (under ${HEIGHT_RELIABLE_WL} λ). The resistance shown is too low there: ` +
+         'about 20% at 0.12 λ and 40% at 0.06 λ. Use it as a rough guide for a centre-fed wire only.';
+}
+function updateHeightWarning() {
+  const el = document.getElementById('dipHeightWarn');
+  if (!el) return;
+  const text = heightWarningText();
+  if (el.textContent !== text) { el.textContent = text; el.style.display = text ? 'block' : 'none'; }
+}
+
 // heightM > 0: horizontal wire that high above average ground (dipole mode only).
 function calcTwoArmZ(La, Lb, freq, heightM = 0) {
   const z0 = wireZ0(freq);
@@ -2515,6 +2540,7 @@ function draw() {
 // ════════════════════════════════════════════════
 
 function drawDipole() {
+  updateHeightWarning();
   // Keep wire-length input display in sync with auto value
   const lenInpEl = document.getElementById('dipWireLenInput');
   if (lenInpEl && dipoleLen === null && document.activeElement !== lenInpEl) {

@@ -125,6 +125,18 @@ const out = await page.evaluate(ref => {
   }
   o.heightAgainstSommerfeld = hs;
   o.lowBands = low;
+
+  // The low-height warning: named bands when the wire is under 0.15 wavelengths, silent otherwise
+  const on = names => BANDS.forEach(b2 => { b2.on = names.includes(b2.name); });
+  const keep = BANDS.map(b2 => b2.on);
+  dipHeightOn = true; dipHeightM = 10; on(['80m', '40m', '20m']);
+  const w1 = heightWarningText();
+  dipHeightM = 20; on(['40m', '20m']);
+  const w2 = heightWarningText();
+  dipHeightOn = false; dipHeightM = 2; on(['160m']);
+  const w3 = heightWarningText();
+  BANDS.forEach((b2, i) => { b2.on = keep[i]; }); dipHeightM = 10;
+  o.heightWarning = { lowOn80mOnly: w1.includes('80m') && !w1.includes('40m') && !w1.includes('20m'), silentWhenHigh: w2 === '', silentWhenOff: w3 === '' };
   o.lowBandPointsNotSane = bad;
 
   // Tuner: rebuild each returned L-network from ideal parts and see what the radio gets
@@ -176,6 +188,7 @@ for (const [k, [maxErr, minZone]] of Object.entries(LIMITS)) {
   if (r.zoneAgreementPct < minZone)  failures.push(`${k}: zone agreement ${r.zoneAgreementPct}% < ${minZone}%`);
 }
 if (out.lowBandPointsNotSane)  failures.push(`low bands: ${out.lowBandPointsNotSane} points where the model is not finite or has R <= 0`);
+if (!Object.values(out.heightWarning).every(Boolean)) failures.push('height warning: ' + JSON.stringify(out.heightWarning));
 if (out.tuner.wrong)           failures.push(`tuner: ${out.tuner.wrong} solutions do not rebuild to 50 Ω`);
 if (out.tuner.limitViolations) failures.push(`tuner: ${out.tuner.limitViolations} solutions exceed the L/C limits`);
 console.log(failures.length ? 'FAILED\n - ' + failures.join('\n - ') : 'ALL CHECKS PASSED');

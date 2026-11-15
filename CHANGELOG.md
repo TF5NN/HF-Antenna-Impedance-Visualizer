@@ -5,6 +5,18 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## [v3.2.1] — 2026-11-15
+
+### Added — Warning when the wire is too low for the height correction
+
+With **Height above ground** switched on in Dipole mode, the tool now shows a
+warning naming every active band on which the wire is lower than 0.15 λ (12 m
+on 80 m, 24 m on 160 m). The 160 m and 80 m validation below showed the
+resistance reads too low there, because the model leaves out the power lost in
+the soil. The calculation itself is unchanged; only the warning is new.
+
+---
+
 ## Validation — 2026-11-15
 
 ### Added — 160 m and 80 m comparison with NEC-2
