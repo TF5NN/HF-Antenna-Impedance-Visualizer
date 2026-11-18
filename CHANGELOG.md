@@ -5,7 +5,7 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
-## Unreleased
+## [v3.3.0] — 2026-11-18
 
 ### Added — Dark mode
 
