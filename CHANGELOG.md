@@ -5,6 +5,19 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## Unreleased
+
+### Changed — Colours named as in the TF5NN style guide
+
+No change to the calculations and no intended change to the look. The page's
+colours are now the named shades shared with Northbound and Sightline (a copy
+of the list at the top of Northbound's stylesheet, described in its
+`docs/STYLE.md`), in preparation for a dark mode. Compared screen by screen,
+nothing moved by more than 17 levels out of 255. The curves' own colours, set
+with the bands in the script, are untouched.
+
+---
+
 ## [v3.2.1] — 2026-11-15
 
 ### Added — Warning when the wire is too low for the height correction
