@@ -170,6 +170,24 @@ const out = await page.evaluate(ref => {
   return o;
 }, ref);
 
+// Light and dark: the header button switches; in the dark the graph's colours are turned,
+// in the light they are used exactly as written.
+out.theme = await page.evaluate(() => {
+  const theme = () => document.documentElement.dataset.theme;
+  const start = theme();
+  document.querySelector('.theme-toggle').click();
+  const dark = {
+    switched: theme() === 'dark' && theme() !== start,
+    remembered: localStorage.getItem('tf5nn-theme') === 'dark',
+    pageIsDark: getComputedStyle(document.body).backgroundColor === 'rgb(15, 25, 23)',
+    curveLifted: themed('#0d3fc3') !== '#0d3fc3',
+    groundTurned: themed('#ffffff') !== '#ffffff',
+    bandButtonTurned: document.querySelector('.band-btn').style.getPropertyValue('--c') !== document.querySelector('.band-btn').dataset.c,
+  };
+  document.querySelector('.theme-toggle').click();
+  return { ...dark, backToLight: theme() === 'light', lightAsWritten: themed('#0d3fc3') === '#0d3fc3' && themed('#ffffff') === '#ffffff' };
+});
+
 console.log(JSON.stringify(out, null, 2));
 console.log('page errors:', errors.length ? errors : 'none');
 await browser.close();
@@ -189,6 +207,7 @@ for (const [k, [maxErr, minZone]] of Object.entries(LIMITS)) {
 }
 if (out.lowBandPointsNotSane)  failures.push(`low bands: ${out.lowBandPointsNotSane} points where the model is not finite or has R <= 0`);
 if (!Object.values(out.heightWarning).every(Boolean)) failures.push('height warning: ' + JSON.stringify(out.heightWarning));
+if (!Object.values(out.theme).every(Boolean)) failures.push('light and dark: ' + JSON.stringify(out.theme));
 if (out.tuner.wrong)           failures.push(`tuner: ${out.tuner.wrong} solutions do not rebuild to 50 Ω`);
 if (out.tuner.limitViolations) failures.push(`tuner: ${out.tuner.limitViolations} solutions exceed the L/C limits`);
 console.log(failures.length ? 'FAILED\n - ' + failures.join('\n - ') : 'ALL CHECKS PASSED');

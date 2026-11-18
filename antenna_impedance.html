@@ -38,7 +38,8 @@
   --green-mid: #417954;
   --green-light: #5f9d77;
   --green-vivid: #60884e;
-  --green-pale: #bce3bc;
+  --logo-tile: #203b3d;
+  --logo-mark: #bce3bc;
   /* Amber and rust: notes and warnings */
   --amber-ink: #8a6a2f;
   --amber-text: #8a7448;
@@ -82,11 +83,94 @@
   --shadow-black: #0006;
   --mono:      'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
   --sans:      'DM Sans', 'Segoe UI', system-ui, Arial, sans-serif;
-  /* Feedpoint's own: marks on the graph's controls. The curves' colours are set with the bands, in the script. */
+  /* Feedpoint's own: marks on the graph's controls and notes in the read-out. The curves' colours
+     are set with the bands, in the script. */
   --blue: #2f6fb7;
   --gold: #b08d1e;
   --violet: #8a56c2;
+  --teal: #1b8f88;
+  --warn: #b5532a;
 }
+
+/* Dark mode: the same named shades with a second value (a copy of Northbound's). The theme is set
+   on <html> by the small script in the head. The graph is drawn in script; themed() there turns
+   its colours for the dark. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ink-deep: #f3f7f1;
+  --ink: #e4ece4;
+  --ink-soft: #cdd9cd;
+  --text-strong: #b3c6ad;
+  --text: #9fb698;
+  --text-cool: #9bb1a2;
+  --text-muted: #8c9f88;
+  --muted: #8d9c93;
+  --text-soft: #75866f;
+  --text-faint: #54635b;
+  --green-dark: #8fd3b4;
+  --green: #53b893;
+  --green-bright: #49b997;
+  --green-mid: #67ab82;
+  --green-light: #72b98d;
+  --green-vivid: #8cbb79;
+  --logo-tile: #1f4236;
+  --logo-mark: #bce3bc;
+  --amber-ink: #e3ba70;
+  --amber-text: #cfb37e;
+  --amber-fill: #b3945f;
+  --amber-line: #4d442a;
+  --amber-soft: #2b2718;
+  --amber-wash: #2d2920;
+  --rust: #e38d69;
+  --blue-ink: #a0b7d2;
+  --blue-fill: #8397b1;
+  --blue-soft: #1f2b38;
+  --line-accent: #44705a;
+  --line-green: #2d4138;
+  --line-strong: #30433c;
+  --line: #263732;
+  --tint-strong: #22392e;
+  --tint-grey: #212f2a;
+  --green-soft: #1c3229;
+  --wash: #14201d;
+  --tint: #19261f;
+  --paper: #0f1917;
+  --surface: #15221f;
+  --white: #1c2b27;
+  --ground: #3b4c42;
+  --grid: #2a3b35;
+  --sky: #17262a;
+  --sun: #e9b84a;
+  --sun-edge: #c9962a;
+  --moon: #d9dde3;
+  --moon-edge: #8793a0;
+  --backdrop: #000000a6;
+  --scrim: #00000099;
+  --shadow-deep: #00000080;
+  --shadow: #00000040;
+  --shadow-soft: #00000030;
+  --shadow-black: #000a;
+  --blue: #6aa6e8;
+  --gold: #d6b548;
+  --violet: #b592e6;
+  --teal: #4fc2ba;
+  --warn: #e38d69;
+}
+/* Light or dark: a small button at the end of the header. Moon in the light, sun in the dark. */
+.theme-toggle {
+  display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 4px; background: none;
+  color: var(--text-strong); cursor: pointer;
+}
+.theme-toggle:hover { background: var(--tint-grey); color: var(--ink); }
+.theme-toggle:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.theme-toggle svg {
+  width: 15px; height: 15px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.theme-toggle .sun, :root[data-theme='dark'] .theme-toggle .moon { display: none; }
+:root[data-theme='dark'] .theme-toggle .sun { display: block; }
+
 
 body {
   font-family: var(--sans);
@@ -603,11 +687,13 @@ input[type=range] { accent-color: var(--green); }
 /* Header: the same brand lockup as Northbound (icon, spaced name, small-caps description),
    with the version chip and the links to the main site and GitHub on the right. */
 header { align-items: center; padding: 18px 20px; }
+/* The line of description gives way before the links and the theme button are pushed to a second row. */
+header p { flex: 1 1 260px; min-width: 0; }
 .brand { display: flex; align-items: center; gap: 13px; }
 .brand-icon {
   display: flex; align-items: center; justify-content: center;
   height: 40px; width: 40px; border-radius: 11px; flex-shrink: 0;
-  background: var(--ink); color: var(--green-pale);
+  background: var(--logo-tile); color: var(--logo-mark);
 }
 .brand-icon svg {
   height: 32px; width: 32px;
@@ -722,6 +808,42 @@ header h1 small {
 .ss-star { color: var(--gold); }
 #dipSweetSpotsTable .ss-header { font-size: 0.65rem; text-transform: uppercase; margin-bottom: 1px; }
 </style>
+<!-- Light or dark before the first paint: the visitor's remembered choice (shared by the TF5NN apps on
+     this site), otherwise the device's setting. The header button switches and remembers. -->
+<script>
+(function () {
+  var KEY = 'tf5nn-theme';
+  var device = window.matchMedia('(prefers-color-scheme: dark)');
+  function chosen() {
+    try { var v = localStorage.getItem(KEY); return v === 'light' || v === 'dark' ? v : null; } catch (e) { return null; }
+  }
+  function current() { return chosen() || (device.matches ? 'dark' : 'light'); }
+  function apply() {
+    var theme = current();
+    var changed = document.documentElement.dataset.theme !== theme;
+    document.documentElement.dataset.theme = theme;
+    var bar = document.querySelector('meta[name="theme-color"]');
+    if (bar) bar.setAttribute('content', theme === 'dark' ? '#0f1917' : '#214e3a');
+    var other = theme === 'dark' ? 'light' : 'dark';
+    document.querySelectorAll('.theme-toggle').forEach(function (button) {
+      button.setAttribute('aria-label', 'Switch to the ' + other + ' theme');
+      button.title = 'Switch to the ' + other + ' theme';
+    });
+    if (changed) document.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
+  }
+  apply();
+  device.addEventListener('change', apply);
+  document.addEventListener('DOMContentLoaded', function () {
+    apply();
+    document.querySelectorAll('.theme-toggle').forEach(function (button) {
+      button.addEventListener('click', function () {
+        try { localStorage.setItem(KEY, current() === 'dark' ? 'light' : 'dark'); } catch (e) {}
+        apply();
+      });
+    });
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -741,6 +863,10 @@ header h1 small {
     <a class="callsign" href="https://github.com/TF5NN/HF-Antenna-Impedance-Visualizer" target="_blank" rel="noopener"
        data-goatcounter-click="github-from-feedpoint" data-goatcounter-title="Feedpoint: GitHub link"
        title="Source code on GitHub">GitHub ↗</a>
+    <button class="theme-toggle" type="button" aria-label="Switch to the dark theme">
+      <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
   </div>
 </header>
 
@@ -821,7 +947,7 @@ header h1 small {
         <input type="number" id="cpLengthInput" value="5.0" min="0.5" max="200" step="0.5">
         <span class="cp-unit">m</span>
       </div>
-      <div id="cpGuidance" style="display:none;font-size:0.68rem;color:#76847d;line-height:1.5;padding:4px 2px 0">
+      <div id="cpGuidance" style="display:none;font-size:0.68rem;color:var(--muted);line-height:1.5;padding:4px 2px 0">
 At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         At low-impedance lengths the counterpoise is half the antenna, so its length moves the match a lot.
       </div>
@@ -880,11 +1006,11 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         <input type="number" id="dipHeightInput" class="cp-inp" value="10" min="0.5" max="100" step="0.5" style="width:64px">
         <span class="cp-unit">m</span>
       </div>
-      <div id="dipHeightHint" style="display:none;font-size:0.68rem;color:#76847d;line-height:1.5;padding:4px 2px 0;max-width:300px">
+      <div id="dipHeightHint" style="display:none;font-size:0.68rem;color:var(--muted);line-height:1.5;padding:4px 2px 0;max-width:300px">
         Horizontal wire over average soil. Shows how resistance changes with height;
         sloping or inverted-V wires are not covered.
       </div>
-      <div id="dipHeightWarn" role="status" style="display:none;font-size:0.68rem;color:#9a6b1f;line-height:1.5;padding:4px 2px 0;max-width:300px"></div>
+      <div id="dipHeightWarn" role="status" style="display:none;font-size:0.68rem;color:var(--amber-ink);line-height:1.5;padding:4px 2px 0;max-width:300px"></div>
     </div>
   </div>
   <div class="ctrl-group dip-only" style="display:none">
@@ -1030,7 +1156,7 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         half-wave resonance peak (the main 49:1 Unun target) roughly three-quarters of the
         way across the X axis, leaving a comfortable tail to the right.
       </p>
-      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
+      <p style="margin-top:6px;color:var(--muted);font-size:0.93em">
         Wires shorter than ⅛ λ are not useful in practice: radiation resistance falls
         as <code>(L/λ)²</code>, capacitive reactance becomes very large, and the
         transmission-line model used here is least accurate in this region. Start the
@@ -1084,8 +1210,8 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         wire cut for 40 m is slightly long on 20, 15 and 10 m — the familiar end-fed
         half-wave behaviour.
       </p>
-      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
-        <strong style="color:#7f8c80">Display limits:</strong>
+      <p style="margin-top:6px;color:var(--muted);font-size:0.93em">
+        <strong style="color:var(--muted)">Display limits:</strong>
         R is clamped at 5 000 Ω and the plotted |Z| at 25 Ω.
       </p>
     </div>
@@ -1123,8 +1249,8 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         counterpoise the wire is modelled against an ideal ground. When enabled,
         dashed ghost curves show that wire-alone impedance for comparison.
       </p>
-      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
-        <strong style="color:#7f8c80">Model limitations:</strong>
+      <p style="margin-top:6px;color:var(--muted);font-size:0.93em">
+        <strong style="color:var(--muted)">Model limitations:</strong>
         the counterpoise is assumed straight, in line with the wire and in free
         space. A counterpoise lying on the ground, or a coax shield acting as one,
         is detuned and lossier than this. Treat the display as a guide.
@@ -1166,8 +1292,8 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         <strong>13 %</strong> for a dipole 5–20 m above average ground. Method and
         numbers are in <code>validation/nec_comparison_v3.md</code>.
       </p>
-      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
-        <strong style="color:#7f8c80">Not modelled:</strong>
+      <p style="margin-top:6px;color:var(--muted);font-size:0.93em">
+        <strong style="color:var(--muted)">Not modelled:</strong>
         ground under an end-fed wire, sloping or bent wires, nearby objects,
         feedline common-mode current and the transformer itself. Real 49:1
         transformers often work poorly on 10 m because of their own stray
@@ -1229,7 +1355,7 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
         If neither topology can reach a match within the preset's Lmax/Cmax limits,
         "No match within tuner limits" is shown and the zone does not light up.
       </p>
-      <p style="margin-top:6px;color:#7f8c80;font-size:0.93em">
+      <p style="margin-top:6px;color:var(--muted);font-size:0.93em">
         ATU presets — <strong>Internal (3:1)</strong>: Lmax 4 µH, Cmax 500 pF;
         <strong>External (10:1)</strong>: Lmax 24 µH, Cmax 1 200 pF;
         <strong>Wide-range (20:1)</strong>: Lmax 60 µH, Cmax 3 500 pF.
@@ -1325,6 +1451,61 @@ At half-wave (49:1) lengths a short counterpoise, about 0.05 λ, is enough.
 <div id="tooltip"></div>
 
 <script>
+// ── Colours in the dark ──────────────────────────────────────────────────────
+// The graph is drawn with colours written out in this script, chosen for a light page. In the
+// light they are used exactly as written. In the dark, themed() turns each one: the greys, the
+// ink and the white ground become the page's dark shades, and everything else (the bands'
+// curves, the zones) keeps its hue and is lifted until it stands out on a dark ground.
+// themedContext() makes a canvas do this by itself for everything drawn on it.
+const DARK_NEUTRALS = {
+  '#ffffff': 'surface', '#fcfdf8': 'surface', '#dfe5de': 'line', '#edf0e7': 'wash',
+  '#76847d': 'muted', '#a0ad97': 'text-soft', '#94a08f': 'text-soft', '#8a9684': 'text-muted',
+  '#c3cfc2': 'line-strong', '#bccabb': 'line-strong',
+};
+const themedCache = new Map();
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+function themed(color) {
+  if (typeof color !== 'string' || !isDark()) return color;
+  if (themedCache.has(color)) return themedCache.get(color);
+  const shade = name => getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+  let out = color;
+  const key = color.toLowerCase();
+  const m = key.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/);
+  const hex = key.match(/^#([0-9a-f]{6})$/);
+  if (DARK_NEUTRALS[key]) out = shade(DARK_NEUTRALS[key]) || color;
+  else if (m || hex) {
+    let r, g, b, a = 1;
+    if (m) { r = +m[1]; g = +m[2]; b = +m[3]; a = m[4] === undefined ? 1 : +m[4]; }
+    else { r = parseInt(hex[1].slice(0, 2), 16); g = parseInt(hex[1].slice(2, 4), 16); b = parseInt(hex[1].slice(4, 6), 16); }
+    if (r === 32 && g === 59 && b === 61) { r = 228; g = 236; b = 228; }            // ink
+    else if (r === 255 && g === 255 && b === 255) { r = 21; g = 34; b = 31; }       // white halo -> the dark ground
+    else {
+      // Keep the hue, lift the lightness to at least 62%.
+      const mx = Math.max(r, g, b) / 255, mn = Math.min(r, g, b) / 255, l = (mx + mn) / 2;
+      const target = Math.max(l, 0.62);
+      if (target > l) {
+        const k = (1 - target) / (1 - l);       // pull each channel towards white by the same share
+        r = Math.round(255 - (255 - r) * k); g = Math.round(255 - (255 - g) * k); b = Math.round(255 - (255 - b) * k);
+      }
+    }
+    out = a === 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${a})`;
+  }
+  themedCache.set(color, out);
+  return out;
+}
+function themedContext(ctx) {
+  if (ctx.__themed) return ctx;
+  for (const prop of ['fillStyle', 'strokeStyle', 'shadowColor']) {
+    const own = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, prop);
+    Object.defineProperty(ctx, prop, {
+      get() { return own.get.call(this); },
+      set(value) { own.set.call(this, themed(value)); },
+    });
+  }
+  ctx.__themed = true;
+  return ctx;
+}
+
 // ════════════════════════════════════════════════
 //  DATA
 // ════════════════════════════════════════════════
@@ -2181,7 +2362,7 @@ function draw() {
   if (antennaMode === 'dip') { drawDipole(); return; }
 
   const canvas = document.getElementById('graph');
-  const ctx    = canvas.getContext('2d');
+  const ctx    = themedContext(canvas.getContext('2d'));
   const dpr    = window.devicePixelRatio || 1;
   const W = CANVAS_W, H = CANVAS_H;
 
@@ -2604,7 +2785,7 @@ function drawDipole() {
   }
 
   const canvas = document.getElementById('graph');
-  const ctx    = canvas.getContext('2d');
+  const ctx    = themedContext(canvas.getContext('2d'));
   const dpr    = window.devicePixelRatio || 1;
   const W = CANVAS_W, H = CANVAS_H;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2918,7 +3099,7 @@ function updateDipoleInspectPanel() {
       const total  = Math.round(mmEff * dz.xfrmrEff * tunerEff * 100);
       const losses = [`mismatch ${Math.round(mmEff * 100)}%`, `xfrmr ${Math.round(dz.xfrmrEff * 100)}%`];
       if (tunerEnabled) losses.push(tunerDesc.trim());
-      zoneHtml += `<span style="color:${dz.text};font-weight:600">${dz.label}</span>` +
+      zoneHtml += `<span style="color:${themed(dz.text)};font-weight:600">${dz.label}</span>` +
         ` <span class="ip-eff">${total}% delivered</span>` +
         ` <span class="ip-loss">[${losses.join(' · ')}]</span>`;
     });
@@ -2927,7 +3108,7 @@ function updateDipoleInspectPanel() {
     const swr50val = swr50({ R: Zc.R, X: Zc.X });
     html +=
       `<div class="ip-row">` +
-      `<span class="ip-band" style="color:${band.color}">${band.name}</span>` +
+      `<span class="ip-band" style="color:${themed(band.color)}">${band.name}</span>` +
       `<span class="ip-z">${formatZ(Z)}</span>` +
       `<span class="ip-rx">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
       zoneHtml +
@@ -2957,7 +3138,7 @@ function updateSweetSpotsTable() {
         : ZONES.find(z => inZone(Zc, z, band.freq));
       if (!zone) return '';
       const eff = Math.round(matchChain(Zc, zone.ratio, zone.xfrmrEff, band.freq).total * 100);
-      return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
+      return `<span class="ss-band" style="color:${themed(band.color)}">${band.name}</span>` +
              `<span class="ss-zone" style="color:${zone.text}">${zone.label}&nbsp;~${eff}%</span>`;
     }).filter(Boolean).join(' &nbsp;');
     html +=
@@ -3000,8 +3181,8 @@ function updateDipSweetSpotsTable() {
         : DIPOLE_ZONES.find(z => z.on && inDipoleZone(Zc, z, band.freq));
       if (!dz) return '';
       const eff = Math.round(matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, band.freq).total * 100);
-      return `<span class="ss-band" style="color:${band.color}">${band.name}</span>` +
-             `<span class="ss-zone" style="color:${dz.text}">${dz.label}&nbsp;~${eff}%</span>`;
+      return `<span class="ss-band" style="color:${themed(band.color)}">${band.name}</span>` +
+             `<span class="ss-zone" style="color:${themed(dz.text)}">${dz.label}&nbsp;~${eff}%</span>`;
     }).filter(Boolean).join(' &nbsp;');
     html +=
       `<div class="ss-row">` +
@@ -3051,7 +3232,7 @@ function updateInspectPanel() {
       ];
       if (tunerEnabled) losses.push(tunerDesc.trim());
 
-      zoneHtml += `<span style="color:${z.text};font-weight:600">${z.label}</span>` +
+      zoneHtml += `<span style="color:${themed(z.text)};font-weight:600">${z.label}</span>` +
         ` <span class="ip-eff">${total}% delivered</span>` +
         ` <span class="ip-loss">[${losses.join(' · ')}]</span>`;
     });
@@ -3059,7 +3240,7 @@ function updateInspectPanel() {
 
     html +=
       `<div class="ip-row">` +
-      `<span class="ip-band" style="color:${band.color}">${band.name}</span>` +
+      `<span class="ip-band" style="color:${themed(band.color)}">${band.name}</span>` +
       `<span class="ip-z">${formatZ(Z)}</span>` +
       `<span class="ip-rx">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
       `<span style="color:var(--text-muted);font-size:0.68rem">${halfwaves.toFixed(2)}×λ/2</span>` +
@@ -3090,7 +3271,8 @@ function buildBandButtons() {
     const btn = document.createElement('button');
     btn.className = 'band-btn' + (band.on ? ' on' : '');
     btn.textContent = band.name;
-    btn.style.setProperty('--c', band.color);
+    btn.dataset.c = band.color;
+    btn.style.setProperty('--c', themed(band.color));
     btn.onclick = () => {
       band.on = !band.on;
       btn.classList.toggle('on', band.on);
@@ -3236,7 +3418,7 @@ function updateLegend() {
     const div = document.createElement('div');
     div.className = 'leg-item';
     div.innerHTML =
-      `<span class="leg-line" style="background:${band.color}"></span>` +
+      `<span class="leg-line" style="background:${themed(band.color)}"></span>` +
       `<span>${band.name} <span class="leg-freq">${(band.freq/1e6).toFixed(3)} MHz</span></span>`;
     bar.appendChild(div);
   });
@@ -3334,12 +3516,12 @@ function setupHover() {
         const tags = activeDZ.filter(dz => inDipoleZone(Zc, dz, band.freq))
           .map(dz => {
             const eff = Math.round(matchChain(Zc, getDipoleZoneParams(dz).ratio, dz.xfrmrEff, band.freq).total * 100);
-            return `<span class="tt-tag" style="color:${dz.text}">${dz.label} ~${eff}%</span>`;
+            return `<span class="tt-tag" style="color:${themed(dz.text)}">${dz.label} ~${eff}%</span>`;
           }).join(' ');
         html +=
           `<div class="tt-row">` +
-          `<span class="tt-dot" style="background:${band.color}"></span>` +
-          `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
+          `<span class="tt-dot" style="background:${themed(band.color)}"></span>` +
+          `<span class="tt-name" style="color:${themed(band.color)}">${band.name}</span>` +
           `<span class="tt-z">${formatZ(Z)}</span>` +
           `<span class="tt-frac" style="font-size:0.68rem">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>` +
           (tags || '') +
@@ -3358,7 +3540,7 @@ function setupHover() {
     const L = pxToL(cx, xRange, W);
 
     const cpHeader = cpEnabled
-      ? ` <span style="color:#8a56c2;font-size:0.68rem">+ CP ${cpLengthM}m</span>`
+      ? ` <span style="color:var(--violet);font-size:0.68rem">+ CP ${cpLengthM}m</span>`
       : '';
     let html = `<div class="tt-title">Wire length: ${formatLength(L)}${cpHeader}</div>`;
 
@@ -3378,7 +3560,7 @@ function setupHover() {
       // but none matched. Covers both SWR-gate and Q-gate rejection.
       let tunerRejectNote = '';
       if (tunerEnabled && zoneMatches.length === 0 && ZONES.some(z => z.on)) {
-        tunerRejectNote = `<span style="color:#8a9684;font-size:0.62rem;display:block;margin-left:14px">` +
+        tunerRejectNote = `<span style="color:var(--text-muted);font-size:0.62rem;display:block;margin-left:14px">` +
           `Match unlikely — required tuner Q too high</span>`;
       }
 
@@ -3404,12 +3586,12 @@ function setupHover() {
               const ratio_ = Math.max(Rl_, 50) / Math.min(Rl_, 50);
               const Qstr   = L_uH > 0 ? ` &nbsp; Q≈${Math.sqrt(Math.max(0, ratio_ - 1)).toFixed(1)}` : '';
               tunerNote = parts.length
-                ? `<span style="color:#1b8f88;font-size:0.63rem;display:block;margin-left:14px">` +
+                ? `<span style="color:var(--teal);font-size:0.63rem;display:block;margin-left:14px">` +
                   `${sol.topology}: ${parts.join(' + ')}` +
                   ` &nbsp; tuner eff ${Math.round(tunerEff * 100)} %${Qstr}</span>`
                 : '';
             } else {
-              tunerNote = `<span style="color:#b5532a;font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
+              tunerNote = `<span style="color:var(--warn);font-size:0.63rem;display:block;margin-left:14px">No match within tuner limits</span>`;
             }
           }
 
@@ -3417,7 +3599,7 @@ function setupHover() {
           const eff    = Math.round(ch.total * 100);
           const swrVal = ch.swr.toFixed(1);
 
-          return `<span class="tt-tag" style="color:${z.text}">${z.label} ~${eff}% ` +
+          return `<span class="tt-tag" style="color:${themed(z.text)}">${z.label} ~${eff}% ` +
                  `<span style="opacity:0.75;font-weight:500">SWR ${swrVal}:1</span></span>` +
                  tunerNote;
         })
@@ -3426,7 +3608,7 @@ function setupHover() {
       // Show R + jX alongside |Z| so users can see the complex impedance
       const sign   = Zc.X >= 0 ? '+' : '−';
       const Xabs   = Math.abs(Zc.X);
-      const rxNote = `<span style="color:#8a9684;font-size:0.75em">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>`;
+      const rxNote = `<span style="color:var(--text-muted);font-size:0.75em">${Zc.R.toFixed(0)}${sign}j${Xabs.toFixed(0)} Ω</span>`;
 
       const cpNote = Zwire !== null
         ? `<span class="tt-cp-note">wire: ${formatZ(Zwire)}</span>`
@@ -3434,8 +3616,8 @@ function setupHover() {
 
       html +=
         `<div class="tt-row">` +
-        `<span class="tt-dot" style="background:${band.color}"></span>` +
-        `<span class="tt-name" style="color:${band.color}">${band.name}</span>` +
+        `<span class="tt-dot" style="background:${themed(band.color)}"></span>` +
+        `<span class="tt-name" style="color:${themed(band.color)}">${band.name}</span>` +
         `<span class="tt-z">${formatZ(Z)}</span>` +
         rxNote +
         zoneTags +
@@ -3447,8 +3629,8 @@ function setupHover() {
 
     // Footnote — only when at least one band lands in a matching zone
     if (anyZoneHit) {
-      html += `<div style="font-size:0.62rem;color:#8a9684;margin-top:5px;` +
-              `border-top:1px solid #dfe5de;padding-top:3px">` +
+      html += `<div style="font-size:0.62rem;color:var(--text-muted);margin-top:5px;` +
+              `border-top:1px solid var(--line);padding-top:3px">` +
               `% = matching + transformer efficiency only — power <em>delivered to the feedpoint</em>, ` +
               `not power radiated. Radiation efficiency (how much actually leaves as RF) is separate: ` +
               `typically 70–90 % at EFHW resonance (49:1 zone), 30–60 % at λ/4 anti-resonance (1:1 zone), ` +
@@ -3670,7 +3852,8 @@ function buildDipoleZoneButtons() {
     const btn = document.getElementById(dz.id + 'Btn');
     if (!btn) return;
     btn.classList.toggle('on', dz.on);
-    btn.style.setProperty('--zc', dz.text);
+    btn.dataset.zc = dz.text;
+    btn.style.setProperty('--zc', themed(dz.text));
     btn.onclick = () => {
       dz.on = !dz.on;
       btn.classList.toggle('on', dz.on);
@@ -3864,6 +4047,30 @@ setupPinControl();
 setupMode();
 setupDipole();
 window.addEventListener('resize', resizeAndDraw);
+
+// The band and zone buttons carry their colour in their own style. Keep the colour as written and
+// show it turned for the theme; then, when the theme changes, turn them again and redraw the graph.
+function themeControls() {
+  document.querySelectorAll('[style*="--zc"], [style*="--c:"], [data-c], [data-zc]').forEach(el => {
+    for (const [name, key] of [['--zc', 'zc'], ['--c', 'c']]) {
+      const written = el.dataset[key] ?? el.style.getPropertyValue(name).trim();
+      if (!written) continue;
+      el.dataset[key] = written;
+      el.style.setProperty(name, themed(written));
+    }
+  });
+}
+document.addEventListener('themechange', () => {
+  themedCache.clear();
+  themeControls();
+  // The legend, the inspect panels and the sweet-spot tables carry band colours too.
+  for (const refresh of [updateLegend, updateInspectPanel, updateDipoleInspectPanel, updateSweetSpotsTable, updateDipSweetSpotsTable]) {
+    try { refresh(); } catch (error) { /* a panel that is not showing has nothing to refresh */ }
+  }
+  resizeAndDraw();
+});
+document.addEventListener('DOMContentLoaded', themeControls);
+if (document.readyState !== 'loading') themeControls();
 resizeAndDraw();
 // Visual only: repaint the canvas labels once the web fonts have loaded.
 if (document.fonts && document.fonts.load) {

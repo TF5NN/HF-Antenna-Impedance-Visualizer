@@ -7,6 +7,22 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ## Unreleased
 
+### Added — Dark mode
+
+The page follows the device's light or dark setting. A sun or moon button at
+the end of the header switches it; that choice is remembered in the browser
+(as `tf5nn-theme`, shared with Northbound and Sightline) and from then on wins
+over the device.
+
+Every named shade has a second, dark value (a copy of Northbound's). The graph
+is drawn with colours written out in the script; in the light they are used
+exactly as before, and in the dark one function, `themed()`, turns them: greys,
+ink and the white ground become the page's dark shades, and the bands' curves
+and the zones keep their hue and are lifted until they stand out. No drawing
+or calculation code was changed, and the validation run has a new gate for the
+switch. The header's line of description now gives way before the links wrap
+to a second row.
+
 ### Changed — Colours named as in the TF5NN style guide
 
 No change to the calculations and no intended change to the look. The page's
