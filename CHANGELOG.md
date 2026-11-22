@@ -5,6 +5,15 @@ Creator and rights holder: **Gunnar B. Guðlaugsson (TF5NN)**.
 
 ---
 
+## Site — 2026-11-22
+
+### Changed — Fonts served from this site
+
+DM Sans and IBM Plex Mono are now files in `fonts/` (SIL Open Font License, from
+Fontsource) instead of being loaded from Google Fonts, so opening the app no longer
+sends anything to Google. The look is unchanged; the same files are used by the
+other TF5NN apps and the website.
+
 ## [v3.3.0] — 2026-11-18
 
 ### Added — Dark mode

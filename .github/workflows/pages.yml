@@ -50,7 +50,7 @@ jobs:
       - name: Collect the site files
         run: |
           mkdir _site
-          cp index.html antenna_impedance.html LICENSE _site/
+          cp -r index.html antenna_impedance.html LICENSE fonts _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
